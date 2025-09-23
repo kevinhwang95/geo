@@ -11,7 +11,7 @@ const MapWithPolygonDrawing: React.FC = () => {
   });
 
   const [polygonPaths, setPolygonPaths] = useState<google.maps.LatLngLiteral[][]>([]);
-  const [polygonArea, setPolygonArea] = useState(null);
+  const [polygonArea, setPolygonArea] = useState(0);
   const [open, setOpen] = useState(false);
 
   const onPolygonComplete = useCallback((polygon: google.maps.Polygon) => {

@@ -11,9 +11,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export default function DatePicker() {
+interface DatePickerProps {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+}
+
+export default function DatePicker({ date, setDate }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [date, setDate] = React.useState<Date | undefined>(undefined)
 
   return (
     <div className="flex flex-col gap-3">

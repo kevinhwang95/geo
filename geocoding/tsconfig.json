@@ -4,10 +4,24 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
-    "compilerOptions": {
+  "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "module": "esnext",
+    "target": "esnext",
+    "strict": true,
+    "noImplicitAny": false,
+    "lib": [
+      "es2015",
+      "esnext",
+      "es6",
+      "dom",
+      "dom.iterable"
+    ],
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "types": ["@types/google.maps"]
   }
 }

@@ -13,11 +13,121 @@
       #root {
         width: 100vw;
         height: 100vh;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+      }
+      #map {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+      }
+      #mode-ui {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: white;
+          padding: 10px;
+          border-radius: 5px;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+      }
+      #mode-ui button {
+          margin: 5px 0;
+          cursor: pointer;
+      }
+
+      .mode-button {
+          width: 30px;
+          height: 30px;
+          border: 1px solid #ccc;
+          background-color: white;
+          padding: 2px;
+          box-sizing: border-box;
+      }
+
+      .mode-button img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          user-select: none;
+      }
+
+      /* Active state for shape modes */
+      .mode-button.active {
+          background-color: #e0e0e0; /* light grey */
+      }
+
+      /* Special buttons default state */
+      #select-mode,
+      #clear-mode,
+      #delete-selected-button,
+      #undo-button,
+      #redo-button,
+      #export-button,
+      #upload-button,
+      #resize-button {
+          background-color: #000000;
+      }
+
+      /* Special buttons icon default state */
+      #select-mode img,
+      #clear-mode img,
+      #delete-selected-button img,
+      #undo-button img,
+      #redo-button img,
+      #export-button img,
+      #upload-button img,
+      #resize-button img {
+          filter: brightness(0) invert(1);
+      }
+
+      /* Special buttons active/click states */
+      #select-mode.active {
+          background-color: #A9A9A9; /* dark grey */
+      }
+
+      #clear-mode:active,
+      #delete-selected-button:active,
+      #undo-button:active,
+      #redo-button:active,
+      #export-button:active,
+      #upload-button:active,
+      #resize-button.active {
+          background-color: #A9A9A9; /* dark grey */
       }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+
+    <!-- Top-right mode selection UI -->
+    <!-- <div id="mode-ui">
+        <button id="point-mode" class="mode-button" title="Point"><img src="./img/point.svg" alt="Point" draggable="false"></button>
+        <button id="linestring-mode" class="mode-button" title="Linestring"><img src="./img/polyline.svg" alt="Linestring" draggable="false"></button>
+        <button id="polygon-mode" class="mode-button active" title="Polygon"><img src="./img/polygon.png" alt="Polygon" draggable="false"></button>
+        <button id="rectangle-mode" class="mode-button" title="Rectangle"><img src="./img/rectangle.svg" alt="Rectangle" draggable="false"></button>
+        <button id="circle-mode" class="mode-button" title="Circle"><img src="./img/circle.svg" alt="Circle" draggable="false"></button>
+        <button id="freehand-mode" class="mode-button" title="Freehand"><img src="./img/freehand.svg" alt="Freehand" draggable="false"></button>
+        <button id="select-mode" class="mode-button" title="Select"><img src="./img/select.svg" alt="Select" draggable="false"></button>
+        <button id="resize-button" class="mode-button" title="Resize"><img src="./img/resize.svg" alt="Resize" draggable="false"></button>
+        <button id="clear-mode" class="mode-button" title="Clear"><img src="./img/delete.svg" alt="Clear" draggable="false"></button>
+        <button id="delete-selected-button" class="mode-button" title="Clear last or Selected"><img src="./img/delete-selected.svg" alt="Delete Selected" draggable="false"></button>
+        <button id="undo-button" class="mode-button" title="Undo"><img src="./img/undo.svg" alt="Undo" draggable="false"></button>
+        <button id="redo-button" class="mode-button" title="Redo"><img src="./img/redo.svg" alt="Redo" draggable="false"></button>
+        <button id="export-button" class="mode-button" title="Export"><img src="./img/download.svg" alt="Export" draggable="false"></button>
+        <button id="upload-button" class="mode-button" title="Upload"><img src="./img/upload.svg" alt="Upload" draggable="false"></button>
+        <input type="file" id="upload-input" style="display: none;" accept=".geojson,.json">
+    </div> -->
+    <div id="map"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

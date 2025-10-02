@@ -97,31 +97,63 @@ const TerraDrawingTools: React.FC = () => {
 
 
   const { data: lands, deleteItem } = useGenericCrud<LandRegistry>('api/landregistry');
+  
+  // Note: In development mode with React StrictMode, useEffect runs twice
+  // This causes the API to be called twice, which is expected behavior
+  // In production builds, this won't happen
+
+  // Track if TerraDraw has been initialized
+  const [terraDrawInitialized, setTerraDrawInitialized] = useState(false);
 
   useEffect(() => {
     if (
       lands &&
       Array.isArray(lands) &&
-      drawRef.current // Ensure TerraDraw is initialized
+      drawRef.current && // Ensure TerraDraw is initialized
+      terraDrawInitialized // Ensure TerraDraw is ready
     ) {
+      console.log(`Loading ${lands.length} land records into TerraDraw...`);
+      
+      // Clear existing features first to avoid duplicates
+      drawRef.current.clear();
+      
+      let loadedCount = 0;
       lands.forEach((land) => {
-        if (!land.coordinations) return;
+        if (!land.coordinations) {
+          console.warn(`Land ${land.id} has no coordinations data`);
+          return;
+        }
+        
         try {
           const geojson = JSON.parse(land.coordinations);
           if (geojson.type === "Feature") {
+            console.log(`Adding Feature for land ${land.id}:`, geojson.geometry?.type);
             drawRef.current!.addFeatures([geojson]);
+            loadedCount++;
           } else if (
             geojson.type === "FeatureCollection" &&
             Array.isArray(geojson.features)
           ) {
+            console.log(`Adding FeatureCollection for land ${land.id} with ${geojson.features.length} features`);
             drawRef.current!.addFeatures(geojson.features);
+            loadedCount += geojson.features.length;
           }
         } catch (e) {
           console.error("Invalid geojson in land.coordinations", e);
         }
       });
+      
+      console.log(`Successfully loaded ${loadedCount} features from ${lands.length} land records`);
+      
+      // Verify features were loaded
+      setTimeout(() => {
+        if (drawRef.current) {
+          const snapshot = drawRef.current.getSnapshot();
+          console.log(`TerraDraw snapshot contains ${snapshot.length} features`);
+        }
+      }, 100);
     }
-  }, [lands, drawRef.current]);
+  }, [lands, terraDrawInitialized]);
 
   const deletePolygon = (id: string) => {
     if (drawRef.current) {
@@ -180,110 +212,150 @@ const TerraDrawingTools: React.FC = () => {
         });
 
         map.addListener("projection_changed", () => {
-          const draw = new TerraDraw({
-            adapter: new TerraDrawGoogleMapsAdapter({ map, lib: google.maps, coordinatePrecision: 9 }),
-            modes: [
-              new TerraDrawSelectMode({
-                flags: {
-                  polygon: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
-                  linestring: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
-                  point: { feature: { draggable: true, rotateable: true } },
-                  rectangle: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
-                  circle: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
-                  freehand: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
-                },
-              }),
-              new TerraDrawPointMode({ editable: true, styles: { pointColor: getRandomColor() } }),
-              new TerraDrawLineStringMode({ editable: true, styles: { lineStringColor: getRandomColor() } }),
-              new TerraDrawPolygonMode({
-                editable: true,
-                styles: (() => {
-                  const color = getRandomColor();
-                  return { fillColor: color, outlineColor: color };
-                })(),
-              }),
-              new TerraDrawRectangleMode({
-                styles: (() => {
-                  const color = getRandomColor();
-                  return { fillColor: color, outlineColor: color };
-                })(),
-              }),
-              new TerraDrawCircleMode({
-                styles: (() => {
-                  const color = getRandomColor();
-                  return { fillColor: color, outlineColor: color };
-                })(),
-              }),
-              new TerraDrawFreehandMode({
-                styles: (() => {
-                  const color = getRandomColor();
-                  return { fillColor: color, outlineColor: color };
-                })(),
-              }),
-            ],
-          });
-
-          drawRef.current = draw;
-          draw.start();
-
-          draw.on("finish", (features, context) => {
-            if (features.toString() === "") return;
-
-            const allFeatures = draw.getSnapshot();
-            const lastFeature = allFeatures.length > 0 ? allFeatures[allFeatures.length - 1] : null;
-            // Calculate area if lastFeature is a Polygon
-
-            if (lastFeature?.geometry?.type === "Polygon" && lastFeature.geometry.coordinates) {
-              // Use Shoelace formula for area calculation (assuming coordinates are [lng, lat])
-                const ring = lastFeature.geometry.coordinates[0];
-                // Convert to google.maps.MVCArray<google.maps.LatLng>
-                const latLngArray = ring.map(([lng, lat]) => new google.maps.LatLng(lat, lng));
-                const mvcArray = new google.maps.MVCArray(latLngArray);
-                const area = google.maps.geometry.spherical.computeArea(mvcArray);
-                console.log("Area:", area);
-                setPolygonArea(area/1600); // Convert to rai (1 rai = 1600 sqm)
-            }
-            
-            console.log("Last feature:", lastFeature);
-            setPolygonPaths(JSON.stringify(lastFeature));
-            setOpen(true);
-            // lastFeature.geometry contains the geometry of the last drawn feature
-
-            //const feature = features.toString();
-            console.log("Feature drawn:", features);
-            console.log("Context:", context);
-          });
-
-          draw.on("ready", () => {
-            draw.setMode("point");
-            historyRef.current.push(processSnapshotForUndo(draw.getSnapshot()));
-
-            draw.on("select", (id) => {
-              if (selectedFeatureIdRef.current && selectedFeatureIdRef.current !== id) {
-                draw.deselectFeature(selectedFeatureIdRef.current);
+          // Add defensive checks to prevent addEventListener error
+          setTimeout(() => {
+            try {
+              // Check if map container still exists and is in DOM
+              if (!mapRef.current) {
+                console.warn("Map container not available, skipping TerraDraw initialization");
+                return;
               }
-              selectedFeatureIdRef.current = id as string;
-            });
 
-            draw.on("deselect", () => {
-              selectedFeatureIdRef.current = null;
-            });
+              if (!document.contains(mapRef.current)) {
+                console.warn("Map container not in DOM, skipping TerraDraw initialization");
+                return;
+              }
 
-            draw.on("change", () => {
-              if (isRestoringRef.current) return;
-              if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+              // Check if map div has proper dimensions
+              const mapDiv = mapRef.current;
+              if (mapDiv.offsetWidth === 0 || mapDiv.offsetHeight === 0) {
+                console.warn("Map container has no dimensions, skipping TerraDraw initialization");
+                return;
+              }
+
+              console.log("Initializing TerraDraw...");
+
+              const draw = new TerraDraw({
+                adapter: new TerraDrawGoogleMapsAdapter({ map, lib: google.maps, coordinatePrecision: 9 }),
+                modes: [
+                  new TerraDrawSelectMode({
+                    flags: {
+                      polygon: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+                      linestring: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+                      point: { feature: { draggable: true, rotateable: true } },
+                      rectangle: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+                      circle: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+                      freehand: { feature: { draggable: true, rotateable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } },
+                    },
+                  }),
+                  new TerraDrawPointMode({ editable: true, styles: { pointColor: getRandomColor() } }),
+                  new TerraDrawLineStringMode({ editable: true, styles: { lineStringColor: getRandomColor() } }),
+                  new TerraDrawPolygonMode({
+                    editable: true,
+                    styles: (() => {
+                      const color = getRandomColor();
+                      return { fillColor: color, outlineColor: color };
+                    })(),
+                  }),
+                  new TerraDrawRectangleMode({
+                    styles: (() => {
+                      const color = getRandomColor();
+                      return { fillColor: color, outlineColor: color };
+                    })(),
+                  }),
+                  new TerraDrawCircleMode({
+                    styles: (() => {
+                      const color = getRandomColor();
+                      return { fillColor: color, outlineColor: color };
+                    })(),
+                  }),
+                  new TerraDrawFreehandMode({
+                    styles: (() => {
+                      const color = getRandomColor();
+                      return { fillColor: color, outlineColor: color };
+                    })(),
+                  }),
+                ],
+              });
+
+              drawRef.current = draw;
               
-              debounceTimeoutRef.current = window.setTimeout(() => {
-              const snapshot = draw.getSnapshot();
-              const processedSnapshot = processSnapshotForUndo(snapshot);
-              const filteredSnapshot = processedSnapshot.filter(
-                (f) => !f.properties.midPoint && !f.properties.selectionPoint
-              );
-              historyRef.current.push(filteredSnapshot);
-              redoHistoryRef.current = [];
-              }, 200);
-            });
-          });
+              // Add event listeners before starting
+              draw.on("finish", (features, context) => {
+                if (features.toString() === "") return;
+
+                const allFeatures = draw.getSnapshot();
+                const lastFeature = allFeatures.length > 0 ? allFeatures[allFeatures.length - 1] : null;
+                // Calculate area if lastFeature is a Polygon
+
+                if (lastFeature?.geometry?.type === "Polygon" && lastFeature.geometry.coordinates) {
+                  // Use Shoelace formula for area calculation (assuming coordinates are [lng, lat])
+                    const ring = lastFeature.geometry.coordinates[0];
+                    // Convert to google.maps.MVCArray<google.maps.LatLng>
+                    const latLngArray = ring.map(([lng, lat]) => new google.maps.LatLng(lat, lng));
+                    const mvcArray = new google.maps.MVCArray(latLngArray);
+                    const area = google.maps.geometry.spherical.computeArea(mvcArray);
+                    console.log("Area:", area);
+                    setPolygonArea(area/1600); // Convert to rai (1 rai = 1600 sqm)
+                }
+                
+                console.log("Last feature:", lastFeature);
+                setPolygonPaths(JSON.stringify(lastFeature));
+                setOpen(true);
+                // lastFeature.geometry contains the geometry of the last drawn feature
+
+                //const feature = features.toString();
+                console.log("Feature drawn:", features);
+                console.log("Context:", context);
+              });
+
+              draw.on("ready", () => {
+                console.log("TerraDraw is ready, setting up modes and event listeners...");
+                
+                draw.setMode("polygon"); // Set polygon as default mode
+                historyRef.current.push(processSnapshotForUndo(draw.getSnapshot()));
+                
+                // Set the polygon button as active after TerraDraw is ready
+                setActiveButton("polygon-mode");
+
+                draw.on("select", (id) => {
+                  if (selectedFeatureIdRef.current && selectedFeatureIdRef.current !== id) {
+                    draw.deselectFeature(selectedFeatureIdRef.current);
+                  }
+                  selectedFeatureIdRef.current = id as string;
+                });
+
+                draw.on("deselect", () => {
+                  selectedFeatureIdRef.current = null;
+                });
+
+                draw.on("change", () => {
+                  if (isRestoringRef.current) return;
+                  if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+                  
+                  debounceTimeoutRef.current = window.setTimeout(() => {
+                  const snapshot = draw.getSnapshot();
+                  const processedSnapshot = processSnapshotForUndo(snapshot);
+                  const filteredSnapshot = processedSnapshot.filter(
+                    (f) => !f.properties.midPoint && !f.properties.selectionPoint
+                  );
+                  historyRef.current.push(filteredSnapshot);
+                  redoHistoryRef.current = [];
+                  }, 200);
+                });
+
+                // Mark TerraDraw as initialized and ready to receive data
+                console.log("TerraDraw initialization complete, ready to load polygon data");
+                setTerraDrawInitialized(true);
+              });
+
+              // Start TerraDraw after all event listeners are set up
+              draw.start();
+              
+            } catch (error) {
+              console.error("Error initializing TerraDraw:", error);
+            }
+          }, 200); // Add delay to ensure DOM is ready
         });
       }
     });
@@ -309,6 +381,15 @@ const TerraDrawingTools: React.FC = () => {
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      // Clean up TerraDraw instance
+      if (drawRef.current) {
+        try {
+          drawRef.current.stop();
+        } catch (error) {
+          console.error("Error stopping TerraDraw:", error);
+        }
+        drawRef.current = null;
+      }
     };
   }, []);
 
@@ -426,6 +507,40 @@ const TerraDrawingTools: React.FC = () => {
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
+      {/* Show loading message while waiting for backend data */}
+      {!lands && (
+        <div style={{ 
+          position: "absolute", 
+          top: "50%", 
+          left: "50%", 
+          transform: "translate(-50%, -50%)", 
+          background: "rgba(0,0,0,0.8)", 
+          color: "white", 
+          padding: "20px", 
+          borderRadius: "8px",
+          zIndex: 1000
+        }}>
+          Loading polygon data from backend...
+        </div>
+      )}
+      
+      {/* Show TerraDraw loading message */}
+      {lands && !terraDrawInitialized && (
+        <div style={{ 
+          position: "absolute", 
+          top: "50%", 
+          left: "50%", 
+          transform: "translate(-50%, -50%)", 
+          background: "rgba(0,0,0,0.8)", 
+          color: "white", 
+          padding: "20px", 
+          borderRadius: "8px",
+          zIndex: 1000
+        }}>
+          Initializing drawing tools...
+        </div>
+      )}
+      
       {/* <div id="mode-ui">
         <button id="select-mode" className="mode-button" onClick={() => handleModeChange("select", "select-mode")}>Select</button>
         <button id="point-mode" className="mode-button" onClick={() => handleModeChange("point", "point-mode")}>Point</button>
@@ -460,8 +575,7 @@ const TerraDrawingTools: React.FC = () => {
         <button id="redo-button" className="mode-button" title="Redo" onClick={handleRedo}><img src="./img/redo.svg" alt="Redo" draggable="false" /></button>
         <button id="export-button" className="mode-button" title="Export" onClick={handleExport}><img src="./img/download.svg" alt="Export" draggable="false" /></button>
         <button id="upload-button" className="mode-button" title="Upload" onClick={() => document.getElementById("upload-input")?.click()}><img src="./img/upload.svg" alt="Upload" draggable="false" /></button>
-        <input id="upload-input" type="file" style={{ display: "none" }} onChange={handleUpload} />
-        <input type="file" id="upload-input" style={{ display: "none" }} accept=".geojson,.json" />
+        <input id="upload-input" type="file" style={{ display: "none" }} accept=".geojson,.json" onChange={handleUpload} />
       </div>
       <div id="map1" ref={mapRef} style={{ width: "100%", height: "100%" }} />
       

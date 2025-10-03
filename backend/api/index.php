@@ -14,6 +14,7 @@ use App\Controllers\CategoryController;
 use App\Controllers\CommentController;
 use App\Controllers\PhotoController;
 use App\Controllers\NotificationController;
+use App\Controllers\EnhancedNotificationController;
 
 // Load environment variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
@@ -35,6 +36,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+// Handle static file serving for uploads
+$requestUri = $_SERVER['REQUEST_URI'];
+if (strpos($requestUri, '/uploads/') === 0) {
+    $filePath = __DIR__ . '/../' . ltrim($requestUri, '/');
+    
+    if (file_exists($filePath) && is_file($filePath)) {
+        // Get file info
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $filePath);
+        finfo_close($finfo);
+        
+        // Set appropriate headers
+        header('Content-Type: ' . $mimeType);
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: public, max-age=31536000'); // Cache for 1 year
+        
+        // Output file
+        readfile($filePath);
+        exit;
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'File not found']);
+        exit;
+    }
+}
+
 // Initialize database connection
 try {
     Database::getInstance();
@@ -45,7 +72,6 @@ try {
 }
 
 // Parse the request URI
-$requestUri = $_SERVER['REQUEST_URI'];
 $path = parse_url($requestUri, PHP_URL_PATH);
 $path = str_replace('/api', '', $path);
 $path = trim($path, '/');
@@ -379,6 +405,14 @@ try {
                         echo json_encode(['error' => 'Notification ID required']);
                     }
                     break;
+                case 'show':
+                    if ($method === 'GET' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $notificationController->show($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Notification ID required']);
+                    }
+                    break;
                 case 'dismiss-all':
                     if ($method === 'POST') {
                         $notificationController->dismissAll();
@@ -395,13 +429,90 @@ try {
                         echo json_encode(['error' => 'Method not allowed']);
                     }
                     break;
-                default:
-                    if ($method === 'GET') {
-                        $notificationController->index();
+                case 'create-maintenance':
+                    if ($method === 'POST') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->createMaintenanceNotification();
                     } else {
                         http_response_code(405);
                         echo json_encode(['error' => 'Method not allowed']);
                     }
+                    break;
+                case 'create-comment':
+                    if ($method === 'POST') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->createCommentNotification();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'create-photo':
+                    if ($method === 'POST') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->createPhotoNotification();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'create-weather-alert':
+                    if ($method === 'POST') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->createWeatherAlert();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'create-system':
+                    if ($method === 'POST') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->createSystemNotification();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'stats':
+                    if ($method === 'GET') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->getStats();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'cleanup':
+                    if ($method === 'POST') {
+                        $enhancedController = new EnhancedNotificationController();
+                        $enhancedController->cleanup();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    if ($method === 'GET') {
+                        $notificationController->index();
+                    } elseif ($method === 'POST') {
+                        $notificationController->store();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+            }
+            break;
+
+        case 'notifications-enhanced':
+            $enhancedController = new EnhancedNotificationController();
+            switch ($method) {
+                case 'GET':
+                    $enhancedController->index();
+                    break;
+                default:
+                    http_response_code(405);
+                    echo json_encode(['error' => 'Method not allowed']);
             }
             break;
 

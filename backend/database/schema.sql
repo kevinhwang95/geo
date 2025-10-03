@@ -60,3 +60,18 @@ CREATE INDEX idx_lands_created_by ON lands(created_by);
 CREATE INDEX idx_lands_province ON lands(province);
 CREATE INDEX idx_lands_plant_type ON lands(plant_type);
 CREATE INDEX idx_lands_created_at ON lands(created_at);
+
+-- Photos table for notification attachments
+CREATE TABLE IF NOT EXISTS photos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    notification_id INT NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_size INT NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_photos_notification_id ON photos(notification_id);
+CREATE INDEX idx_photos_uploaded_at ON photos(uploaded_at);

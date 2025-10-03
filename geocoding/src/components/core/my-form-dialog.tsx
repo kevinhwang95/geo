@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -31,6 +31,7 @@ import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
 import { Textarea } from "@/components/ui/textarea";
 import axiosClient from '@/api/axiosClient';
+import { MapPin, User, Calendar, Hash, Building, Map, Leaf, Save, X, Globe, Crop, Clock, FileText as NotesIcon } from 'lucide-react';
 
 
 export interface MyFormDialogProps {
@@ -151,7 +152,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
         <Button style={{display: 'none'}} variant="outline">Open Form</Button>
       </DialogTrigger>
       <DialogContent 
-        className="sm:max-w-[600px]" 
+        className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto" 
         style={{ 
           zIndex: isFullscreen ? 10000 : undefined,
           position: isFullscreen ? 'fixed' : undefined,
@@ -163,42 +164,63 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
           pointerEvents: 'auto' // Ensure the dialog is interactive
         }}
       >
-        <DialogHeader>
-          <DialogTitle>Land Registration</DialogTitle>
-          <DialogDescription>
-            Register a new land parcel with its details and coordinates.
-          </DialogDescription>
-        </DialogHeader>
+         <DialogHeader className="pb-6">
+           <div className="flex items-center gap-3 mb-2">
+             <div className="p-2 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg">
+               <MapPin className="h-6 w-6 text-white" />
+             </div>
+             <div>
+               <DialogTitle className="text-xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                 Land Registration
+               </DialogTitle>
+               <DialogDescription className="text-sm text-gray-600 mt-1">
+                 Register a new land parcel with its details and coordinates
+               </DialogDescription>
+             </div>
+           </div>
+         </DialogHeader>
         <Card>
-          <CardHeader>
-            <CardTitle>New Land Registration</CardTitle>
-          </CardHeader>
-          <CardContent>
+          
+          <CardContent className="pt-0">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="land_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Land Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Land name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="space-y-4">
+                     <FormField
+                       control={form.control}
+                       name="land_name"
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                             <Map className="h-4 w-4 text-green-600" />
+                             Land Name
+                           </FormLabel>
+                           <FormControl>
+                             <Input 
+                               placeholder="Enter land name" 
+                               {...field} 
+                               className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors" 
+                             />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
                     <FormField
                       control={form.control}
                       name="land_code"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Land code</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Hash className="h-4 w-4 text-blue-600" />
+                            Land Code
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Land code" {...field} />
+                            <Input 
+                              placeholder="Enter land code" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -209,9 +231,16 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="land_number"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Land number</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Hash className="h-4 w-4 text-purple-600" />
+                            Land Number
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Land number" {...field} />
+                            <Input 
+                              placeholder="Enter land number" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -222,9 +251,18 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="size"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Size</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Crop className="h-4 w-4 text-orange-600" />
+                            Size (Rai)
+                          </FormLabel>
                           <FormControl>
-                            <Input type="number" step={0.01} placeholder="Land size" {...field} />
+                            <Input 
+                              type="number" 
+                              step={0.01} 
+                              placeholder="Enter land size" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-orange-500 focus:ring-orange-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -235,9 +273,17 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="coordinations"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Coordinations</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Globe className="h-4 w-4 text-indigo-600" />
+                            Coordinates
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="GEO Coordinations" {...field} />
+                            <Input 
+                              placeholder="Auto-generated from map" 
+                              {...field} 
+                              className="h-10 border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed" 
+                              disabled 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -248,9 +294,16 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="location"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Location</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <MapPin className="h-4 w-4 text-red-600" />
+                            Location
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Location" {...field} />
+                            <Input 
+                              placeholder="Enter location" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-red-500 focus:ring-red-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -261,9 +314,16 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="province"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Province</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Building className="h-4 w-4 text-teal-600" />
+                            Province
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Province" {...field} />
+                            <Input 
+                              placeholder="Enter province" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-teal-500 focus:ring-teal-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -271,15 +331,22 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                     />
                     
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     <FormField
                       control={form.control}
                       name="district"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>District</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Building className="h-4 w-4 text-cyan-600" />
+                            District
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="District" {...field} />
+                            <Input 
+                              placeholder="Enter district" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-cyan-500 focus:ring-cyan-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -290,9 +357,16 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="city"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>City</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Building className="h-4 w-4 text-emerald-600" />
+                            City
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="City" {...field} />
+                            <Input 
+                              placeholder="Enter city" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -303,9 +377,16 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="owner"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Owner</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <User className="h-4 w-4 text-pink-600" />
+                            Owner
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Owner" {...field} />
+                            <Input 
+                              placeholder="Enter owner name" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-pink-500 focus:ring-pink-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -316,18 +397,24 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="planttypeid"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Plant Type</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Leaf className="h-4 w-4 text-green-600" />
+                            Plant Type
+                          </FormLabel>
                           <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors">
                                 <SelectValue placeholder={loadingOptions ? "Loading..." : "Select plant type"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {plantTypes.map((plantType) => (
                                 <SelectItem key={plantType.id} value={plantType.id.toString()}>
-                                  {plantType.name}
-                                  {plantType.scientific_name && ` (${plantType.scientific_name})`}
+                                  <div className="flex items-center gap-2">
+                                    <Leaf className="h-3 w-3 text-green-600" />
+                                    {plantType.name}
+                                    {plantType.scientific_name && ` (${plantType.scientific_name})`}
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -341,10 +428,13 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="categoryid"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Category</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Building className="h-4 w-4 text-blue-600" />
+                            Category
+                          </FormLabel>
                           <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-colors">
                                 <SelectValue placeholder={loadingOptions ? "Loading..." : "Select category"} />
                               </SelectTrigger>
                             </FormControl>
@@ -353,7 +443,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                                 <SelectItem key={category.id} value={category.id.toString()}>
                                   <div className="flex items-center gap-2">
                                     <div 
-                                      className="w-3 h-3 rounded-full" 
+                                      className="w-3 h-3 rounded-full border border-gray-300" 
                                       style={{ backgroundColor: category.color }}
                                     />
                                     {category.name}
@@ -371,9 +461,14 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="plant_date"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Plant Date</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Calendar className="h-4 w-4 text-indigo-600" />
+                            Plant Date
+                          </FormLabel>
                           <FormControl>
-                            <DatePicker date={field.value ? new Date(field.value) : new Date()} setDate={field.onChange} />
+                            <div className="border border-gray-200 rounded-md focus-within:border-indigo-500 focus-within:ring-indigo-500 transition-colors">
+                              <DatePicker date={field.value ? new Date(field.value) : new Date()} setDate={field.onChange} />
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -384,9 +479,16 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                       name="harvest_cycle"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Harvest Cycle</FormLabel>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Clock className="h-4 w-4 text-yellow-600" />
+                            Harvest Cycle
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Harvest Cycle" {...field} />
+                            <Input 
+                              placeholder="Enter harvest cycle" 
+                              {...field} 
+                              className="h-10 border-gray-200 focus:border-yellow-500 focus:ring-yellow-500 transition-colors" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -397,25 +499,45 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                   
                 </div>
                 <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes</FormLabel>
-                            <FormControl>
-                            <Textarea
-                              placeholder="Notes"
-                              {...field}
-                              className="min-h-[120px]"
-                            />
-                            </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                <DialogFooter>
-                  <Button type="submit">Save changes</Button>
-                </DialogFooter>
+                       control={form.control}
+                       name="notes"
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                             <NotesIcon className="h-4 w-4 text-gray-600" />
+                             Notes
+                           </FormLabel>
+                             <FormControl>
+                             <Textarea
+                               placeholder="Enter additional notes or comments"
+                               {...field}
+                               className="min-h-[80px] border-gray-200 focus:border-gray-500 focus:ring-gray-500 transition-colors resize-none"
+                             />
+                             </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                 <DialogFooter className="pt-6 border-t border-gray-100">
+                   <div className="flex gap-3 w-full">
+                     <Button 
+                       type="button" 
+                       variant="outline" 
+                       onClick={() => setOpen(false)}
+                       className="flex-1 h-11 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                     >
+                       <X className="h-4 w-4 mr-2" />
+                       Cancel
+                     </Button>
+                     <Button 
+                       type="submit"
+                       className="flex-1 h-11 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-medium shadow-md transition-all duration-200"
+                     >
+                       <Save className="h-4 w-4 mr-2" />
+                       Register Land
+                     </Button>
+                   </div>
+                 </DialogFooter>
               </form>
             </Form>
           </CardContent>
@@ -462,18 +584,40 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
           }}
           onClick={(e) => e.stopPropagation()} // Prevent backdrop click when clicking inside dialog
         >
-          <div style={{ padding: '24px' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Land Registration</h2>
-              <p style={{ fontSize: '14px', color: '#666' }}>Register a new land parcel with its details and coordinates.</p>
-            </div>
+           <div style={{ padding: '24px' }}>
+             <div style={{ marginBottom: '24px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                 <div style={{ 
+                   padding: '8px', 
+                   background: 'linear-gradient(135deg, #10b981, #3b82f6)', 
+                   borderRadius: '8px' 
+                 }}>
+                   <MapPin style={{ width: '24px', height: '24px', color: 'white' }} />
+                 </div>
+                 <div>
+                   <h2 style={{ 
+                     fontSize: '20px', 
+                     fontWeight: '700', 
+                     background: 'linear-gradient(135deg, #10b981, #3b82f6)', 
+                     WebkitBackgroundClip: 'text', 
+                     WebkitTextFillColor: 'transparent',
+                     margin: 0
+                   }}>
+                     Land Registration
+                   </h2>
+                   <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0 0' }}>
+                     Register a new land parcel with its details and coordinates
+                   </p>
+                 </div>
+               </div>
+             </div>
             
             <Card>
               <CardContent style={{ padding: '24px' }}>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-6">
+                      <div className="space-y-3">
                         <FormField
                           control={form.control}
                           name="land_name"
@@ -494,7 +638,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Land code</FormLabel>
                               <FormControl>
-                                <Input placeholder="Land code" {...field} />
+                                <Input placeholder="Land code" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -507,7 +651,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Land number</FormLabel>
                               <FormControl>
-                                <Input placeholder="Land number" {...field} />
+                                <Input placeholder="Land number" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -520,7 +664,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Size</FormLabel>
                               <FormControl>
-                                <Input type="number" step={0.01} placeholder="Land size" {...field} />
+                                <Input type="number" step={0.01} placeholder="Land size" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -533,7 +677,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Coordinations</FormLabel>
                               <FormControl>
-                                <Input placeholder="GEO Coordinations" {...field} />
+                                <Input placeholder="GEO Coordinations" {...field} className="h-9" disabled />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -546,7 +690,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Location</FormLabel>
                               <FormControl>
-                                <Input placeholder="Location" {...field} />
+                                <Input placeholder="Location" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -559,14 +703,14 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Province</FormLabel>
                               <FormControl>
-                                <Input placeholder="Province" {...field} />
+                                <Input placeholder="Province" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
-                      <div className="space-y-6">
+                      <div className="space-y-3">
                         <FormField
                           control={form.control}
                           name="district"
@@ -574,7 +718,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>District</FormLabel>
                               <FormControl>
-                                <Input placeholder="District" {...field} />
+                                <Input placeholder="District" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -587,7 +731,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>City</FormLabel>
                               <FormControl>
-                                <Input placeholder="City" {...field} />
+                                <Input placeholder="City" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -600,7 +744,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Owner</FormLabel>
                               <FormControl>
-                                <Input placeholder="Owner" {...field} />
+                                <Input placeholder="Owner" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -614,7 +758,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                               <FormLabel>Plant Type</FormLabel>
                               <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="h-9">
                                     <SelectValue placeholder={loadingOptions ? "Loading..." : "Select plant type"} />
                                   </SelectTrigger>
                                 </FormControl>
@@ -639,7 +783,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                               <FormLabel>Category</FormLabel>
                               <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="h-9">
                                     <SelectValue placeholder={loadingOptions ? "Loading..." : "Select category"} />
                                   </SelectTrigger>
                                 </FormControl>
@@ -681,7 +825,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Harvest Cycle</FormLabel>
                               <FormControl>
-                                <Input placeholder="Harvest Cycle" {...field} />
+                                <Input placeholder="Harvest Cycle" {...field} className="h-9" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -699,21 +843,38 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <Textarea
                               placeholder="Notes"
                               {...field}
-                              className="min-h-[120px]"
+                              className="min-h-[80px]"
                             />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                      <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit">
-                        Save changes
-                      </Button>
-                    </div>
+                     <div style={{ 
+                       display: 'flex', 
+                       justifyContent: 'flex-end', 
+                       gap: '12px', 
+                       marginTop: '32px',
+                       paddingTop: '20px',
+                       borderTop: '1px solid #e5e7eb'
+                     }}>
+                       <Button 
+                         type="button" 
+                         variant="outline" 
+                         onClick={() => setOpen(false)}
+                         className="px-6 py-3 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                       >
+                         <X className="h-4 w-4 mr-2" />
+                         Cancel
+                       </Button>
+                       <Button 
+                         type="submit"
+                         className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-medium shadow-md transition-all duration-200"
+                       >
+                         <Save className="h-4 w-4 mr-2" />
+                         Register Land
+                       </Button>
+                     </div>
                   </form>
                 </Form>
               </CardContent>

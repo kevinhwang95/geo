@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Auth;
 use App\Database;
+use Exception;
 
 class NotificationController
 {
@@ -190,6 +191,158 @@ class NotificationController
         echo json_encode([
             'success' => true,
             'message' => "Created {$notificationsCreated} harvest notifications"
+        ]);
+    }
+
+    public function store()
+    {
+        $user = Auth::requireAuth();
+        
+        // Get input data
+        $landId = $_POST['land_id'] ?? null;
+        $title = $_POST['title'] ?? null;
+        $message = $_POST['message'] ?? null;
+        $type = $_POST['type'] ?? null;
+        $priority = $_POST['priority'] ?? 'medium';
+        
+        // Validate required fields
+        if (!$landId || !$title || !$message || !$type) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields: land_id, title, message, type']);
+            return;
+        }
+        
+        // Validate land exists and user has access
+        $landStmt = $this->db->query("SELECT id FROM lands WHERE id = ?", [$landId]);
+        if (!$landStmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Land not found']);
+            return;
+        }
+        
+        // Validate notification type
+        $validTypes = ['harvest_due', 'harvest_overdue', 'maintenance_due', 'comment_added', 'photo_added'];
+        if (!in_array($type, $validTypes)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid notification type']);
+            return;
+        }
+        
+        // Validate priority
+        $validPriorities = ['low', 'medium', 'high'];
+        if (!in_array($priority, $validPriorities)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid priority level']);
+            return;
+        }
+        
+        try {
+            // Insert notification
+            $stmt = $this->db->query("
+                INSERT INTO notifications (land_id, user_id, type, title, message, priority, is_read, is_dismissed, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 0, 0, NOW())
+            ", [$landId, $user['user_id'], $type, $title, $message, $priority]);
+            
+            $notificationId = $this->db->lastInsertId();
+            
+            // Handle photo uploads if any
+            $photoIds = [];
+            if (isset($_FILES['photos']) && is_array($_FILES['photos']['name'])) {
+                // Use absolute path for upload directory (ignore env var to fix path issue)
+                $uploadDir = __DIR__ . '/../../uploads/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                for ($i = 0; $i < count($_FILES['photos']['name']); $i++) {
+                    if ($_FILES['photos']['error'][$i] === UPLOAD_ERR_OK) {
+                        $fileName = uniqid() . '_' . $_FILES['photos']['name'][$i];
+                        $filePath = $uploadDir . $fileName;
+                        
+                        if (move_uploaded_file($_FILES['photos']['tmp_name'][$i], $filePath)) {
+                            // Store relative path for web access
+                            $relativePath = 'uploads/' . $fileName;
+                            
+                            // Insert photo record
+                            $photoStmt = $this->db->query("
+                                INSERT INTO photos (notification_id, file_path, file_name, file_size, mime_type, uploaded_at)
+                                VALUES (?, ?, ?, ?, ?, NOW())
+                            ", [
+                                $notificationId, 
+                                $relativePath, 
+                                $_FILES['photos']['name'][$i],
+                                $_FILES['photos']['size'][$i],
+                                $_FILES['photos']['type'][$i]
+                            ]);
+                            
+                            $photoIds[] = $this->db->lastInsertId();
+                        }
+                    }
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Notification created successfully',
+                'notification_id' => $notificationId,
+                'photo_ids' => $photoIds
+            ]);
+            
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to create notification: ' . $e->getMessage()]);
+        }
+    }
+
+    public function show($id)
+    {
+        $user = Auth::requireAuth();
+        
+        // Get notification details with photos
+        $stmt = $this->db->query("
+            SELECT 
+                n.*,
+                l.land_name,
+                l.land_code,
+                l.location,
+                l.city,
+                l.district,
+                l.province,
+                l.next_harvest_date,
+                CASE 
+                    WHEN l.next_harvest_date <= CURDATE() THEN 'overdue'
+                    WHEN l.next_harvest_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'due_soon'
+                    ELSE 'normal'
+                END as harvest_status
+            FROM notifications n
+            LEFT JOIN lands l ON n.land_id = l.id
+            WHERE n.id = ? AND n.user_id = ?
+        ", [$id, $user['user_id']]);
+        
+        $notification = $stmt->fetch();
+        
+        if (!$notification) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Notification not found']);
+            return;
+        }
+        
+        // Get photos for this notification
+        $photoStmt = $this->db->query("
+            SELECT id, file_path, file_name, file_size, mime_type, uploaded_at
+            FROM photos
+            WHERE notification_id = ?
+            ORDER BY uploaded_at ASC
+        ", [$id]);
+        
+        $photos = $photoStmt->fetchAll();
+        
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'notification' => $notification,
+                'photos' => $photos
+            ]
         ]);
     }
 }

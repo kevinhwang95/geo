@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {MyFormDialog} from "@/components/core/my-form-dialog";
+import CreateNotificationDialog from "@/components/core/CreateNotificationDialog";
 import { Loader } from "@googlemaps/js-api-loader";
 import {
   TerraDraw,
@@ -16,6 +17,7 @@ import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
 import { useAuthStore } from '@/stores/authStore';
+import { useMapStore } from '@/stores/mapStore';
 
 const colorPalette = [
   "#E74C3C", "#FF0066", "#9B59B6", "#673AB7", "#3F51B5", "#3498DB", "#03A9F4",
@@ -100,12 +102,70 @@ const TerraDrawingTools: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
+  const [selectedLandForNotification, setSelectedLandForNotification] = useState<LandRegistry | null>(null);
+
+  // Debug state changes
+  useEffect(() => {
+    console.log('Notification dialog state changed:', notificationDialogOpen);
+    console.log('Selected land for notification:', selectedLandForNotification?.land_name);
+  }, [notificationDialogOpen, selectedLandForNotification]);
+
 
   // Get authentication state
   const { isAuthenticated, user } = useAuthStore();
 
+  // Get map store for land selection and centering
+  const { selectedLand, shouldCenterMap, clearSelection } = useMapStore();
+
+  // Ensure InfoWindow is initialized
+  const ensureInfoWindow = () => {
+    if (!infoWindowRef.current && mapInstanceRef.current) {
+      console.log('Initializing InfoWindow...');
+      console.log('Google Maps API version:', google.maps.version);
+      console.log('Available InfoWindow methods:', Object.getOwnPropertyNames(google.maps.InfoWindow.prototype));
+      
+      try {
+        infoWindowRef.current = new google.maps.InfoWindow({
+          disableAutoPan: false,
+          maxWidth: 300
+        });
+        console.log('InfoWindow initialized successfully');
+      } catch (initError) {
+        console.error('Error initializing InfoWindow:', initError);
+        return false;
+      }
+    }
+    return !!infoWindowRef.current;
+  };
+
   // Only fetch lands data if user is authenticated
   const { data: lands, deleteItem, loading: landsLoading, error: landsError, fetchData, createItem } = useGenericCrud<LandRegistry>('lands');
+  
+  // Create global function for InfoWindow button
+  useEffect(() => {
+    (window as any).createNotificationForLand = (landIdentifier: string) => {
+      console.log('Create notification button clicked for land:', landIdentifier);
+      
+      // Find the land by ID or land_code
+      const selectedLand = lands?.find(land => 
+        land.id?.toString() === landIdentifier || land.land_code === landIdentifier
+      );
+      
+      if (selectedLand) {
+        console.log('Found land:', selectedLand.land_name);
+        setSelectedLandForNotification(selectedLand);
+        setNotificationDialogOpen(true);
+      } else {
+        console.error('Land not found for identifier:', landIdentifier);
+      }
+    };
+
+    // Cleanup function
+    return () => {
+      delete (window as any).createNotificationForLand;
+    };
+  }, [lands]);
   
   // Note: In development mode with React StrictMode, useEffect runs twice
   // This causes the API to be called twice, which is expected behavior
@@ -167,6 +227,23 @@ const TerraDrawingTools: React.FC = () => {
             drawRef.current!.addFeatures(geojson.features);
             loadedCount += geojson.features.length;
             console.log('✅ Successfully loaded land feature collection:', land.land_name, geojson.features.length, 'features');
+          } else if (geojson.type === "Polygon" || geojson.type === "Point" || geojson.type === "LineString") {
+            // Handle raw geometry types by converting them to Features
+            console.log('Converting raw geometry to Feature for land:', land.land_name, 'Type:', geojson.type);
+            const feature = {
+              type: "Feature" as const,
+              geometry: geojson,
+              properties: {
+                mode: geojson.type.toLowerCase(),
+                landId: land.id,
+                landName: land.land_name,
+                landCode: land.land_code
+              }
+            };
+            console.log('Adding converted Feature to TerraDraw:', feature);
+            drawRef.current!.addFeatures([feature]);
+            loadedCount++;
+            console.log('✅ Successfully converted and loaded land geometry:', land.land_name);
           } else {
             console.warn('⚠️ Unknown GeoJSON type for land:', land.land_name, 'Type:', geojson.type);
           }
@@ -197,6 +274,357 @@ const TerraDrawingTools: React.FC = () => {
       createPolygonMarkers(mapInstanceRef.current);
     }
   }, [lands]);
+
+  // Handle map centering when a land is selected from the Lands tab
+  useEffect(() => {
+    console.log('Map centering useEffect triggered:', {
+      selectedLand: selectedLand?.land_name,
+      shouldCenterMap,
+      mapInstance: !!mapInstanceRef.current,
+      drawRef: !!drawRef.current,
+      markersCount: markersRef.current.length,
+      terraDrawInitialized
+    });
+
+    // Add a small delay to ensure map is fully ready
+    if (selectedLand && shouldCenterMap && mapInstanceRef.current && drawRef.current && terraDrawInitialized) {
+      console.log('Starting map centering for land:', selectedLand.land_name);
+      
+      try {
+        // Parse the land's geometry to get coordinates
+        const geojson = JSON.parse(selectedLand.coordinations);
+        console.log('Parsed GeoJSON:', geojson);
+        
+        // Handle both Feature and raw geometry types
+        let coordinates;
+        if (geojson.type === "Feature" && geojson.geometry && geojson.geometry.coordinates) {
+          coordinates = geojson.geometry.coordinates[0]; // First ring of polygon
+          console.log('Using Feature geometry coordinates');
+        } else if (geojson.type === "Polygon" && geojson.coordinates) {
+          coordinates = geojson.coordinates[0]; // First ring of polygon
+          console.log('Using raw Polygon coordinates');
+        } else {
+          console.error('Unable to extract coordinates from land geometry:', geojson);
+          return;
+        }
+        
+        if (coordinates && coordinates.length > 0) {
+          console.log('Coordinates found:', coordinates.length, 'points');
+          
+          // Calculate center point of the polygon
+          let centerLat = 0;
+          let centerLng = 0;
+          coordinates.forEach((coord: [number, number]) => {
+            centerLng += coord[0];
+            centerLat += coord[1];
+          });
+          centerLat /= coordinates.length;
+          centerLng /= coordinates.length;
+          
+          console.log('Calculated center:', { lat: centerLat, lng: centerLng });
+          
+          // Center the map on the land
+          mapInstanceRef.current.setCenter({ lat: centerLat, lng: centerLng });
+          mapInstanceRef.current.setZoom(16); // Zoom in to show the land clearly
+          console.log('Map centered and zoomed');
+          
+          // Find and highlight the corresponding marker
+          console.log('Looking for marker with title:', `Land Code: ${selectedLand.land_code}`);
+          console.log('Available markers:', markersRef.current.map(m => m.title));
+          console.log('Land code from selected land:', selectedLand.land_code);
+          
+          const marker = markersRef.current.find(m => 
+            m.title === `Land Code: ${selectedLand.land_code}`
+          );
+          
+          console.log('Found marker:', !!marker);
+          if (marker) {
+            console.log('Marker details:', {
+              title: marker.title,
+              position: marker.position?.toString(),
+              map: marker.map?.toString()
+            });
+          }
+          
+          // Ensure InfoWindow is initialized
+          const infoWindowReady = ensureInfoWindow();
+          console.log('InfoWindow ready:', infoWindowReady);
+          
+          if (infoWindowRef.current) {
+            console.log('InfoWindow details:', {
+              isOpen: !!infoWindowRef.current.getContent?.(),
+              content: typeof infoWindowRef.current.getContent?.() === 'string' 
+                ? (infoWindowRef.current.getContent() as string)?.substring(0, 100) + '...'
+                : 'HTML content'
+            });
+          }
+          
+          if (marker && infoWindowReady) {
+            // Show InfoWindow for the selected land
+            // Handle both LandRegistry and extended Land types
+            const plantTypeName = (selectedLand as any).plant_type_name || 'Unknown';
+            const categoryName = (selectedLand as any).category_name || 'Unknown';
+            const harvestStatus = (selectedLand as any).harvest_status || 'normal';
+            const nextHarvestDate = (selectedLand as any).next_harvest_date || new Date().toISOString();
+            
+            const infoContent = `
+              <div style="font-family: Arial, sans-serif; max-width: 300px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                  <div style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #495057; font-size: 12px;">LAND NAME</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.land_name}</div>
+                  </div>
+                  <div style="background: #e3f2fd; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #1976d2; font-size: 12px;">LAND CODE</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.land_code}</div>
+                  </div>
+                  <div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #7b1fa2; font-size: 12px;">SIZE</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.size} rais</div>
+                  </div>
+                  <div style="background: #e8f5e8; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #388e3c; font-size: 12px;">PLANT TYPE</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${plantTypeName}</div>
+                  </div>
+                  <div style="background: #fff3e0; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #f57c00; font-size: 12px;">CATEGORY</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${categoryName}</div>
+                  </div>
+                  <div style="background: #fce4ec; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #c2185b; font-size: 12px;">HARVEST STATUS</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px; text-transform: capitalize;">${harvestStatus}</div>
+                  </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                  <strong style="color: #495057; font-size: 12px;">LOCATION</strong>
+                  <div style="color: #212529; margin-top: 2px;">${selectedLand.location}, ${selectedLand.city}, ${selectedLand.district}, ${selectedLand.province}</div>
+                </div>
+                <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                  <strong style="color: #1976d2; font-size: 12px;">NEXT HARVEST</strong>
+                  <div style="color: #212529; margin-top: 2px;">${new Date(nextHarvestDate).toLocaleDateString()}</div>
+                </div>
+              </div>
+            `;
+            
+            console.log('Setting InfoWindow content and opening...');
+            console.log('InfoWindow content length:', infoContent.length);
+            console.log('Opening InfoWindow with marker:', marker.title);
+            
+            try {
+              // Close any existing InfoWindow first
+              if (infoWindowRef.current && infoWindowRef.current.getContent?.()) {
+                console.log('Closing existing InfoWindow...');
+                infoWindowRef.current.close();
+              }
+              
+              // Set content
+              if (infoWindowRef.current) {
+                infoWindowRef.current.setContent(infoContent);
+              }
+              console.log('InfoWindow content set successfully');
+              
+              // Try different opening methods
+              console.log('Attempting to open InfoWindow...');
+              
+              // Method 1: Open with map and marker (only for standard markers)
+              try {
+                if (marker.constructor.name === 'Marker' && infoWindowRef.current) {
+                  infoWindowRef.current.open(mapInstanceRef.current, marker);
+                  console.log('InfoWindow opened with map and standard marker');
+                } else {
+                  // For AdvancedMarkerElement, use position-based opening
+                  throw new Error('AdvancedMarkerElement detected, using position-based opening');
+                }
+              } catch (method1Error) {
+                console.warn('Method 1 failed, trying method 2:', method1Error);
+                
+                // Method 2: Open with map and position
+                try {
+                  console.log('Marker type:', marker.constructor.name);
+                  let markerPosition;
+                  
+                  if (marker.position) {
+                    markerPosition = marker.position;
+                    console.log('Got position from marker.position (AdvancedMarkerElement):', markerPosition);
+                  } else if (typeof (marker as any).getPosition === 'function') {
+                    markerPosition = (marker as any).getPosition();
+                    console.log('Got position from getPosition() (standard Marker):', markerPosition);
+                  } else if ((marker as any).lat && (marker as any).lng) {
+                    markerPosition = { lat: (marker as any).lat, lng: (marker as any).lng };
+                    console.log('Got position from lat/lng:', markerPosition);
+                  } else {
+                    console.log('Using center coordinates as fallback');
+                    markerPosition = { lat: centerLat, lng: centerLng };
+                  }
+                  
+                  if (infoWindowRef.current) {
+                    infoWindowRef.current.setPosition(markerPosition);
+                    infoWindowRef.current.open(mapInstanceRef.current);
+                  }
+                  console.log('InfoWindow opened with map and position');
+                } catch (method2Error) {
+                  console.warn('Method 2 failed, trying method 3:', method2Error);
+                  
+                  // Method 3: Just open with map
+                  if (infoWindowRef.current) {
+                    infoWindowRef.current.open(mapInstanceRef.current);
+                  }
+                  console.log('InfoWindow opened with map only');
+                }
+              }
+              
+              // Verify InfoWindow is actually open
+              setTimeout(() => {
+                const isOpen = !!infoWindowRef.current?.getContent?.();
+                console.log('InfoWindow verification - is open:', isOpen);
+                if (!isOpen) {
+                  console.error('InfoWindow failed to open properly');
+                  console.log('Trying fallback method...');
+                  
+                  // Fallback: Try opening without marker
+                  try {
+                    console.log('Marker type:', marker.constructor.name);
+                    console.log('Marker methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(marker)));
+                    
+                    let markerPosition;
+                    if (marker.position) {
+                      markerPosition = marker.position;
+                      console.log('Got position from marker.position (AdvancedMarkerElement):', markerPosition);
+                    } else if (typeof (marker as any).getPosition === 'function') {
+                      markerPosition = (marker as any).getPosition();
+                      console.log('Got position from getPosition() (standard Marker):', markerPosition);
+                    } else if ((marker as any).lat && (marker as any).lng) {
+                      markerPosition = { lat: (marker as any).lat, lng: (marker as any).lng };
+                      console.log('Got position from lat/lng:', markerPosition);
+                    } else {
+                      console.log('Using center coordinates as fallback');
+                      markerPosition = { lat: centerLat, lng: centerLng };
+                    }
+                    
+                    if (infoWindowRef.current) {
+                      infoWindowRef.current.setPosition(markerPosition);
+                      infoWindowRef.current.open(mapInstanceRef.current);
+                    }
+                    console.log('Fallback InfoWindow opened');
+                  } catch (fallbackError) {
+                    console.error('Fallback also failed:', fallbackError);
+                  }
+                }
+              }, 200);
+            } catch (error) {
+              console.error('Error opening InfoWindow:', error);
+            }
+          } else {
+            console.warn('Marker or InfoWindow not found. Creating InfoWindow at center point...');
+            
+            // Fallback: Create InfoWindow at the center point if no marker found
+            const infoWindowReady = ensureInfoWindow();
+            if (infoWindowReady) {
+              const infoContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 300px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                    <div style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                      <strong style="color: #495057; font-size: 12px;">LAND NAME</strong>
+                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.land_name}</div>
+                    </div>
+                    <div style="background: #e3f2fd; padding: 8px; border-radius: 4px;">
+                      <strong style="color: #1976d2; font-size: 12px;">LAND CODE</strong>
+                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.land_code}</div>
+                    </div>
+                    <div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">
+                      <strong style="color: #7b1fa2; font-size: 12px;">SIZE</strong>
+                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.size} rais</div>
+                    </div>
+                    <div style="background: #e8f5e8; padding: 8px; border-radius: 4px;">
+                      <strong style="color: #388e3c; font-size: 12px;">LOCATION</strong>
+                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.location}</div>
+                    </div>
+                  </div>
+                  <div style="background: #fff3e0; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                    <strong style="color: #f57c00; font-size: 12px;">NOTE</strong>
+                    <div style="color: #212529; margin-top: 2px;">Land marker not found, showing at center point</div>
+                  </div>
+                </div>
+              `;
+              
+              console.log('Setting fallback InfoWindow content and opening...');
+              console.log('Fallback InfoWindow content length:', infoContent.length);
+              console.log('Fallback InfoWindow position:', { lat: centerLat, lng: centerLng });
+              
+              try {
+                // Close any existing InfoWindow first
+                if (infoWindowRef.current && infoWindowRef.current.getContent?.()) {
+                  console.log('Closing existing InfoWindow for fallback...');
+                  infoWindowRef.current.close();
+                }
+                
+                // Set content and position
+                if (infoWindowRef.current) {
+                  infoWindowRef.current.setContent(infoContent);
+                  console.log('Fallback InfoWindow content set successfully');
+                  
+                  infoWindowRef.current.setPosition({ lat: centerLat, lng: centerLng });
+                }
+                console.log('Fallback InfoWindow position set successfully');
+                
+                // Try opening with different methods
+                console.log('Attempting to open fallback InfoWindow...');
+                
+                try {
+                  if (infoWindowRef.current) {
+                    infoWindowRef.current.open(mapInstanceRef.current);
+                    console.log('Fallback InfoWindow opened successfully');
+                  }
+                } catch (openError) {
+                  console.warn('Fallback opening failed, trying alternative:', openError);
+                  
+                  // Alternative: Create new InfoWindow
+                  try {
+                    const newInfoWindow = new google.maps.InfoWindow({
+                      content: infoContent,
+                      position: { lat: centerLat, lng: centerLng }
+                    });
+                    newInfoWindow.open(mapInstanceRef.current);
+                    console.log('New InfoWindow created and opened');
+                  } catch (newWindowError) {
+                    console.error('Creating new InfoWindow also failed:', newWindowError);
+                  }
+                }
+                
+                // Verify fallback InfoWindow is actually open
+                setTimeout(() => {
+                  const isOpen = !!infoWindowRef.current?.getContent?.();
+                  console.log('Fallback InfoWindow verification - is open:', isOpen);
+                  if (!isOpen) {
+                    console.error('Fallback InfoWindow failed to open properly');
+                  }
+                }, 200);
+              } catch (error) {
+                console.error('Error opening fallback InfoWindow:', error);
+              }
+            }
+          }
+        } else {
+          console.error('No coordinates found for land:', selectedLand.land_name);
+        }
+      } catch (error) {
+        console.error('Error parsing land geometry:', error);
+      }
+      
+      // Clear the centering flag after centering with a small delay
+      setTimeout(() => {
+        clearSelection();
+        console.log('Cleared selection after centering');
+      }, 100);
+    } else {
+      console.log('Map centering conditions not met:', {
+        selectedLand: !!selectedLand,
+        shouldCenterMap,
+        mapInstance: !!mapInstanceRef.current,
+        drawRef: !!drawRef.current
+      });
+    }
+  }, [selectedLand, shouldCenterMap, clearSelection, terraDrawInitialized]);
 
   const deletePolygon = (id: string) => {
     if (drawRef.current) {
@@ -275,13 +703,19 @@ const TerraDrawingTools: React.FC = () => {
                 justify-content: center; 
                 box-shadow: 0 2px 6px rgba(0,0,0,0.3);
                 cursor: pointer;
-              ">
+                transition: all 0.2s ease;
+              " 
+              onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)'"
+              onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.3)'"
+              title="Left-click: View details | Right-click: Create notification"
+              >
                 <span style="
-                  color: black; 
+                  color: white; 
                   font-family: Arial, sans-serif; 
                   font-size: 16px; 
                   font-weight: bold;
                   text-align: center;
+                  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
                 ">${land.land_code}</span>
               </div>
             `;
@@ -294,60 +728,54 @@ const TerraDrawingTools: React.FC = () => {
               content: markerElement.firstElementChild as HTMLElement,
             });
 
+            console.log('Created marker for land:', land.land_name, 'with position:', { lat: centerLat, lng: centerLng });
+
             // Add click event to marker
             marker.addListener('click', () => {
+              // Get extended land data
+              const plantTypeName = (land as any).plant_type_name || 'Unknown';
+              const categoryName = (land as any).category_name || 'Unknown';
+              const harvestStatus = (land as any).harvest_status || 'normal';
+              const nextHarvestDate = (land as any).next_harvest_date || new Date().toISOString();
+              
               // Create InfoWindow content with two-column layout
               const infoContent = `
-                <div style="padding: 15px; font-family: Arial, sans-serif; max-width: 500px; min-width: 400px;">
-                  <h3 style="margin: 0 0 15px 0; color: #4285F4; font-size: 18px; text-align: center; border-bottom: 2px solid #4285F4; padding-bottom: 8px;">${land.land_name}</h3>
-                  
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <!-- Left Column -->
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #4285F4;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Land Code</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.land_code}</span>
-                      </div>
-                      
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #34A853;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Land Number</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.land_number}</span>
-                      </div>
-                      
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #FBBC04;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Size</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.size} rai</span>
-                      </div>
-                      
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #EA4335;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Owner</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.owner || 'N/A'}</span>
-                      </div>
-                    </div>
-                    
-                    <!-- Right Column -->
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #4285F4;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Location</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.location}</span>
-                      </div>
-                      
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #34A853;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Province</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.province}</span>
-                      </div>
-                      
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #FBBC04;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">District</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.district}</span>
-                      </div>
-                      
-                      <div style="padding: 6px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #EA4335;">
-                        <strong style="color: #333; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">City</strong><br/>
-                        <span style="color: #666; font-size: 14px;">${land.city}</span>
-                      </div>
-                    </div>
+                <div style="font-family: Arial, sans-serif; max-width: 300px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                  <div style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #495057; font-size: 12px;">LAND NAME</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${land.land_name}</div>
                   </div>
+                  <div style="background: #e3f2fd; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #1976d2; font-size: 12px;">LAND CODE</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${land.land_code}</div>
+                  </div>
+                  <div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #7b1fa2; font-size: 12px;">SIZE</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${land.size} rais</div>
+                  </div>
+                  <div style="background: #e8f5e8; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #388e3c; font-size: 12px;">PLANT TYPE</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${plantTypeName}</div>
+                  </div>
+                  <div style="background: #fff3e0; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #f57c00; font-size: 12px;">CATEGORY</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${categoryName}</div>
+                  </div>
+                  <div style="background: #fce4ec; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #c2185b; font-size: 12px;">HARVEST STATUS</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px; text-transform: capitalize;">${harvestStatus}</div>
+                  </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                  <strong style="color: #495057; font-size: 12px;">LOCATION</strong>
+                  <div style="color: #212529; margin-top: 2px;">${land.location}, ${land.city}, ${land.district}, ${land.province}</div>
+                </div>
+                <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                  <strong style="color: #1976d2; font-size: 12px;">NEXT HARVEST</strong>
+                  <div style="color: #212529; margin-top: 2px;">${new Date(nextHarvestDate).toLocaleDateString()}</div>
+                </div>
+              </div>
                   
                   ${land.harvest_cycle ? `
                     <div style="margin-bottom: 10px; padding: 8px; background-color: #e8f5e8; border-radius: 4px; border-left: 3px solid #34A853;">
@@ -375,6 +803,29 @@ const TerraDrawingTools: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                  
+                  <div style="margin-top: 12px; text-align: center;">
+                    <button 
+                      id="create-notification-btn-${land.id || land.land_code}" 
+                      style="
+                        background: linear-gradient(135deg, #4285F4, #34A853);
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                      "
+                      onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
+                      onclick="window.createNotificationForLand && window.createNotificationForLand('${land.id || land.land_code}')"
+                    >
+                      📝 Create Notification
+                    </button>
+                  </div>
                 </div>
               `;
 
@@ -386,6 +837,33 @@ const TerraDrawingTools: React.FC = () => {
               infoWindowRef.current.setContent(infoContent);
               infoWindowRef.current.open(map, marker);
             });
+
+            // Add right-click event to marker for creating notifications
+            // Try both AdvancedMarkerElement and the content element
+            try {
+              marker.addListener('rightclick', () => {
+                console.log('Right-click detected on marker:', land.land_name);
+                // Store the selected land for notification creation
+                setSelectedLandForNotification(land);
+                setNotificationDialogOpen(true);
+                console.log('Notification dialog should open now');
+              });
+            } catch (error) {
+              console.log('AdvancedMarkerElement rightclick not supported, trying content element');
+            }
+
+            // Also add right-click to the marker content element as fallback
+            const markerContent = markerElement.firstElementChild as HTMLElement;
+            if (markerContent) {
+              markerContent.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                console.log('Right-click detected on marker content:', land.land_name);
+                // Store the selected land for notification creation
+                setSelectedLandForNotification(land);
+                setNotificationDialogOpen(true);
+                console.log('Notification dialog should open now');
+              });
+            }
 
             markersRef.current.push(marker);
           }
@@ -574,11 +1052,11 @@ const TerraDrawingTools: React.FC = () => {
           });
 
           draw.on("ready", () => {
-                draw.setMode("polygon"); // Set polygon as default mode
+                draw.setMode("select"); // Set select as default mode
             historyRef.current.push(processSnapshotForUndo(draw.getSnapshot()));
                 
-                // Set the polygon button as active after TerraDraw is ready
-                setActiveButton("polygon-mode");
+                // Set the select button as active after TerraDraw is ready
+                setActiveButton("select-mode");
 
             draw.on("select", (id) => {
               if (selectedFeatureIdRef.current && selectedFeatureIdRef.current !== id) {
@@ -959,10 +1437,10 @@ const TerraDrawingTools: React.FC = () => {
         {/* <button id="linestring-mode" className="mode-button" title="Linestring" onClick={() => handleModeChange("linestring", "linestring-mode")}><img src="./img/polyline.svg" alt="Linestring" draggable="false" /></button> */}
         <button 
           id="polygon-mode" 
-          className="mode-button active" 
+          className="mode-button" 
           title="Draw polygon" 
           aria-label="Draw polygon - Click to draw polygon shapes on the map"
-          aria-pressed="true"
+          aria-pressed="false"
           onClick={() => handleModeChange("polygon", "polygon-mode")}
         >
           <img src="./img/polygon.png" alt="Polygon" draggable="false" />
@@ -972,10 +1450,10 @@ const TerraDrawingTools: React.FC = () => {
         {/* <button id="freehand-mode" className="mode-button" title="Freehand" onClick={() => handleModeChange("freehand", "freehand-mode")}><img src="./img/freehand.svg" alt="Freehand" draggable="false" /></button> */}
         <button 
           id="select-mode" 
-          className="mode-button" 
+          className="mode-button active" 
           title="Select and edit" 
           aria-label="Select mode - Click to select and edit existing shapes"
-          aria-pressed="false"
+          aria-pressed="true"
           onClick={() => handleModeChange("select", "select-mode")}
         >
           <img src="./img/select.svg" alt="Select" draggable="false" />
@@ -1065,6 +1543,20 @@ const TerraDrawingTools: React.FC = () => {
         >
           <span style={{ color: "#4285F4", fontWeight: "bold", fontSize: "12px" }}>↻</span>
         </button>
+        <button 
+          id="test-notification-button" 
+          className="mode-button" 
+          title="Test notification dialog" 
+          aria-label="Test notification dialog - Open notification dialog for testing"
+          onClick={() => {
+            if (lands && lands.length > 0) {
+              setSelectedLandForNotification(lands[0]);
+              setNotificationDialogOpen(true);
+            }
+          }}
+        >
+          <span style={{ color: "#4285F4", fontWeight: "bold", fontSize: "12px" }}>📝</span>
+        </button>
         <input 
           id="upload-input" 
           type="file" 
@@ -1102,6 +1594,16 @@ const TerraDrawingTools: React.FC = () => {
         polygonArea={polygonArea}
         createItem={createItem}
         isFullscreen={isFullscreen}
+      />
+      
+      <CreateNotificationDialog 
+        open={notificationDialogOpen}
+        onOpenChange={setNotificationDialogOpen}
+        selectedLand={selectedLandForNotification}
+        onNotificationCreated={() => {
+          // Refresh notifications or show success message
+          console.log('Notification created successfully');
+        }}
       />
     </div>
     

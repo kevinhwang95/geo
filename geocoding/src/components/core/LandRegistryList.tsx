@@ -2,7 +2,7 @@ import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
 
 export const LandRegistryList = () => {
-  const { data: lands, loading, error, createItem, updateItem, deleteItem } = useGenericCrud<LandRegistry>('api/landregistry');
+  const { data: lands, loading, error, createItem, updateItem, deleteItem } = useGenericCrud<LandRegistry>('lands');
 
   if (loading) return <div>Loading posts...</div>;
   if (error) return <div>Error: {error.message}</div>;

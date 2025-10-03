@@ -14,32 +14,34 @@ class Land
     public function create($data)
     {
         $sql = "INSERT INTO lands (
-                    land_name, land_code, deed_number, location, 
-                    province, district, city, plant_type, category, 
-                    plant_year, harvest_cycle, geometry, size, 
-                    created_by, created_at, updated_at
+                    land_name, land_code, land_number, location, 
+                    province, district, city, plant_type_id, category_id, 
+                    plant_date, harvest_cycle_days, geometry, size, 
+                    owner_name, notes, created_by, created_at, updated_at
                 ) VALUES (
-                    :land_name, :land_code, :deed_number, :location,
-                    :province, :district, :city, :plant_type, :category,
-                    :plant_year, :harvest_cycle, :geometry, :size,
-                    :created_by, NOW(), NOW()
+                    :land_name, :land_code, :land_number, :location,
+                    :province, :district, :city, :plant_type_id, :category_id,
+                    :plant_date, :harvest_cycle_days, :geometry, :size,
+                    :owner_name, :notes, :created_by, NOW(), NOW()
                 )";
 
         $params = [
-            'land_name' => $data['landName'],
-            'land_code' => $data['landCode'],
-            'deed_number' => $data['deedNumber'],
+            'land_name' => $data['land_name'],
+            'land_code' => $data['land_code'],
+            'land_number' => $data['land_number'],
             'location' => $data['location'],
             'province' => $data['province'],
             'district' => $data['district'],
             'city' => $data['city'],
-            'plant_type' => $data['plantType'],
-            'category' => $data['category'],
-            'plant_year' => $data['plantYear'],
-            'harvest_cycle' => $data['harvestCycle'],
-            'geometry' => $data['geometry'],
+            'plant_type_id' => $data['planttypeid'],
+            'category_id' => $data['categoryid'],
+            'plant_date' => $data['plant_date'],
+            'harvest_cycle_days' => $data['harvest_cycle'],
+            'geometry' => $data['coordinations'],
             'size' => $data['size'],
-            'created_by' => $data['createdBy'] ?? 1,
+            'owner_name' => $data['owner'] ?? null,
+            'notes' => $data['notes'] ?? null,
+            'created_by' => $data['created_by'] ?? 1,
         ];
 
         $this->db->query($sql, $params);
@@ -48,9 +50,14 @@ class Land
 
     public function findById($id)
     {
-        $sql = "SELECT l.*, u.first_name, u.last_name 
+        $sql = "SELECT l.*, u.first_name, u.last_name,
+                       pt.name as plant_type_name, 
+                       c.name as category_name, 
+                       c.color as category_color
                 FROM lands l 
                 LEFT JOIN users u ON l.created_by = u.id 
+                LEFT JOIN plant_types pt ON l.plant_type_id = pt.id
+                LEFT JOIN categories c ON l.category_id = c.id
                 WHERE l.id = :id";
         
         return $this->db->fetchOne($sql, ['id' => $id]);
@@ -58,9 +65,15 @@ class Land
 
     public function getAll()
     {
-        $sql = "SELECT l.*, u.first_name, u.last_name 
+        $sql = "SELECT l.*, u.first_name, u.last_name, 
+                       pt.name as plant_type_name, 
+                       c.name as category_name, 
+                       c.color as category_color
                 FROM lands l 
                 LEFT JOIN users u ON l.created_by = u.id 
+                LEFT JOIN plant_types pt ON l.plant_type_id = pt.id
+                LEFT JOIN categories c ON l.category_id = c.id
+                WHERE l.is_active = 1
                 ORDER BY l.created_at DESC";
         
         return $this->db->fetchAll($sql);
@@ -136,22 +149,50 @@ class Land
     {
         return [
             'id' => (int) $land['id'],
-            'landName' => $land['land_name'],
-            'landCode' => $land['land_code'],
-            'deedNumber' => $land['deed_number'],
+            'land_name' => $land['land_name'],
+            'land_code' => $land['land_code'],
+            'land_number' => $land['land_number'],
             'location' => $land['location'],
             'province' => $land['province'],
             'district' => $land['district'],
             'city' => $land['city'],
-            'plantType' => $land['plant_type'],
-            'category' => $land['category'],
-            'plantYear' => (int) $land['plant_year'],
-            'harvestCycle' => (int) $land['harvest_cycle'],
-            'geometry' => $land['geometry'],
+            'plant_type_id' => (int) $land['plant_type_id'],
+            'category_id' => (int) $land['category_id'],
+            'plant_type_name' => $land['plant_type_name'] ?? null,
+            'category_name' => $land['category_name'] ?? null,
+            'category_color' => $land['category_color'] ?? '#4285F4',
+            'plant_date' => $land['plant_date'],
+            'harvest_cycle_days' => (int) $land['harvest_cycle_days'],
+            'next_harvest_date' => $land['next_harvest_date'],
+            'coordinations' => $land['geometry'], // Map geometry to coordinations for frontend
+            'geometry' => $land['geometry'], // Keep original geometry field too
             'size' => (float) $land['size'],
-            'createdBy' => (int) $land['created_by'],
-            'createdAt' => $land['created_at'],
-            'updatedAt' => $land['updated_at'],
+            'owner_name' => $land['owner_name'],
+            'notes' => $land['notes'],
+            'is_active' => (bool) $land['is_active'],
+            'created_by' => (int) $land['created_by'],
+            'created_at' => $land['created_at'],
+            'updated_at' => $land['updated_at'],
+            'harvest_status' => $this->calculateHarvestStatus($land['next_harvest_date']),
         ];
+    }
+
+    private function calculateHarvestStatus($nextHarvestDate)
+    {
+        if (!$nextHarvestDate) {
+            return 'normal';
+        }
+
+        $harvestDate = new \DateTime($nextHarvestDate);
+        $today = new \DateTime();
+        $daysUntilHarvest = $today->diff($harvestDate)->days;
+
+        if ($harvestDate < $today) {
+            return 'overdue';
+        } elseif ($daysUntilHarvest <= 7) {
+            return 'due_soon';
+        } else {
+            return 'normal';
+        }
     }
 }

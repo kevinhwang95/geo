@@ -10,7 +10,7 @@ const MapWithPolygonFetch: React.FC = () => {
   // const overlayRef = useRef<google.maps.OverlayView | null>(null);
   // const divRef = useRef<HTMLDivElement | null>(null);
   //const [map, setMap] = useState<google.maps.Map | null>(null);
-  const { data: lands, error, loading } = useGenericCrud<LandRegistry>('api/landregistry');
+  const { data: lands, error, loading } = useGenericCrud<LandRegistry>('lands');
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: 'AIzaSyBdsqAGgmfJQ3-vZhL9qPUSIVhqciANlpY'
   });

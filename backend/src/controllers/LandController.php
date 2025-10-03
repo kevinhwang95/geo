@@ -16,6 +16,9 @@ class LandController
 
     public function index()
     {
+        // Require authentication but allow all roles to view lands
+        Auth::requireAuth();
+        
         $lands = $this->landModel->getAll();
         $formattedLands = array_map([$this->landModel, 'formatLand'], $lands);
         
@@ -42,9 +45,9 @@ class LandController
         $input = json_decode(file_get_contents('php://input'), true);
         
         $requiredFields = [
-            'landName', 'landCode', 'deedNumber', 'location',
-            'province', 'district', 'city', 'plantType', 'category',
-            'plantYear', 'harvestCycle', 'geometry', 'size'
+            'land_name', 'land_code', 'land_number', 'location',
+            'province', 'district', 'city', 'planttypeid', 'categoryid',
+            'plant_date', 'harvest_cycle', 'coordinations', 'size'
         ];
 
         foreach ($requiredFields as $field) {
@@ -55,7 +58,7 @@ class LandController
             }
         }
 
-        $input['createdBy'] = $userData['user_id'];
+        $input['created_by'] = $userData['user_id'];
         
         try {
             $land = $this->landModel->create($input);

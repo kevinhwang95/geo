@@ -34,7 +34,7 @@ export interface MyFormDialogProps {
 
 export function MyFormDialogLoad({ open, setOpen, land }: MyFormDialogProps) {
 
-  const {createItem } = useGenericCrud<LandRegistry>('api/landregistry');
+  const {createItem } = useGenericCrud<LandRegistry>('lands');
   const coordination = land.coordinations;
 
  

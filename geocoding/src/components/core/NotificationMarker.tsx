@@ -235,14 +235,7 @@ const NotificationMarker: React.FC<NotificationMarkerProps> = ({
                    onclick="window.openPhotoCarousel(${index})"
                    onload="console.log('Photo loaded successfully:', '${photo.file_name}')"
                    onerror="console.error('Photo failed to load:', '${photoUrl}'); this.style.display='none'; this.nextElementSibling.style.display='block';">
-              <div style="display: none; width: 80px; height: 60px; background-color: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 8px; text-align: center; border: 1px dashed #ccc;">
-                ❌<br/>Failed<br/>to load
-              </div>
             </div>
-            <p style="margin: 2px 0 0 0; font-size: 9px; color: #666; word-break: break-all; line-height: 1.2;">
-              ${photo.file_name}<br/>
-              <small style="color: #999;">${Math.round(photo.file_size / 1024)}KB</small>
-            </p>
           </div>
         `;
       }).join('');

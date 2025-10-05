@@ -133,11 +133,10 @@ const UserManagement: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-          <p className="text-gray-600">Manage users, teams, and work assignments</p>
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          {/* <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users" className="flex items-center space-x-2">
               <Users className="h-4 w-4" />
               <span>Users</span>
@@ -150,7 +149,7 @@ const UserManagement: React.FC = () => {
               <Edit className="h-4 w-4" />
               <span>Work Assignments</span>
             </TabsTrigger>
-          </TabsList>
+          </TabsList> */}
 
           <TabsContent value="users" className="space-y-6">
             <div className="flex justify-between items-center">

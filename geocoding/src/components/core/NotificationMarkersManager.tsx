@@ -1,32 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient from '@/api/axiosClient';
+import { useNotificationStore } from '@/stores/notificationStore';
+import { notificationPollingService } from '@/services/NotificationPollingService';
+import type { Notification } from '@/types/notification';
 import NotificationMarker from './NotificationMarker';
-
-interface Notification {
-  id: number;
-  land_id: number;
-  user_id: number;
-  type: string;
-  title: string;
-  message: string;
-  priority: 'low' | 'medium' | 'high';
-  is_read: boolean;
-  is_dismissed: boolean;
-  created_at: string;
-  land_name?: string;
-  land_code?: string;
-  harvest_status?: string;
-  creator_first_name?: string;
-  creator_last_name?: string;
-  photos?: Array<{
-    id: number;
-    file_path: string;
-    file_name: string;
-    file_size: number;
-    mime_type: string;
-    uploaded_at: string;
-  }>;
-}
 
 interface Land {
   id: number;
@@ -40,43 +17,23 @@ interface NotificationMarkersManagerProps {
   map: google.maps.Map | null;
   onNotificationClick?: (notification: Notification) => void;
   onNotificationDismissed?: () => void;
-  onNotificationMarkedAsRead?: () => void;
 }
 
 const NotificationMarkersManager: React.FC<NotificationMarkersManagerProps> = ({
   map,
   onNotificationClick,
-  onNotificationDismissed,
-  onNotificationMarkedAsRead
+  onNotificationDismissed
 }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Use notification store instead of local state
+  const { notifications, loading: notificationsLoading } = useNotificationStore();
   const [lands, setLands] = useState<Land[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Function to mark notification as read
-  const markNotificationAsRead = async (notificationId: number) => {
-    try {
-      await axiosClient.post(`/notifications/mark-read/${notificationId}`);
-      console.log('Notification marked as read:', notificationId);
-      
-      // Remove the notification from the local state immediately
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      
-      // Notify parent component that notification was marked as read
-      onNotificationMarkedAsRead?.();
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
 
   // Function to dismiss notification
   const dismissNotification = async (notificationId: number) => {
     try {
-      await axiosClient.post(`/notifications/dismiss/${notificationId}`);
+      await notificationPollingService.markAsDismissed(notificationId);
       console.log('Notification dismissed:', notificationId);
-      
-      // Remove the notification from the local state immediately
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
       
       // Notify parent component that notification was dismissed
       onNotificationDismissed?.();
@@ -85,62 +42,25 @@ const NotificationMarkersManager: React.FC<NotificationMarkersManagerProps> = ({
     }
   };
 
-  // Fetch notifications and lands
+  // Fetch lands only (notifications are handled by the store)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchLands = async () => {
       try {
         setLoading(true);
         
-        // Fetch notifications
-        const notificationsResponse = await axiosClient.get('/notifications');
-        console.log('Notifications API response:', notificationsResponse.data);
-        
-        const notificationsData = notificationsResponse.data.success 
-          ? notificationsResponse.data.data 
-          : notificationsResponse.data;
-        
-        console.log('Notifications data:', notificationsData);
-        
-        // Filter for high priority notifications that are not dismissed (show both read and unread)
-        const highPriorityNotifications = notificationsData.filter(
-          (notification: Notification) => 
-            notification.priority === 'high' && 
-            !notification.is_dismissed
-        );
-        
-        console.log(`Found ${highPriorityNotifications.length} high priority notifications (not dismissed):`, highPriorityNotifications);
-        
-        // Debug photos data
-        highPriorityNotifications.forEach((notification: Notification, index: number) => {
-          if (notification.photos && notification.photos.length > 0) {
-            console.log(`Notification ${index + 1} (${notification.title}) has ${notification.photos.length} photos:`, notification.photos);
-          }
-        });
-        console.log(`Total notifications: ${notificationsData.length}`);
-        console.log(`High priority: ${notificationsData.filter((n: Notification) => n.priority === 'high').length}`);
-        console.log(`Read: ${notificationsData.filter((n: Notification) => n.is_read).length}`);
-        console.log(`Dismissed: ${notificationsData.filter((n: Notification) => n.is_dismissed).length}`);
-        console.log(`Active (not read): ${highPriorityNotifications.filter((n: Notification) => !n.is_read).length}`);
-        console.log(`Read but not dismissed: ${highPriorityNotifications.filter((n: Notification) => n.is_read).length}`);
-        setNotifications(highPriorityNotifications);
-
         // Fetch lands
         const landsResponse = await axiosClient.get('/lands');
         const landsData = landsResponse.data;
         setLands(landsData);
 
       } catch (error) {
-        console.error('Error fetching notifications and lands:', error);
+        console.error('Error fetching lands:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-
-    // Refresh data every 30 seconds
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    fetchLands();
   }, []);
 
   // Helper function to calculate the center point of a polygon using geometric centroid
@@ -229,21 +149,22 @@ const NotificationMarkersManager: React.FC<NotificationMarkersManagerProps> = ({
 
   // Create notification markers
   const createNotificationMarkers = () => {
-    if (!map || loading) return null;
+    if (!map || loading || notificationsLoading) return null;
 
-    console.log(`Creating markers for ${notifications.length} notifications`);
-    console.log('Notifications:', notifications);
+    // Filter for high priority notifications that are not dismissed (show both read and unread)
+    const highPriorityNotifications = notifications.filter(
+      (notification: Notification) => 
+        notification.priority === 'high' && 
+        !notification.is_dismissed
+    );
+
+    console.log(`Creating markers for ${highPriorityNotifications.length} high priority notifications`);
+    console.log('High priority notifications:', highPriorityNotifications);
     console.log('Lands:', lands);
 
-    return notifications.map((notification) => {
+    return highPriorityNotifications.map((notification) => {
       console.log(`Processing notification ${notification.id} for land ${notification.land_id}`);
       console.log(`Notification status - Read: ${notification.is_read}, Dismissed: ${notification.is_dismissed}, Priority: ${notification.priority}`);
-      
-      // Skip dismissed notifications (they shouldn't reach here due to filtering, but just in case)
-      if (notification.is_dismissed) {
-        console.log(`Skipping dismissed notification ${notification.id}`);
-        return null;
-      }
       
       const land = lands.find(l => l.id === notification.land_id);
       if (!land) {
@@ -269,8 +190,6 @@ const NotificationMarkersManager: React.FC<NotificationMarkersManagerProps> = ({
           position={coordinates}
           notification={notification}
           onClick={() => {
-            // Mark as read when clicked
-            //markNotificationAsRead(notification.id);
             // Call the original click handler if provided
             onNotificationClick?.(notification);
           }}

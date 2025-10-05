@@ -54,6 +54,8 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
   const [plantTypes, setPlantTypes] = React.useState<Array<{id: number, name: string, description?: string, scientific_name?: string, harvest_cycle_days: number}>>([]);
   const [categories, setCategories] = React.useState<Array<{id: number, name: string, description?: string, color: string}>>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(true);
+  const [optionsError, setOptionsError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
   //const coordination = JSON.stringify(polygonPaths[polygonPaths.length - 1]);
   const coordination = polygonPaths;
   
@@ -67,45 +69,77 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
     const fetchOptions = async () => {
       try {
         setLoadingOptions(true);
+        setOptionsError(null);
         
-        // Fetch plant types
-        const plantTypesResponse = await axiosClient.get('/plant-types');
-        if (plantTypesResponse.data.success) {
-          setPlantTypes(plantTypesResponse.data.data);
+        console.log('Fetching plant types and categories...');
+        
+        // Fetch plant types and categories in parallel
+        const [plantTypesResponse, categoriesResponse] = await Promise.allSettled([
+          axiosClient.get('/plant-types'),
+          axiosClient.get('/categories')
+        ]);
+        
+        // Handle plant types response
+        if (plantTypesResponse.status === 'fulfilled' && plantTypesResponse.value.data.success) {
+          const plantTypesData = plantTypesResponse.value.data.data;
+          console.log('Plant types loaded:', plantTypesData.length);
+          setPlantTypes(plantTypesData);
+        } else {
+          console.error('Plant types fetch failed:', plantTypesResponse);
+          setOptionsError('Failed to load plant types');
         }
         
-        // Fetch categories
-        const categoriesResponse = await axiosClient.get('/categories');
-        if (categoriesResponse.data.success) {
-          setCategories(categoriesResponse.data.data);
+        // Handle categories response
+        if (categoriesResponse.status === 'fulfilled' && categoriesResponse.value.data.success) {
+          const categoriesData = categoriesResponse.value.data.data;
+          console.log('Categories loaded:', categoriesData.length);
+          setCategories(categoriesData);
+        } else {
+          console.error('Categories fetch failed:', categoriesResponse);
+          setOptionsError('Failed to load categories');
         }
+        
+        // Check if both failed
+        if (plantTypesResponse.status === 'rejected' && categoriesResponse.status === 'rejected') {
+          setOptionsError('Failed to load both plant types and categories');
+        }
+        
       } catch (error) {
         console.error('Error fetching options:', error);
+        setOptionsError('Network error loading options');
+        
+        // Retry logic
+        if (retryCount < 3) {
+          console.log(`Retrying fetch options (attempt ${retryCount + 1})...`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000 * (retryCount + 1)); // Exponential backoff
+        }
       } finally {
         setLoadingOptions(false);
       }
     };
 
     fetchOptions();
-  }, []);
+  }, [retryCount]);
   const form = useForm<z.infer<typeof landRegistrySchema>>({
     resolver: zodResolver(landRegistrySchema),
     defaultValues: {
-      land_name: 'Test',
-      land_code: 'Test',
-      land_number: 'Test',
-      size: size||1,
-      coordinations: coordination||'test',
-      location: 'Test',
-      province: 'Test',
-      district: 'Test',
-      city: 'Test',
-      owner: 'Test',
-      planttypeid: 1,
-      categoryid: 1,
+      land_name: '',
+      land_code: '',
+      land_number: '',
+      size: size || 1,
+      coordinations: coordination || '',
+      location: '',
+      province: '',
+      district: '',
+      city: '',
+      owner: '',
+      planttypeid: undefined, // Will be set when data loads
+      categoryid: undefined, // Will be set when data loads
       plant_date: currentdate,
-      harvest_cycle: 'Test',
-      notes: 'Test',
+      harvest_cycle: '',
+      notes: '',
       created: formattedDate,
       createdby: 'Test',
       updated: formattedDate,
@@ -116,8 +150,23 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
   // Set form values when size or coordination changes
   React.useEffect(() => {
     form.setValue('size', size || 1);
-    form.setValue('coordinations', coordination || 'test');
-  }, [size, coordination]);
+    form.setValue('coordinations', coordination || '');
+  }, [size, coordination, form]);
+
+  // Set default values when data loads
+  React.useEffect(() => {
+    if (!loadingOptions && !optionsError) {
+      // Set default plant type if none selected and data is available
+      if (plantTypes.length > 0 && !form.getValues('planttypeid')) {
+        form.setValue('planttypeid', plantTypes[0].id);
+      }
+      
+      // Set default category if none selected and data is available
+      if (categories.length > 0 && !form.getValues('categoryid')) {
+        form.setValue('categoryid', categories[0].id);
+      }
+    }
+  }, [loadingOptions, optionsError, plantTypes, categories, form]);
 
   function onSubmit(values: z.infer<typeof landRegistrySchema>) {
     try {
@@ -400,23 +449,47 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Leaf className="h-4 w-4 text-green-600" />
                             Plant Type
+                            {optionsError && (
+                              <span className="text-red-500 text-xs ml-2">⚠️ {optionsError}</span>
+                            )}
                           </FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={loadingOptions || plantTypes.length === 0}
+                          >
                             <FormControl>
-                              <SelectTrigger className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors">
-                                <SelectValue placeholder={loadingOptions ? "Loading..." : "Select plant type"} />
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <SelectValue 
+                                  placeholder={
+                                    loadingOptions 
+                                      ? "Loading plant types..." 
+                                      : plantTypes.length === 0 
+                                        ? "No plant types available" 
+                                        : "Select plant type"
+                                  } 
+                                />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {plantTypes.map((plantType) => (
-                                <SelectItem key={plantType.id} value={plantType.id.toString()}>
-                                  <div className="flex items-center gap-2">
-                                    <Leaf className="h-3 w-3 text-green-600" />
-                                    {plantType.name}
-                                    {plantType.scientific_name && ` (${plantType.scientific_name})`}
+                            <SelectContent className="z-[10001]">
+                              {plantTypes.length === 0 && !loadingOptions ? (
+                                <SelectItem value="no-data" disabled>
+                                  <div className="flex items-center gap-2 text-gray-500">
+                                    <Leaf className="h-3 w-3" />
+                                    No plant types available
                                   </div>
                                 </SelectItem>
-                              ))}
+                              ) : (
+                                plantTypes.map((plantType) => (
+                                  <SelectItem key={plantType.id} value={plantType.id.toString()}>
+                                    <div className="flex items-center gap-2">
+                                      <Leaf className="h-3 w-3 text-green-600" />
+                                      {plantType.name}
+                                      {plantType.scientific_name && ` (${plantType.scientific_name})`}
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -431,25 +504,49 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Building className="h-4 w-4 text-blue-600" />
                             Category
+                            {optionsError && (
+                              <span className="text-red-500 text-xs ml-2">⚠️ {optionsError}</span>
+                            )}
                           </FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={loadingOptions || categories.length === 0}
+                          >
                             <FormControl>
-                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-colors">
-                                <SelectValue placeholder={loadingOptions ? "Loading..." : "Select category"} />
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <SelectValue 
+                                  placeholder={
+                                    loadingOptions 
+                                      ? "Loading categories..." 
+                                      : categories.length === 0 
+                                        ? "No categories available" 
+                                        : "Select category"
+                                  } 
+                                />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id.toString()}>
-                                  <div className="flex items-center gap-2">
-                                    <div 
-                                      className="w-3 h-3 rounded-full border border-gray-300" 
-                                      style={{ backgroundColor: category.color }}
-                                    />
-                                    {category.name}
+                            <SelectContent className="z-[10001]">
+                              {categories.length === 0 && !loadingOptions ? (
+                                <SelectItem value="no-data" disabled>
+                                  <div className="flex items-center gap-2 text-gray-500">
+                                    <Building className="h-3 w-3" />
+                                    No categories available
                                   </div>
                                 </SelectItem>
-                              ))}
+                              ) : (
+                                categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id.toString()}>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full border border-gray-300" 
+                                        style={{ backgroundColor: category.color }}
+                                      />
+                                      {category.name}
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -520,6 +617,19 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                      />
                  <DialogFooter className="pt-6 border-t border-gray-100">
                    <div className="flex gap-3 w-full">
+                     {optionsError && (
+                       <Button 
+                         type="button" 
+                         variant="outline" 
+                         onClick={() => {
+                           setRetryCount(0);
+                           setOptionsError(null);
+                         }}
+                         className="px-4 py-2 border-orange-300 text-orange-700 hover:bg-orange-50 transition-colors"
+                       >
+                         🔄 Retry Loading Options
+                       </Button>
+                     )}
                      <Button 
                        type="button" 
                        variant="outline" 
@@ -755,20 +865,38 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           name="planttypeid"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Plant Type</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                              <FormLabel>Plant Type {optionsError && <span className="text-red-500 text-xs">⚠️ {optionsError}</span>}</FormLabel>
+                              <Select 
+                                onValueChange={(value) => field.onChange(parseInt(value))} 
+                                value={field.value?.toString()}
+                                disabled={loadingOptions || plantTypes.length === 0}
+                              >
                                 <FormControl>
-                                  <SelectTrigger className="h-9">
-                                    <SelectValue placeholder={loadingOptions ? "Loading..." : "Select plant type"} />
+                                  <SelectTrigger className="h-9 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <SelectValue 
+                                      placeholder={
+                                        loadingOptions 
+                                          ? "Loading plant types..." 
+                                          : plantTypes.length === 0 
+                                            ? "No plant types available" 
+                                            : "Select plant type"
+                                      } 
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
-                                  {plantTypes.map((plantType) => (
-                                    <SelectItem key={plantType.id} value={plantType.id.toString()}>
-                                      {plantType.name}
-                                      {plantType.scientific_name && ` (${plantType.scientific_name})`}
+                                <SelectContent className="z-[10001]">
+                                  {plantTypes.length === 0 && !loadingOptions ? (
+                                    <SelectItem value="no-data" disabled>
+                                      No plant types available
                                     </SelectItem>
-                                  ))}
+                                  ) : (
+                                    plantTypes.map((plantType) => (
+                                      <SelectItem key={plantType.id} value={plantType.id.toString()}>
+                                        {plantType.name}
+                                        {plantType.scientific_name && ` (${plantType.scientific_name})`}
+                                      </SelectItem>
+                                    ))
+                                  )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -780,25 +908,43 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           name="categoryid"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Category</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                              <FormLabel>Category {optionsError && <span className="text-red-500 text-xs">⚠️ {optionsError}</span>}</FormLabel>
+                              <Select 
+                                onValueChange={(value) => field.onChange(parseInt(value))} 
+                                value={field.value?.toString()}
+                                disabled={loadingOptions || categories.length === 0}
+                              >
                                 <FormControl>
-                                  <SelectTrigger className="h-9">
-                                    <SelectValue placeholder={loadingOptions ? "Loading..." : "Select category"} />
+                                  <SelectTrigger className="h-9 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <SelectValue 
+                                      placeholder={
+                                        loadingOptions 
+                                          ? "Loading categories..." 
+                                          : categories.length === 0 
+                                            ? "No categories available" 
+                                            : "Select category"
+                                      } 
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
-                                  {categories.map((category) => (
-                                    <SelectItem key={category.id} value={category.id.toString()}>
-                                      <div className="flex items-center gap-2">
-                                        <div 
-                                          className="w-3 h-3 rounded-full" 
-                                          style={{ backgroundColor: category.color }}
-                                        />
-                                        {category.name}
-                                      </div>
+                                <SelectContent className="z-[10001]">
+                                  {categories.length === 0 && !loadingOptions ? (
+                                    <SelectItem value="no-data" disabled>
+                                      No categories available
                                     </SelectItem>
-                                  ))}
+                                  ) : (
+                                    categories.map((category) => (
+                                      <SelectItem key={category.id} value={category.id.toString()}>
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="w-3 h-3 rounded-full" 
+                                            style={{ backgroundColor: category.color }}
+                                          />
+                                          {category.name}
+                                        </div>
+                                      </SelectItem>
+                                    ))
+                                  )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />

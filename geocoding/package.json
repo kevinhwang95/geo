@@ -6,8 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "tsc -b && vite build --mode production",
+    "build:analyze": "tsc -b && vite build --mode production && npx vite-bundle-analyzer dist",
+    "build:verify": "npm run build:prod && node scripts/verify-production-build.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean && npm run lint"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",

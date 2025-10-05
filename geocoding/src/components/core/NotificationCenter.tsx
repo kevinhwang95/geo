@@ -6,43 +6,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bell, RefreshCw, Filter, CheckCircle, XCircle, AlertTriangle, Info, Camera, MessageSquare, MapPin } from 'lucide-react';
 import axiosClient from '@/api/axiosClient';
 import { useMapStore } from '@/stores/mapStore';
+import { useNotificationStore } from '@/stores/notificationStore';
+import { notificationPollingService } from '@/services/NotificationPollingService';
 import NotificationDetailDialog from './NotificationDetailDialog';
 
-interface Notification {
-  id: number;
-  land_id: number;
-  user_id: number;
-  type: string;
-  title: string;
-  message: string;
-  priority: 'low' | 'medium' | 'high';
-  is_read: boolean;
-  is_dismissed: boolean;
-  created_at: string;
-  land_name?: string;
-  land_code?: string;
-  harvest_status?: string;
-}
-
-interface NotificationStats {
-  type: string;
-  count: number;
-  unread_count: number;
-  active_count: number;
-}
+// Notification interfaces are now imported from the store
 
 interface NotificationCenterProps {
   onNavigateToMap?: () => void;
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [stats, setStats] = useState<NotificationStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use notification store instead of local state
+  const { 
+    notifications, 
+    stats, 
+    loading, 
+    error, 
+    unreadCount
+  } = useNotificationStore();
+  
   const [filterType, setFilterType] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
-  const [unreadCount, setUnreadCount] = useState(0);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedNotificationId, setSelectedNotificationId] = useState<number | null>(null);
 
@@ -50,64 +35,25 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
   const { centerMapOnLand } = useMapStore();
 
   const loadNotifications = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams();
-      if (filterType !== 'all') params.append('type', filterType);
-      if (filterPriority !== 'all') params.append('priority', filterPriority);
-
-      // Use enhanced endpoint if filters are applied, otherwise use regular endpoint
-      const hasFilters = filterType !== 'all' || filterPriority !== 'all';
-      const endpoint = hasFilters ? '/notifications-enhanced' : '/notifications';
-      
-      const response = await axiosClient.get(`${endpoint}?${params.toString()}`);
-      
-      setNotifications(response.data.data || []);
-
-      // Load stats (optional - might not be available)
-      try {
-        const statsResponse = await axiosClient.get('/notifications/stats');
-        setStats(statsResponse.data.data || []);
-      } catch (statsError) {
-        console.log('Stats endpoint not available, skipping...');
-        setStats([]);
-      }
-
-      // Calculate unread count
-      const unread = response.data.data?.filter((n: Notification) => !n.is_read).length || 0;
-      setUnreadCount(unread);
-
-    } catch (err) {
-      setError('Failed to load notifications');
-      console.error('Error loading notifications:', err);
-    } finally {
-      setLoading(false);
-    }
+    // Use the polling service to refresh notifications silently
+    notificationPollingService.refreshNow(true);
   };
 
   useEffect(() => {
     loadNotifications();
   }, [filterType, filterPriority]);
 
-  const markAsRead = async (notificationId: number) => {
+  const handleMarkAsRead = async (notificationId: number) => {
     try {
-      await axiosClient.post(`/notifications/mark-read/${notificationId}`);
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      await notificationPollingService.markAsRead(notificationId);
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
   };
 
-  const dismissNotification = async (notificationId: number) => {
+  const handleDismissNotification = async (notificationId: number) => {
     try {
-      await axiosClient.post(`/notifications/dismiss/${notificationId}`);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      await notificationPollingService.markAsDismissed(notificationId);
     } catch (error) {
       console.error('Failed to dismiss notification:', error);
     }
@@ -156,8 +102,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
   const dismissAll = async () => {
     try {
       await axiosClient.post('/notifications/dismiss-all');
-      setNotifications([]);
-      setUnreadCount(0);
+      // Refresh notifications from the store after dismissing all
+      notificationPollingService.refreshNow(true);
     } catch (error) {
       console.error('Failed to dismiss all notifications:', error);
     }
@@ -403,7 +349,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        markAsRead(notification.id);
+                        handleMarkAsRead(notification.id);
                       }}
                     >
                       Mark Read
@@ -414,7 +360,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation();
-                      dismissNotification(notification.id);
+                      handleDismissNotification(notification.id);
                     }}
                   >
                     Dismiss

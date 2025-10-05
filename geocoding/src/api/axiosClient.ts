@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+import { attemptTokenRefresh } from '@/utils/tokenRefreshManager';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -34,32 +35,29 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Prevent infinite loops by checking if this is already a refresh request
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       originalRequest._retry = true;
       
       try {
-        const { tokens, logout } = useAuthStore.getState();
+        console.log('[AxiosInterceptor] Attempting token refresh for 401 response');
+        const result = await attemptTokenRefresh('axios-interceptor');
         
-        if (tokens?.refresh_token) {
-          // Try to refresh the token
-          const response = await axios.post(`${BASE_URL}/oauth/refresh`, {
-            refresh_token: tokens.refresh_token
-          });
-          
-          const newTokens = response.data.tokens;
-          useAuthStore.getState().setTokens(newTokens);
-          
+        if (result.success && result.tokens?.access_token) {
+          console.log('[AxiosInterceptor] Token refresh successful, retrying original request');
           // Retry the original request with new token
-          originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
+          originalRequest.headers.Authorization = `Bearer ${result.tokens.access_token}`;
           return axiosClient(originalRequest);
         } else {
-          // No refresh token, logout user
+          console.error('[AxiosInterceptor] Token refresh failed, logging out');
+          const { logout } = useAuthStore.getState();
           logout();
           window.location.href = '/login';
         }
       } catch (refreshError) {
-        // Refresh failed, logout user
-        useAuthStore.getState().logout();
+        console.error('[AxiosInterceptor] Token refresh error:', refreshError);
+        const { logout } = useAuthStore.getState();
+        logout();
         window.location.href = '/login';
       }
     }

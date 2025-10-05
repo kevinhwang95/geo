@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { isTokenExpired, getTokenTimeRemaining, decodeJWT } from '@/utils/jwt';
 
 export interface User {
   id: number;
@@ -38,6 +39,8 @@ interface AuthActions {
   logout: () => void;
   clearError: () => void;
   updateUser: (updates: Partial<User>) => void;
+  isTokenExpired: () => boolean;
+  getTokenTimeRemaining: () => number;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -79,6 +82,20 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         if (currentUser) {
           set({ user: { ...currentUser, ...updates } });
         }
+      },
+      
+      isTokenExpired: () => {
+        const { tokens } = get();
+        if (!tokens?.access_token) return true;
+        
+        return isTokenExpired(tokens.access_token, 30); // 30 second buffer
+      },
+      
+      getTokenTimeRemaining: () => {
+        const { tokens } = get();
+        if (!tokens?.access_token) return 0;
+        
+        return getTokenTimeRemaining(tokens.access_token);
       }
     }),
     {

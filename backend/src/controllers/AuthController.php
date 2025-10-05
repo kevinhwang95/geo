@@ -106,12 +106,29 @@ class AuthController
 
     public function refresh()
     {
-        $userData = Auth::requireAuth();
-        $user = $this->userModel->findById($userData['user_id']);
-        $token = Auth::generateToken($user['id'], $user['role']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($input['refresh_token'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Refresh token is required']);
+            return;
+        }
+
+        $refreshToken = $input['refresh_token'];
+        $newTokens = Auth::refreshAccessToken($refreshToken);
+
+        if (!$newTokens) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid or expired refresh token']);
+            return;
+        }
+
+        // Get user info for the response
+        $payload = Auth::validateToken($newTokens['access_token']);
+        $user = $this->userModel->findById($payload['user_id']);
 
         echo json_encode([
-            'token' => $token,
+            'tokens' => $newTokens,
             'user' => $this->userModel->formatUser($user)
         ]);
     }

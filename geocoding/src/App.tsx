@@ -2,13 +2,18 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+
 import LoginPage from '@/components/auth/LoginPage';
 import Dashboard from '@/components/dashboard/Dashboard';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
 
 function App() {
   const { isAuthenticated, setLoading, setError } = useAuthStore();
+  
+  // Initialize automatic token refresh for active users
+  useTokenRefresh();
 
   useEffect(() => {
     // Check if user has stored tokens on app load

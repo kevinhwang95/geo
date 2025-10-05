@@ -45,6 +45,7 @@ const LoginPage: React.FC = () => {
       });
       
       const { token, user } = response.data;
+      
       login(user, token);
       navigate('/dashboard');
     } catch (error: any) {
@@ -80,6 +81,7 @@ const LoginPage: React.FC = () => {
       });
       
       const { token, user } = response.data;
+      
       login(user, token);
       navigate('/dashboard');
     } catch (error: any) {

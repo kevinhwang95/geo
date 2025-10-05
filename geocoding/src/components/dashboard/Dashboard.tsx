@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore, canManageLands, canManageUsers, canManageTeams, canManageWorkAssignments } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
+import { useNotificationStore } from '@/stores/notificationStore';
+import { notificationPollingService } from '@/services/NotificationPollingService';
 import axiosClient from '@/api/axiosClient';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
 import NotificationCenter from '@/components/core/NotificationCenter';
@@ -29,22 +31,14 @@ import TeamManagement from '@/components/admin/TeamManagement';
 import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
+// import { TokenDebugger } from '@/components/debug/TokenDebugger';
+// import { NotificationDebugger } from '@/components/debug/NotificationDebugger';
+// import NotificationAPITester from '@/components/debug/NotificationAPITester';
+import TokenExpirationDebugger from '@/components/debug/TokenExpirationDebugger';
+//import CommunicationAnalyzer from '@/components/debug/CommunicationAnalyzer';
+import { DebugOnly } from '@/utils/buildUtils';
 
-interface Notification {
-  id: number;
-  land_id: number;
-  user_id: number;
-  type: 'harvest_due' | 'harvest_overdue' | 'maintenance_due' | 'comment_added' | 'photo_added';
-  title: string;
-  message: string;
-  priority: 'low' | 'medium' | 'high';
-  is_read: boolean;
-  is_dismissed: boolean;
-  created_at: string;
-  land_name?: string;
-  land_code?: string;
-  harvest_status?: 'overdue' | 'due_soon' | 'normal';
-}
+// Notification interface is now imported from the store
 
 // Define Land type that matches the actual API response from backend
 interface Land {
@@ -82,8 +76,11 @@ const Dashboard: React.FC = () => {
   // const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [highPriorityCount, setHighPriorityCount] = useState(0);
+  // Use notification store instead of local state
+  const { 
+    unreadCount, 
+    highPriorityCount
+  } = useNotificationStore();
   const [activeSection, setActiveSection] = useState<string>('overview');
   const [landSearchTerm, setLandSearchTerm] = useState('');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
@@ -95,6 +92,11 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Cleanup notification polling on unmount
+    return () => {
+      notificationPollingService.stopPolling();
+    };
   }, []);
 
   // Fetch user names when lands data is loaded
@@ -161,12 +163,8 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      // Load notifications
-      const notificationsResponse = await axiosClient.get('/notifications?limit=10');
-      // setNotifications(notificationsResponse.data.data || []);
-      const notifications = notificationsResponse.data.data || [];
-      setUnreadCount(notifications.filter((n: Notification) => !n.is_read).length || 0);
-      setHighPriorityCount(notifications.filter((n: Notification) => n.priority === 'high' && !n.is_dismissed).length || 0);
+      // Start notification polling service
+      notificationPollingService.startPolling(30000); // Poll every 30 seconds
 
       // Lands are now loaded by the useGenericCrud hook automatically
       console.log('Lands loaded by hook:', lands?.length || 0, 'lands');
@@ -797,6 +795,8 @@ const Dashboard: React.FC = () => {
         selectedLand={selectedLandForNotification}
         onNotificationCreated={handleNotificationCreated}
       />
+
+      
     </div>
   );
 };

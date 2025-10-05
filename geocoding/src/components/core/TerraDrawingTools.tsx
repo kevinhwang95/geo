@@ -20,6 +20,7 @@ import type LandRegistry from '@/types/landRegistry.type';
 import { useAuthStore, canManageLands } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
 import NotificationMarkersManager from './NotificationMarkersManager';
+import { useDynamicMapHeight } from '@/hooks/useDynamicMapHeight';
 
 const colorPalette = [
   "#E74C3C", "#FF0066", "#9B59B6", "#673AB7", "#3F51B5", "#3498DB", "#03A9F4",
@@ -87,12 +88,10 @@ function rotateFeature(feature: any, angle: number) {
 
 interface TerraDrawingToolsProps {
   onNotificationDismissed?: () => void;
-  onNotificationMarkedAsRead?: () => void;
 }
 
 const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({ 
-  onNotificationDismissed,
-  onNotificationMarkedAsRead 
+  onNotificationDismissed
 }) => {
   
 
@@ -115,6 +114,15 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [selectedLandForNotification, setSelectedLandForNotification] = useState<LandRegistry | null>(null);
+
+  // Dynamic map height based on screen size
+  const dynamicHeight = useDynamicMapHeight(isFullscreen, {
+    minHeight: 400,
+    maxHeight: 1200,
+    headerHeight: 60,
+    toolbarHeight: 80,
+    padding: 40
+  });
 
   // Debug state changes
   useEffect(() => {
@@ -185,6 +193,61 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
   // Track if TerraDraw has been initialized
   const [terraDrawInitialized, setTerraDrawInitialized] = useState(false);
   const [polygonLoadAttempted, setPolygonLoadAttempted] = useState(false);
+
+  // Test function to manually add a polygon
+  const addTestPolygon = useCallback(() => {
+    console.log('🧪 Test polygon function called');
+    console.log('TerraDraw instance:', drawRef.current);
+    console.log('Map instance:', mapInstanceRef.current);
+    
+    if (!drawRef.current) {
+      console.error('❌ TerraDraw not available for test polygon');
+      console.log('TerraDraw initialized:', terraDrawInitialized);
+      return;
+    }
+
+    if (!mapInstanceRef.current) {
+      console.error('❌ Map not available for test polygon');
+      return;
+    }
+
+    console.log('🧪 Adding test polygon...');
+    
+    const testPolygon = {
+      type: "Feature" as const,
+      geometry: {
+        type: "Polygon" as const,
+        coordinates: [[
+          [99.82120, 14.09480],
+          [99.82130, 14.09480],
+          [99.82130, 14.09490],
+          [99.82120, 14.09490],
+          [99.82120, 14.09480]
+        ]]
+      },
+      properties: {
+        mode: "polygon",
+        landId: "test",
+        landName: "Test Polygon",
+        landCode: "TEST"
+      }
+    };
+
+    try {
+      console.log('Adding test polygon to TerraDraw...');
+      drawRef.current.addFeatures([testPolygon]);
+      console.log('✅ Test polygon added successfully');
+      
+      // Check if it's visible
+      const snapshot = drawRef.current.getSnapshot();
+      console.log('📊 TerraDraw snapshot after test:', snapshot.length, 'features');
+      console.log('Snapshot details:', snapshot);
+      
+    } catch (error) {
+      console.error('❌ Failed to add test polygon:', error);
+      console.error('Error details:', error);
+    }
+  }, [terraDrawInitialized]);
 
   // Enhanced polygon loading with retry mechanism
   const loadPolygonsToMap = useCallback(async () => {
@@ -1387,7 +1450,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
     <div 
       style={{ 
         width: isFullscreen ? "100vw" : "100%", 
-        height: isFullscreen ? "100vh" : "100%",
+        height: isFullscreen ? "100vh" : dynamicHeight.containerHeight,
         position: isFullscreen ? "fixed" : "relative",
         top: isFullscreen ? "0" : "auto",
         left: isFullscreen ? "0" : "auto",
@@ -1524,6 +1587,176 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
         >
           <span>⛶ Fullscreen Mode</span>
           <span style={{ fontSize: "10px", opacity: 0.7 }}>Press ESC to exit</span>
+        </div>
+      )}
+
+      {/* Polygon Debug Panel (Development Only) */}
+      {import.meta.env.DEV && !isFullscreen && (
+        <div 
+          style={{ 
+            position: "absolute", 
+            top: "10px", 
+            right: "10px", 
+            background: "rgba(0,0,0,0.9)", 
+            color: "white", 
+            padding: "12px", 
+            borderRadius: "6px",
+            fontSize: "11px",
+            zIndex: 1001,
+            fontFamily: "monospace",
+            maxWidth: "350px",
+            minWidth: "300px"
+          }}
+        >
+          <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#60a5fa" }}>🔍 Polygon Debug</div>
+          
+          <div style={{ marginBottom: "6px" }}>
+            <strong>Status:</strong> 
+            <span style={{ 
+              color: terraDrawInitialized ? "#4ade80" : "#fbbf24",
+              marginLeft: "4px"
+            }}>
+              {terraDrawInitialized ? "✅ Ready" : "⏳ Loading"}
+            </span>
+          </div>
+          
+          <div style={{ marginBottom: "6px" }}>
+            <strong>Lands:</strong> {lands?.length || 0} total
+          </div>
+          
+          <div style={{ marginBottom: "6px" }}>
+            <strong>Features:</strong> {drawRef.current?.getSnapshot().length || 0} loaded
+          </div>
+          
+          <div style={{ marginBottom: "6px" }}>
+            <strong>Mode:</strong> {drawRef.current?.getMode() || "unknown"}
+          </div>
+          
+          <div style={{ marginBottom: "6px" }}>
+            <strong>Map:</strong> 
+            <span style={{ 
+              color: mapInstanceRef.current ? "#4ade80" : "#fbbf24",
+              marginLeft: "4px"
+            }}>
+              {mapInstanceRef.current ? "✅ Ready" : "⏳ Loading"}
+            </span>
+          </div>
+          
+          <div style={{ marginBottom: "8px" }}>
+            <strong>Auth:</strong> 
+            <span style={{ 
+              color: isAuthenticated ? "#4ade80" : "#fbbf24",
+              marginLeft: "4px"
+            }}>
+              {isAuthenticated ? "✅ Yes" : "❌ No"}
+            </span>
+          </div>
+          
+          <div style={{ marginBottom: "8px" }}>
+            <strong>Map Height:</strong> {dynamicHeight.mapHeight}
+          </div>
+          
+          <div style={{ marginBottom: "8px" }}>
+            <strong>Screen:</strong> {dynamicHeight.screenInfo.viewportWidth}×{dynamicHeight.screenInfo.viewportHeight}
+          </div>
+          
+          <div style={{ marginBottom: "8px" }}>
+            <strong>Optimal:</strong> 
+            <span style={{ 
+              color: dynamicHeight.isOptimal ? "#4ade80" : "#fbbf24",
+              marginLeft: "4px"
+            }}>
+              {dynamicHeight.isOptimal ? "✅ Yes" : "⚠️ Constrained"}
+            </span>
+          </div>
+          
+          <div style={{ 
+            display: "flex", 
+            gap: "6px", 
+            marginTop: "8px",
+            borderTop: "1px solid #374151",
+            paddingTop: "8px",
+            flexWrap: "wrap"
+          }}>
+            <button 
+              onClick={() => {
+                console.log('🔄 Manual polygon reload triggered');
+                setPolygonLoadAttempted(false);
+                loadPolygonsToMap();
+              }}
+              style={{
+                background: "#3b82f6",
+                color: "white",
+                border: "none",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                cursor: "pointer"
+              }}
+            >
+              🔄 Reload
+            </button>
+            
+            <button 
+              onClick={() => {
+                console.log('🧹 Manual clear triggered');
+                if (drawRef.current) {
+                  drawRef.current.clear();
+                  console.log('✅ TerraDraw cleared');
+                }
+              }}
+              style={{
+                background: "#ef4444",
+                color: "white",
+                border: "none",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                cursor: "pointer"
+              }}
+            >
+              🧹 Clear
+            </button>
+            
+            <button 
+              onClick={addTestPolygon}
+              style={{
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                cursor: "pointer"
+              }}
+            >
+              🧪 Test
+            </button>
+            
+            <button 
+              onClick={() => {
+                console.log('🔍 TerraDraw Debug Info:');
+                console.log('TerraDraw instance:', drawRef.current);
+                console.log('TerraDraw mode:', drawRef.current?.getMode());
+                console.log('TerraDraw snapshot:', drawRef.current?.getSnapshot());
+                console.log('Map instance:', mapInstanceRef.current);
+                console.log('Map center:', mapInstanceRef.current?.getCenter()?.toJSON());
+                console.log('Map zoom:', mapInstanceRef.current?.getZoom());
+                console.log('Lands data:', lands);
+              }}
+              style={{
+                background: "#8b5cf6",
+                color: "white",
+                border: "none",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                cursor: "pointer"
+              }}
+            >
+              🔍 Debug
+            </button>
+          </div>
         </div>
       )}
       
@@ -1698,8 +1931,8 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
         ref={mapRef} 
         style={{ 
           width: "100%", 
-          height: isFullscreen ? "100vh" : "100%",
-          minHeight: isFullscreen ? "100vh" : "600px",
+          height: isFullscreen ? "100vh" : dynamicHeight.mapHeight,
+          minHeight: isFullscreen ? "100vh" : "400px",
           position: "relative"
         }} 
         role="application"
@@ -1715,7 +1948,6 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           // You can add additional logic here, like opening a dialog or navigating to the notification
         }}
         onNotificationDismissed={onNotificationDismissed}
-        onNotificationMarkedAsRead={onNotificationMarkedAsRead}
       />
 
       {/* Category Colors Legend */}

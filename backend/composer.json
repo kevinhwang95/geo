@@ -1,14 +1,12 @@
 {
     "name": "land-management/backend",
-    "description": "Land Management System Backend API with OAuth 2.0 Support",
+    "description": "Land Management System Backend API with JWT Authentication",
     "type": "project",
     "require": {
         "php": ">=8.0",
         "firebase/php-jwt": "^6.0",
         "vlucas/phpdotenv": "^5.0",
         "guzzlehttp/guzzle": "^7.0",
-        "league/oauth2-google": "^4.0",
-        "league/oauth2-client": "^2.6",
         "intervention/image": "^2.7"
     },
     "autoload": {

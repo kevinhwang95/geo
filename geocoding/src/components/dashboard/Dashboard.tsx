@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import NavigationMenu from '@/components/core/NavigationMenu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
@@ -16,29 +16,33 @@ import {
   Clock,
   Plus,
   LogOut,
-  Search,
-  Home,
-  Layers
+  Search
 } from 'lucide-react';
-import { useAuthStore, canManageLands } from '@/stores/authStore';
+import { useAuthStore, canManageLands, canManageUsers, canManageTeams, canManageWorkAssignments } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
 import axiosClient from '@/api/axiosClient';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
 import NotificationCenter from '@/components/core/NotificationCenter';
 import CreateNotificationDialog from '@/components/core/CreateNotificationDialog';
+import UserManagement from '@/components/admin/UserManagement';
+import TeamManagement from '@/components/admin/TeamManagement';
+import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 
 interface Notification {
   id: number;
   land_id: number;
+  user_id: number;
   type: 'harvest_due' | 'harvest_overdue' | 'maintenance_due' | 'comment_added' | 'photo_added';
   title: string;
   message: string;
+  priority: 'low' | 'medium' | 'high';
   is_read: boolean;
+  is_dismissed: boolean;
   created_at: string;
-  land_name: string;
-  land_code: string;
+  land_name?: string;
+  land_code?: string;
   harvest_status?: 'overdue' | 'due_soon' | 'normal';
 }
 
@@ -74,19 +78,20 @@ interface Land {
 
 const Dashboard: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuthStore();
-  const { centerMapOnLand, clearSelection } = useMapStore();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { centerMapOnLand } = useMapStore();
+  // const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<string>('map');
+  const [highPriorityCount, setHighPriorityCount] = useState(0);
+  const [activeSection, setActiveSection] = useState<string>('overview');
   const [landSearchTerm, setLandSearchTerm] = useState('');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [selectedLandForNotification, setSelectedLandForNotification] = useState<Land | null>(null);
 
   // Use the same hook that other components use successfully
-  const { data: lands, loading: landsLoading, error: landsError, fetchData: fetchLands } = useGenericCrud<Land>('lands');
+  const { data: lands, loading: landsLoading, error: landsError } = useGenericCrud<Land>('lands');
 
   useEffect(() => {
     loadDashboardData();
@@ -118,10 +123,10 @@ const Dashboard: React.FC = () => {
           const response = await axiosClient.get(`/users/${userId}`);
           console.log(`User ${userId} response:`, response.data);
           
-          if (response.data.firstName) {
-            // Handle direct response format (API returns camelCase)
+          if (response.data.first_name) {
+            // Handle direct response format (API returns snake_case)
             const userData = response.data;
-            const fullName = `${userData.firstName} ${userData.lastName}`.trim();
+            const fullName = `${userData.first_name} ${userData.last_name}`.trim();
             userNamesMap[userId] = fullName;
             console.log(`User ${userId} name: ${fullName}`);
           } else {
@@ -158,8 +163,10 @@ const Dashboard: React.FC = () => {
 
       // Load notifications
       const notificationsResponse = await axiosClient.get('/notifications?limit=10');
-      setNotifications(notificationsResponse.data.data || []);
-      setUnreadCount(notificationsResponse.data.data?.filter((n: Notification) => !n.is_read).length || 0);
+      // setNotifications(notificationsResponse.data.data || []);
+      const notifications = notificationsResponse.data.data || [];
+      setUnreadCount(notifications.filter((n: Notification) => !n.is_read).length || 0);
+      setHighPriorityCount(notifications.filter((n: Notification) => n.priority === 'high' && !n.is_dismissed).length || 0);
 
       // Lands are now loaded by the useGenericCrud hook automatically
       console.log('Lands loaded by hook:', lands?.length || 0, 'lands');
@@ -173,27 +180,27 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const markNotificationAsRead = async (notificationId: number) => {
-    try {
-      await axiosClient.post(`/notifications/mark-read/${notificationId}`);
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
+  // const markNotificationAsRead = async (notificationId: number) => {
+  //   try {
+  //     await axiosClient.post(`/notifications/mark-read/${notificationId}`);
+  //     setNotifications(prev => 
+  //       prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+  //     );
+  //     setUnreadCount(prev => Math.max(0, prev - 1));
+  //   } catch (error) {
+  //     console.error('Failed to mark notification as read:', error);
+  //   }
+  // };
 
-  const dismissNotification = async (notificationId: number) => {
-    try {
-      await axiosClient.post(`/notifications/dismiss/${notificationId}`);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Failed to dismiss notification:', error);
-    }
-  };
+  // const dismissNotification = async (notificationId: number) => {
+  //   try {
+  //     await axiosClient.post(`/notifications/dismiss/${notificationId}`);
+  //     setNotifications(prev => prev.filter(n => n.id !== notificationId));
+  //     setUnreadCount(prev => Math.max(0, prev - 1));
+  //   } catch (error) {
+  //     console.error('Failed to dismiss notification:', error);
+  //   }
+  // };
 
   const handleLogout = async () => {
     try {
@@ -211,12 +218,12 @@ const Dashboard: React.FC = () => {
   };
 
   const handleNotificationClick = () => {
-    setActiveTab('notifications');
+    setActiveSection('notifications');
   };
 
   const handleAddLand = () => {
     // For now, switch to map tab where users can draw new lands
-    setActiveTab('map');
+    setActiveSection('map');
   };
 
   const handleViewLandDetails = (landId: number) => {
@@ -230,7 +237,7 @@ const Dashboard: React.FC = () => {
     if (land) {
       console.log('Switching to map tab and centering on land:', land.land_name);
       // Switch to map tab
-      setActiveTab('map');
+      setActiveSection('map');
       // Center map on the selected land and show InfoWindow
       centerMapOnLand(land);
       console.log('centerMapOnLand function called');
@@ -253,42 +260,42 @@ const Dashboard: React.FC = () => {
   };
 
   // Test function to verify map store
-  const testMapStore = () => {
-    console.log('Testing map store...');
-    const testLand = lands?.[0];
-    if (testLand) {
-      console.log('Testing with land:', testLand.land_name);
-      centerMapOnLand(testLand);
-    }
-  };
+  // const testMapStore = () => {
+  //   console.log('Testing map store...');
+  //   const testLand = lands?.[0];
+  //   if (testLand) {
+  //     console.log('Testing with land:', testLand.land_name);
+  //     centerMapOnLand(testLand);
+  //   }
+  // };
 
   // Test function specifically for InfoWindow
-  const testInfoWindow = () => {
-    console.log('Testing InfoWindow specifically...');
-    const testLand = lands?.[0];
-    if (testLand) {
-      console.log('Testing InfoWindow with land:', testLand.land_name);
-      setActiveTab('map');
-      // Use a small delay to ensure map is ready
-      setTimeout(() => {
-        centerMapOnLand(testLand);
-      }, 500);
-    }
-  };
+  // const testInfoWindow = () => {
+  //   console.log('Testing InfoWindow specifically...');
+  //   const testLand = lands?.[0];
+  //   if (testLand) {
+  //     console.log('Testing InfoWindow with land:', testLand.land_name);
 
-  // Test function for simple InfoWindow
-  const testSimpleInfoWindow = () => {
-    console.log('Testing simple InfoWindow...');
-    setActiveTab('map');
-    setTimeout(() => {
-      // This will trigger the map centering which should show InfoWindow
-      const testLand = lands?.[0];
-      if (testLand) {
-        console.log('Testing simple InfoWindow with land:', testLand.land_name);
-        centerMapOnLand(testLand);
-      }
-    }, 1000);
-  };
+  //     setActiveSection('map');
+  //     // Use a small delay to ensure map is ready
+  //     setTimeout(() => {
+  //       centerMapOnLand(testLand);
+  //     }, 500);
+  //   }
+  // };
+
+  // const testSimpleInfoWindow = () => {
+  //   console.log('Testing simple InfoWindow...');
+  //   setActiveTab('map');
+  //   setTimeout(() => {
+  //     // This will trigger the map centering which should show InfoWindow
+  //     const testLand = lands?.[0];
+  //     if (testLand) {
+  //       console.log('Testing simple InfoWindow with land:', testLand.land_name);
+  //       centerMapOnLand(testLand);
+  //     }
+  //   }, 1000);
+  // };
 
   // Filter lands based on search term
   const filteredLands = (lands || []).filter(land => 
@@ -352,7 +359,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -385,7 +392,7 @@ const Dashboard: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={testMapStore}>
+                {/* <Button variant="outline" size="sm" onClick={testMapStore}>
                   Test Map Store
                 </Button>
                 <Button variant="outline" size="sm" onClick={testInfoWindow}>
@@ -393,7 +400,7 @@ const Dashboard: React.FC = () => {
                 </Button>
                 <Button variant="outline" size="sm" onClick={testSimpleInfoWindow}>
                   Simple Test
-                </Button>
+                </Button> */}
                 <Avatar
                   src={user?.avatar_url}
                   alt={user?.first_name}
@@ -420,58 +427,26 @@ const Dashboard: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 min-h-0 flex flex-col">
+      <div className="flex-1 flex flex-col">
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex-1 min-h-0 flex flex-col">
-          <div className="flex justify-center">
-            <TabsList className="grid w-auto grid-cols-4 bg-gray-100/50 p-1 rounded-xl border shadow-sm h-auto">
-              <TabsTrigger 
-                value="overview" 
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 hover:text-purple-500 rounded-lg"
-              >
-                <Home className="h-4 w-4" />
-                <span>Overview</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="lands" 
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 hover:text-purple-500 rounded-lg"
-              >
-                <Layers className="h-4 w-4" />
-                <span>Lands</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="notifications" 
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 hover:text-purple-500 rounded-lg relative"
-              >
-                <Bell className="h-4 w-4" />
-                <span>Notifications</span>
-                {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs font-bold"
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="map" 
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 hover:text-purple-500 rounded-lg"
-              >
-                <Eye className="h-4 w-4" />
-                <span>Map</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+        <NavigationMenu 
+          activeSection={activeSection} 
+          onSectionChange={setActiveSection} 
+          unreadCount={unreadCount}
+          highPriorityCount={highPriorityCount}
+        />
 
-          <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-300 flex-1 min-h-0 flex flex-col">
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-auto">
+          {activeSection === 'overview' && (
+            <div className="space-y-6 p-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-blue-700">Total Lands</CardTitle>
@@ -528,6 +503,23 @@ const Dashboard: React.FC = () => {
                   <div className="text-2xl font-bold text-purple-900">{unreadCount}</div>
                   <p className="text-xs text-purple-600">
                     New notifications
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-red-50 to-red-100/50"
+                onClick={() => setActiveSection('map')}
+                title="Click to view map with notification markers"
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-red-700">High Priority</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-900">{highPriorityCount}</div>
+                  <p className="text-xs text-red-600">
+                    Urgent notifications
                   </p>
                 </CardContent>
               </Card>
@@ -592,9 +584,11 @@ const Dashboard: React.FC = () => {
                 </ScrollArea>
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="lands" className="space-y-6 animate-in fade-in-50 duration-300 flex-1 min-h-0 flex flex-col">
+          {activeSection === 'lands' && (
+            <div className="space-y-6 p-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">All Lands</h2>
               {canManageLands() && (
@@ -742,13 +736,17 @@ const Dashboard: React.FC = () => {
                 )}
               </div>
             )}
-          </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="notifications" className="space-y-6 animate-in fade-in-50 duration-300 flex-1 min-h-0 flex flex-col">
-              <NotificationCenter onNavigateToMap={() => setActiveTab('map')} />
-            </TabsContent>
+          {activeSection === 'notifications' && (
+            <div className="space-y-6 p-6">
+              <NotificationCenter onNavigateToMap={() => setActiveSection('map')} />
+            </div>
+          )}
 
-          <TabsContent value="map" className="space-y-6 animate-in fade-in-50 duration-300 flex-1 min-h-0 flex flex-col">
+          {activeSection === 'map' && (
+            <div className="space-y-6 p-6">
               <Card className="h-[min(70vh,600px)] flex flex-col">
               <CardHeader>
                 <CardTitle>Interactive Map</CardTitle>
@@ -757,11 +755,39 @@ const Dashboard: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0 h-full">
-                <TerraDrawingTools />
+                <TerraDrawingTools 
+                  onNotificationDismissed={() => {
+                    // Refresh notification counts when a notification is dismissed
+                    loadDashboardData();
+                  }}
+                  onNotificationMarkedAsRead={() => {
+                    // Refresh notification counts when a notification is marked as read
+                    loadDashboardData();
+                  }}
+                />
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+            </div>
+          )}
+
+          {canManageTeams() && activeSection === 'teams' && (
+            <div className="space-y-6 p-6">
+              <TeamManagement />
+            </div>
+          )}
+
+          {canManageWorkAssignments() && activeSection === 'work-assignments' && (
+            <div className="space-y-6 p-6">
+              <WorkAssignmentManagement />
+            </div>
+          )}
+
+          {canManageUsers() && activeSection === 'admin' && (
+            <div className="space-y-6 p-6">
+              <UserManagement />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create Notification Dialog */}

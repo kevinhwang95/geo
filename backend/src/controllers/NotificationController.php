@@ -29,6 +29,8 @@ class NotificationController
                 l.land_name,
                 l.land_code,
                 l.next_harvest_date,
+                u.first_name as creator_first_name,
+                u.last_name as creator_last_name,
                 CASE 
                     WHEN l.next_harvest_date <= CURDATE() THEN 'overdue'
                     WHEN l.next_harvest_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'due_soon'
@@ -36,11 +38,27 @@ class NotificationController
                 END as harvest_status
             FROM notifications n
             JOIN lands l ON n.land_id = l.id
+            LEFT JOIN users u ON n.user_id = u.id
             WHERE n.user_id = ? AND n.is_dismissed = 0
             ORDER BY n.created_at DESC
             LIMIT ? OFFSET ?
         ", [$user['user_id'], $limit, $offset]);
         $notifications = $stmt->fetchAll();
+        
+        // Get photos for each notification
+        $notificationsWithPhotos = [];
+        foreach ($notifications as $notification) {
+            $photoStmt = $this->db->query("
+                SELECT id, file_path, file_name, file_size, mime_type, uploaded_at
+                FROM photos
+                WHERE notification_id = ?
+                ORDER BY uploaded_at ASC
+            ", [$notification['id']]);
+            
+            $photos = $photoStmt->fetchAll();
+            $notification['photos'] = $photos;
+            $notificationsWithPhotos[] = $notification;
+        }
         
         // Get total count
         $stmt = $this->db->query("
@@ -51,7 +69,7 @@ class NotificationController
         
         echo json_encode([
             'success' => true,
-            'data' => $notifications,
+            'data' => $notificationsWithPhotos,
             'pagination' => [
                 'page' => $page,
                 'limit' => $limit,
@@ -237,11 +255,11 @@ class NotificationController
         }
         
         try {
-            // Insert notification
+            // Insert notification with priority
             $stmt = $this->db->query("
-                INSERT INTO notifications (land_id, user_id, type, title, message, priority, is_read, is_dismissed, created_at)
+                INSERT INTO notifications (land_id, user_id, type, priority, title, message, is_read, is_dismissed, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, 0, 0, NOW())
-            ", [$landId, $user['user_id'], $type, $title, $message, $priority]);
+            ", [$landId, $user['user_id'], $type, $priority, $title, $message]);
             
             $notificationId = $this->db->lastInsertId();
             

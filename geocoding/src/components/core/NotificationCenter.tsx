@@ -3,11 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, RefreshCw, Filter, CheckCircle, XCircle, AlertTriangle, Info, Camera, MessageSquare, MapPin, Eye } from 'lucide-react';
+import { Bell, RefreshCw, Filter, CheckCircle, XCircle, AlertTriangle, Info, Camera, MessageSquare, MapPin } from 'lucide-react';
 import axiosClient from '@/api/axiosClient';
 import { useMapStore } from '@/stores/mapStore';
 import NotificationDetailDialog from './NotificationDetailDialog';
-import type LandRegistry from '@/types/landRegistry.type';
 
 interface Notification {
   id: number;
@@ -146,11 +145,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
       }
     } catch (error) {
       console.error('Error fetching land data:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+      // console.error('Error details:', {
+      //   message: error.message,
+      //   status: error.response?.status,
+      //   data: error.response?.data
+      // });
     }
   };
 

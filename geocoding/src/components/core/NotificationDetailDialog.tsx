@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { AlertTriangle, CheckCircle, MessageSquare, Camera, Info, MapPin, Calendar, User, X, ZoomIn, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, MessageSquare, Camera, Info, MapPin, Calendar, Download } from 'lucide-react';
 import axiosClient from '@/api/axiosClient';
 
 interface NotificationDetail {
@@ -52,7 +52,7 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  // const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
@@ -134,13 +134,13 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
   const handlePhotoClick = (photo: Photo) => {
     const photoIndex = photos.findIndex(p => p.id === photo.id);
     setCurrentPhotoIndex(photoIndex >= 0 ? photoIndex : 0);
-    setSelectedPhoto(photo);
+    // setSelectedPhoto(photo);
     setPhotoModalOpen(true);
   };
 
   const handleDownloadPhoto = (photo: Photo) => {
     const link = document.createElement('a');
-    link.href = `http://localhost:8000/${photo.file_path}`;
+    link.href = `${import.meta.env.VITE_API_BASE_UPLOAD}${photo.file_path}`;
     link.download = photo.file_name;
     link.target = '_blank';
     document.body.appendChild(link);
@@ -264,7 +264,7 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
                       {photo.mime_type.startsWith('image/') ? (
                         <>
                           <img
-                            src={`http://localhost:8000/${photo.file_path}`}
+                            src={`${import.meta.env.VITE_API_BASE_UPLOAD}${photo.file_path}`}
                             alt={photo.file_name}
                             className="w-full h-full object-cover rounded-lg"
                             style={{ maxWidth: '100%', maxHeight: '100%' }}
@@ -379,12 +379,12 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
                 }}
               >
                 <CarouselContent className="h-[60vh]">
-                  {photos.map((photo, index) => (
+                  {photos.map((photo) => (
                     <CarouselItem key={photo.id}>
                       <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg overflow-hidden">
                         {photo.mime_type.startsWith('image/') ? (
                           <img
-                            src={`http://localhost:8000/${photo.file_path}`}
+                            src={`${import.meta.env.VITE_API_BASE_UPLOAD}${photo.file_path}`}
                             alt={photo.file_name}
                             className="max-w-full max-h-full object-contain"
                             onError={(e) => {
@@ -438,7 +438,7 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
                     }`}
                   >
                     <img
-                      src={`http://localhost:8000/${photo.file_path}`}
+                      src={`${import.meta.env.VITE_API_BASE_UPLOAD}${photo.file_path}`}
                       alt={photo.file_name}
                       className="w-full h-full object-cover"
                       onError={(e) => {

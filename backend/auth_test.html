@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .token-display {
+            word-break: break-all;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 10px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JWT Authentication Test</h1>
+        <p>This page tests the JWT authentication system. You can register a new user or login with existing credentials.</p>
+        
+        <!-- Registration Form -->
+        <div id="registrationForm" style="display: none;">
+            <h2>Register New User</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="regFirstName">First Name *</label>
+                    <input type="text" id="regFirstName" required>
+                </div>
+                <div class="form-group">
+                    <label for="regLastName">Last Name *</label>
+                    <input type="text" id="regLastName" required>
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email *</label>
+                    <input type="email" id="regEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="regPhone">Phone</label>
+                    <input type="tel" id="regPhone">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Password *</label>
+                    <input type="password" id="regPassword" required>
+                </div>
+                <div class="form-group">
+                   <br>
+                    <button type="submit" id="registerBtn">Register</button>
+                    <button type="button" onclick="showLoginForm()">Switch to Login</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm">
+            <h2>Login</h2>
+            <form id="loginHandler">
+                <div class="form-group">
+                    <label for="loginEmail">Email *</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password *</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" id="loginBtn">Login</button>
+                    <button type="button" onclick="showRegistrationForm()">Switch to Register</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Authenticated State -->
+        <div id="authenticatedState" style="display: none;">
+            <h2>Authenticated User</h2>
+            <div id="userInfo"></div>
+            <br>
+            <button onclick="testProtectedEndpoint()">Test Protected Endpoint</button>
+            <button onclick="refreshToken()">Refresh Token</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Test Actions -->
+        <div class="form-group">
+            <button onclick="registerTestUser()">Register Test User</button>
+            <button onclick="loginTestUser()">Login as Test User</button>
+            <button onclick="clearStorage()">Clear Storage</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+
+        let currentTokens = null;
+
+        // Check for existing authentication on page load
+        document.addEventListener('DOMContentLoaded', checkExistingAuth);
+
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResult() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '';
+            resultDiv.className = 'result';
+        }
+
+        function checkExistingAuth() {
+            const stored = localStorage.getItem('auth-storage');
+            if (stored) {
+                try {
+                    const authData = JSON.parse(stored);
+                    if (authData.tokens && authData.tokens.access_token && authData.user) {
+                        currentTokens = authData.tokens;
+                        showAuthenticatedState(authData.user);
+                        showResult('Found existing authentication!\n' + JSON.stringify(authData.user, null, 2), 'success');
+                    } else {
+                        clearAuth();
+                    }
+                } catch (e) {
+                    clearAuth();
+                }
+            }
+        }
+
+        function showAuthenticatedState(user) {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('authenticatedState').style.display = 'block';
+            document.getElementById('userInfo').innerHTML = '<strong>User:</strong> ' + user.firstName + ' ' + user.lastName + 
+                '<br><strong>Email:</strong> ' + user.email + 
+                '<br><strong>Role:</strong> ' + user.role;
+        }
+
+        function clearAuth() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('authenticatedState').style.display = 'none';
+            document.getElementById('userInfo').innerHTML = '';
+            localStorage.removeItem('auth-storage');
+            currentTokens = null;
+            clearResult();
+        }
+
+        function showRegistrationForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registrationForm').style.display = 'block';
+            clearResult();
+        }
+
+        function showLoginForm() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registrationForm').style.display = 'none';
+            clearResult();
+        }
+
+        // Registration form handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        firstName: document.getElementById('regFirstName').value,
+                        lastName: document.getElementById('regLastName').value,
+                        email: document.getElementById('regEmail').value,
+                        phone: document.getElementById('regPhone').value,
+                        password: document.getElementById('regPassword').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentTokens = data.token;
+                    showAuthenticatedState(data.user);
+                    showResult('Registration successful!\n\nUser created:\n' + JSON.stringify(data.user, null, 2) + 
+                        '\n\nTokens received:\n' + JSON.stringify(data.token, null, 2), 'success');
+                } else {
+                    showResult('Registration failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showResult('Registration error: ' + error.message, 'error');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register';
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginHandler').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentTokens = data.token;
+                    showAuthenticatedState(data.user);
+                    showResult('Login successful!\n\nUser data:\n' + JSON.stringify(data.user, null, 2) + 
+                        '\n\nTokens received:\n' + JSON.stringify(data.token, null, 2), 'success');
+                } else {
+                    showResult('Login failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showResult('Login error: ' + error.message, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+
+        async function testProtectedEndpoint() {
+            if (!currentTokens) {
+                showResult('No authentication tokens available', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + currentTokens.access_token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('Protected endpoint test successful!\n\nProfile data:\n' + JSON.stringify(data, null, 2), 'success');
+                } else {
+                    showResult('Protected endpoint test failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showResult('Protected endpoint test error: ' + error.message, 'error');
+            }
+        }
+
+        async function refreshToken() {
+            if (!currentTokens) {
+                showResult('No authentication tokens available', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + currentTokens.access_token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentTokens = data.token;
+                    showResult('Token refresh successful!\n\nNew tokens:\n' + JSON.stringify(data.token, null, 2), 'success');
+                } else {
+                    showResult('Token refresh failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showResult('Token refresh error: ' + error.message, 'error');
+            }
+        }
+
+        function logout() {
+            clearAuth();
+            showResult('Logged out successfully', 'info');
+        }
+
+        async function registerTestUser() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        firstName: 'Test',
+                        lastName: 'User',
+                        email: 'testuser@example.com',
+                        phone: '1234567890',
+                        password: 'testpassword123'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('Test user registration successful!\n' + JSON.stringify(data, null, 2), 'success');
+                } else {
+                    showResult('Test user registration failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showResult('Test user registration error: ' + error.message, 'error');
+            }
+        }
+
+        async function loginTestUser() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'testuser@example.com',
+                        password: 'testpassword123'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentTokens = data.token;
+                    showAuthenticatedState(data.user);
+                    showResult('Test user login successful!\n' + JSON.stringify(data, null, 2), 'success');
+                } else {
+                    showResult('Test user login failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showResult('Test user login error: ' + error.message, 'error');
+            }
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('auth-storage');
+            showResult('Storage cleared!', 'info');
+        }
+    </script>
+</body>
+</html>

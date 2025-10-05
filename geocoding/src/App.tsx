@@ -4,7 +4,6 @@ import { Toaster } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LoginPage from '@/components/auth/LoginPage';
-import OAuthCallback from '@/components/auth/OAuthCallback';
 import Dashboard from '@/components/dashboard/Dashboard';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
 
@@ -44,10 +43,6 @@ function App() {
             element={
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
             } 
-          />
-          <Route 
-            path="/oauth/callback" 
-            element={<OAuthCallback />} 
           />
           <Route 
             path="/dashboard" 

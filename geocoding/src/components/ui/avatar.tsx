@@ -13,7 +13,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   className = 'h-8 w-8 rounded-full',
   fallback = '/default-avatar.svg'
 }) => {
-  const [imageSrc, setImageSrc] = useState(src || fallback);
+  const [, setImageSrc] = useState(src || fallback);
   const [hasError, setHasError] = useState(false);
 
   const handleError = () => {

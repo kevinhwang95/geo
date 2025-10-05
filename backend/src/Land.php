@@ -14,12 +14,12 @@ class Land
     public function create($data)
     {
         $sql = "INSERT INTO lands (
-                    land_name, land_code, land_number, location, 
+                    land_name, land_code, deed_number, location, 
                     province, district, city, plant_type_id, category_id, 
                     plant_date, harvest_cycle_days, geometry, size, 
                     owner_name, notes, created_by, created_at, updated_at
                 ) VALUES (
-                    :land_name, :land_code, :land_number, :location,
+                    :land_name, :land_code, :deed_number, :location,
                     :province, :district, :city, :plant_type_id, :category_id,
                     :plant_date, :harvest_cycle_days, :geometry, :size,
                     :owner_name, :notes, :created_by, NOW(), NOW()
@@ -28,7 +28,7 @@ class Land
         $params = [
             'land_name' => $data['land_name'],
             'land_code' => $data['land_code'],
-            'land_number' => $data['land_number'],
+            'deed_number' => $data['land_number'], // Map land_number to deed_number
             'location' => $data['location'],
             'province' => $data['province'],
             'district' => $data['district'],
@@ -151,13 +151,15 @@ class Land
             'id' => (int) $land['id'],
             'land_name' => $land['land_name'],
             'land_code' => $land['land_code'],
-            'land_number' => $land['land_number'],
+            'land_number' => $land['deed_number'], // Map deed_number back to land_number for frontend
             'location' => $land['location'],
             'province' => $land['province'],
             'district' => $land['district'],
             'city' => $land['city'],
             'plant_type_id' => (int) $land['plant_type_id'],
+            'planttypeid' => (int) $land['plant_type_id'], // Also map to planttypeid for frontend compatibility
             'category_id' => (int) $land['category_id'],
+            'categoryid' => (int) $land['category_id'], // Also map to categoryid for frontend compatibility
             'plant_type_name' => $land['plant_type_name'] ?? null,
             'category_name' => $land['category_name'] ?? null,
             'category_color' => $land['category_color'] ?? '#4285F4',

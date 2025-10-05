@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {MyFormDialog} from "@/components/core/my-form-dialog";
 import CreateNotificationDialog from "@/components/core/CreateNotificationDialog";
 import { Loader } from "@googlemaps/js-api-loader";
+import { getMarkerBackgroundColor } from '@/utils/markerColors';
 import {
   TerraDraw,
   TerraDrawSelectMode,
@@ -16,8 +17,9 @@ import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
 
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, canManageLands } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
+import NotificationMarkersManager from './NotificationMarkersManager';
 
 const colorPalette = [
   "#E74C3C", "#FF0066", "#9B59B6", "#673AB7", "#3F51B5", "#3498DB", "#03A9F4",
@@ -83,7 +85,15 @@ function rotateFeature(feature: any, angle: number) {
   return newFeature;
 }
 
-const TerraDrawingTools: React.FC = () => {
+interface TerraDrawingToolsProps {
+  onNotificationDismissed?: () => void;
+  onNotificationMarkedAsRead?: () => void;
+}
+
+const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({ 
+  onNotificationDismissed,
+  onNotificationMarkedAsRead 
+}) => {
   
 
   const mapRef = useRef<HTMLDivElement>(null);
@@ -101,6 +111,7 @@ const TerraDrawingTools: React.FC = () => {
   const [polygonArea, setPolygonArea] = useState(0);
   const [open, setOpen] = useState(false);
   const [showMarkers, setShowMarkers] = useState(true);
+  const [showColorsLegend, setShowColorsLegend] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [selectedLandForNotification, setSelectedLandForNotification] = useState<LandRegistry | null>(null);
@@ -691,11 +702,20 @@ const TerraDrawingTools: React.FC = () => {
             
             // Create marker content element
             const markerElement = document.createElement('div');
+            // Get background color using database category color (primary) or plant type color (fallback)
+            const backgroundColor = getMarkerBackgroundColor({
+              category_color: land.category_color,
+              planttypeid: land.planttypeid
+            });
+            
+            // Debug: Log color source to verify it's using database colors
+            console.log(`${land.land_name} (${land.land_code}): Category Color: ${land.category_color}, Used Color: ${backgroundColor}`);
+            
             markerElement.innerHTML = `
               <div style="
                 width: 60px; 
                 height: 60px; 
-                background: #4285F4; 
+                background: ${backgroundColor}; 
                 border: 3px solid #ffffff; 
                 border-radius: 50%; 
                 display: flex; 
@@ -716,7 +736,7 @@ const TerraDrawingTools: React.FC = () => {
                   font-weight: bold;
                   text-align: center;
                   text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-                ">${land.land_code}</span>
+                  ">${land.land_code}</span>
               </div>
             `;
 
@@ -882,6 +902,11 @@ const TerraDrawingTools: React.FC = () => {
     });
   };
 
+  // Function to toggle color legend
+  const toggleColorsLegend = () => {
+    setShowColorsLegend(!showColorsLegend);
+  };
+
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
     
@@ -924,7 +949,7 @@ const TerraDrawingTools: React.FC = () => {
     let map: google.maps.Map;
 
     const loader = new Loader({
-      apiKey: "AIzaSyBdsqAGgmfJQ3-vZhL9qPUSIVhqciANlpY",
+      apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
       version: "weekly",
       libraries: ["maps", "drawing", "marker"],
     });
@@ -1433,21 +1458,48 @@ const TerraDrawingTools: React.FC = () => {
         <button id="redo-button" onClick={handleRedo}>Redo</button>
       </div> */}
       <div id="mode-ui" role="toolbar" aria-label="Drawing tools toolbar" aria-orientation="horizontal">
-        {/* <button id="point-mode" className="mode-button" title="Point" onClick={() => handleModeChange("point", "point-mode")}><img src="./img/point.svg" alt="Point" draggable="false" /></button> */}
-        {/* <button id="linestring-mode" className="mode-button" title="Linestring" onClick={() => handleModeChange("linestring", "linestring-mode")}><img src="./img/polyline.svg" alt="Linestring" draggable="false" /></button> */}
-        <button 
-          id="polygon-mode" 
-          className="mode-button" 
-          title="Draw polygon" 
-          aria-label="Draw polygon - Click to draw polygon shapes on the map"
-          aria-pressed="false"
-          onClick={() => handleModeChange("polygon", "polygon-mode")}
-        >
-          <img src="./img/polygon.png" alt="Polygon" draggable="false" />
-        </button>
-        {/* <button id="rectangle-mode" className="mode-button" title="Rectangle" onClick={() => handleModeChange("rectangle", "rectangle-mode")}><img src="./img/rectangle.svg" alt="Rectangle" draggable="false" /></button> */}
-        {/* <button id="circle-mode" className="mode-button" title="Circle" onClick={() => handleModeChange("circle", "circle-mode")}><img src="./img/circle.svg" alt="Circle" draggable="false" /></button> */}
-        {/* <button id="freehand-mode" className="mode-button" title="Freehand" onClick={() => handleModeChange("freehand", "freehand-mode")}><img src="./img/freehand.svg" alt="Freehand" draggable="false" /></button> */}
+        {/* Drawing tools - only visible to admin and contributor roles */}
+        {canManageLands() && (
+          <>
+            {/* <button id="point-mode" className="mode-button" title="Point" onClick={() => handleModeChange("point", "point-mode")}><img src="./img/point.svg" alt="Point" draggable="false" /></button> */}
+            {/* <button id="linestring-mode" className="mode-button" title="Linestring" onClick={() => handleModeChange("linestring", "linestring-mode")}><img src="./img/polyline.svg" alt="Linestring" draggable="false" /></button> */}
+            <button 
+              id="polygon-mode" 
+              className="mode-button" 
+              title="Draw polygon" 
+              aria-label="Draw polygon - Click to draw polygon shapes on the map"
+              aria-pressed="false"
+              onClick={() => handleModeChange("polygon", "polygon-mode")}
+            >
+              <img src="./img/polygon.png" alt="Polygon" draggable="false" />
+            </button>
+            {/* <button id="rectangle-mode" className="mode-button" title="Rectangle" onClick={() => handleModeChange("rectangle", "rectangle-mode")}><img src="./img/rectangle.svg" alt="Rectangle" draggable="false" /></button> */}
+            {/* <button id="circle-mode" className="mode-button" title="Circle" onClick={() => handleModeChange("circle", "circle-mode")}><img src="./img/circle.svg" alt="Circle" draggable="false" /></button> */}
+            {/* <button id="freehand-mode" className="mode-button" title="Freehand" onClick={() => handleModeChange("freehand", "freehand-mode")}><img src="./img/freehand.svg" alt="Freehand" draggable="false" /></button> */}
+            <button 
+              id="resize-button" 
+              className="mode-button" 
+              title="Toggle resize mode" 
+              aria-label="Toggle resize mode - Enable or disable resizing of selected shapes"
+              aria-pressed="false"
+              onClick={handleResize}
+            >
+              <img src="./img/resize.svg" alt="Resize" draggable="false" />
+            </button>
+            {/* <button id="clear-mode" className="mode-button" title="Clear" onClick={() => handleModeChange("static", "clear-mode")}><img src="./img/delete.svg" alt="Clear" draggable="false" /></button> */}
+            <button 
+              id="delete-selected-button" 
+              className="mode-button" 
+              title="Delete selected or last shape" 
+              aria-label="Delete selected shape - Remove the currently selected shape or the last drawn shape"
+              onClick={handleDeleteSelected}
+            >
+              <img src="./img/delete-selected.svg" alt="Delete Selected" draggable="false" />
+            </button>
+          </>
+        )}
+        
+        {/* Select mode - available to all authenticated users */}
         <button 
           id="select-mode" 
           className="mode-button active" 
@@ -1457,26 +1509,6 @@ const TerraDrawingTools: React.FC = () => {
           onClick={() => handleModeChange("select", "select-mode")}
         >
           <img src="./img/select.svg" alt="Select" draggable="false" />
-        </button>
-        <button 
-          id="resize-button" 
-          className="mode-button" 
-          title="Toggle resize mode" 
-          aria-label="Toggle resize mode - Enable or disable resizing of selected shapes"
-          aria-pressed="false"
-          onClick={handleResize}
-        >
-          <img src="./img/resize.svg" alt="Resize" draggable="false" />
-        </button>
-        {/* <button id="clear-mode" className="mode-button" title="Clear" onClick={() => handleModeChange("static", "clear-mode")}><img src="./img/delete.svg" alt="Clear" draggable="false" /></button> */}
-        <button 
-          id="delete-selected-button" 
-          className="mode-button" 
-          title="Delete selected or last shape" 
-          aria-label="Delete selected shape - Remove the currently selected shape or the last drawn shape"
-          onClick={handleDeleteSelected}
-        >
-          <img src="./img/delete-selected.svg" alt="Delete Selected" draggable="false" />
         </button>
         <button 
           id="undo-button" 
@@ -1525,6 +1557,16 @@ const TerraDrawingTools: React.FC = () => {
           <span style={{ color: showMarkers ? "#4285F4" : "#666", fontWeight: "bold", fontSize: "12px" }}>M</span>
         </button>
         <button 
+          id="toggle-colors-button" 
+          className="mode-button" 
+          title={showColorsLegend ? "Hide color legend" : "Show color legend"} 
+          aria-label={showColorsLegend ? "Hide legend - Hide plant type color legend" : "Show legend - Display plant type color legend"}
+          aria-pressed={showColorsLegend}
+          onClick={toggleColorsLegend}
+        >
+          <span style={{ color: showColorsLegend ? "#4285F4" : "#666", fontWeight: "bold", fontSize: "12px" }}>🎨</span>
+        </button>
+        <button 
           id="toggle-fullscreen-button" 
           className="mode-button" 
           title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"} 
@@ -1543,20 +1585,7 @@ const TerraDrawingTools: React.FC = () => {
         >
           <span style={{ color: "#4285F4", fontWeight: "bold", fontSize: "12px" }}>↻</span>
         </button>
-        <button 
-          id="test-notification-button" 
-          className="mode-button" 
-          title="Test notification dialog" 
-          aria-label="Test notification dialog - Open notification dialog for testing"
-          onClick={() => {
-            if (lands && lands.length > 0) {
-              setSelectedLandForNotification(lands[0]);
-              setNotificationDialogOpen(true);
-            }
-          }}
-        >
-          <span style={{ color: "#4285F4", fontWeight: "bold", fontSize: "12px" }}>📝</span>
-        </button>
+
         <input 
           id="upload-input" 
           type="file" 
@@ -1579,6 +1608,61 @@ const TerraDrawingTools: React.FC = () => {
         aria-label="Interactive map for drawing land boundaries"
         tabIndex={0}
       />
+
+      {/* Notification Markers for High Priority Notifications */}
+      <NotificationMarkersManager 
+        map={mapInstanceRef.current} 
+        onNotificationClick={(notification) => {
+          console.log('Notification clicked:', notification);
+          // You can add additional logic here, like opening a dialog or navigating to the notification
+        }}
+        onNotificationDismissed={onNotificationDismissed}
+        onNotificationMarkedAsRead={onNotificationMarkedAsRead}
+      />
+
+      {/* Category Colors Legend */}
+      {showColorsLegend && (
+        <div style={{
+          position: "absolute",
+          top: "10px",
+          left: "10px",
+          background: "white",
+          padding: "12px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          zIndex: 1000,
+          fontFamily: "Arial, sans-serif",
+          fontSize: "12px",
+          maxWidth: "250px"
+        }}>
+          <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#374151" }}>
+            Category Colors
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
+            {/* Show categories from actual land data */}
+            {lands && Array.from(new Set(lands.map(land => land.category_name))).map((categoryName, index) => {
+              const sampleLand = lands.find(land => land.category_name === categoryName);
+              return (
+                <div key={categoryName || index} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div 
+                    style={{ 
+                      width: "16px", 
+                      height: "16px", 
+                      backgroundColor: sampleLand?.category_color || '#4285F4', 
+                      borderRadius: "50%",
+                      border: "1px solid #ccc"
+                    }} 
+                  />
+                  <span style={{ color: "#374151", fontSize: "10px" }}>{categoryName || 'Unknown'}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: "8px", fontSize: "10px", color: "#6B7280" }}>
+            Colors from database categories. Falls back to blue for unmatched items.
+          </div>
+        </div>
+      )}
       
       <MyFormDialog 
         open={open} 

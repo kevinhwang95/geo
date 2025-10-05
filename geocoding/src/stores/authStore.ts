@@ -7,7 +7,7 @@ export interface User {
   last_name: string;
   email: string;
   phone: string;
-  role: 'admin' | 'contributor' | 'user';
+  role: 'admin' | 'contributor' | 'user' | 'team_lead';
   avatar_url?: string;
   is_active: boolean;
   last_login?: string;
@@ -93,20 +93,21 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 );
 
 // Helper functions
-export const hasRole = (requiredRole: 'admin' | 'contributor' | 'user'): boolean => {
+export const hasRole = (requiredRole: 'admin' | 'contributor' | 'user' | 'team_lead'): boolean => {
   const user = useAuthStore.getState().user;
   if (!user) return false;
   
   const roleHierarchy = {
     user: 1,
-    contributor: 2,
-    admin: 3
+    team_lead: 2,
+    contributor: 3,
+    admin: 4
   };
   
   return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
 };
 
-export const hasAnyRole = (roles: ('admin' | 'contributor' | 'user')[]): boolean => {
+export const hasAnyRole = (roles: ('admin' | 'contributor' | 'user' | 'team_lead')[]): boolean => {
   const user = useAuthStore.getState().user;
   if (!user) return false;
   
@@ -127,4 +128,12 @@ export const canManagePlantTypes = (): boolean => {
 
 export const canManageCategories = (): boolean => {
   return hasRole('admin');
+};
+
+export const canManageTeams = (): boolean => {
+  return hasAnyRole(['admin', 'contributor']);
+};
+
+export const canManageWorkAssignments = (): boolean => {
+  return hasAnyRole(['admin', 'contributor']);
 };

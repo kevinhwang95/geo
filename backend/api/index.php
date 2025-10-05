@@ -6,9 +6,10 @@ use Dotenv\Dotenv;
 use App\Database;
 use App\Auth;
 use App\Controllers\AuthController;
-use App\Controllers\OAuthController;
 use App\Controllers\LandController;
 use App\Controllers\UserController;
+use App\Controllers\TeamController;
+use App\Controllers\WorkAssignmentController;
 use App\Controllers\PlantTypeController;
 use App\Controllers\CategoryController;
 use App\Controllers\CommentController;
@@ -109,6 +110,14 @@ try {
                         echo json_encode(['error' => 'Method not allowed']);
                     }
                     break;
+                case 'register':
+                    if ($method === 'POST') {
+                        $authController->register();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
                 case 'refresh':
                     if ($method === 'POST') {
                         $authController->refresh();
@@ -123,122 +132,6 @@ try {
             }
             break;
 
-        case 'oauth':
-            $oauthController = new OAuthController();
-            switch ($pathParts[1] ?? '') {
-                case 'google':
-                    if ($pathParts[2] ?? '' === 'callback') {
-                        if ($method === 'GET') {
-                            // Handle OAuth callback directly here
-                            $code = $_GET['code'] ?? null;
-                            $state = $_GET['state'] ?? null;
-                            $error = $_GET['error'] ?? null;
-
-                            if ($error) {
-                                $frontendUrl = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
-                                header("Location: {$frontendUrl}/oauth/callback?error=" . urlencode($error));
-                                exit;
-                            }
-
-                            if (!$code) {
-                                $frontendUrl = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
-                                header("Location: {$frontendUrl}/oauth/callback?error=no_code");
-                                exit;
-                            }
-
-                            try {
-                                $result = Auth::handleGoogleOAuth($code);
-                                
-                                if (!$result) {
-                                    $frontendUrl = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
-                                    header("Location: {$frontendUrl}/oauth/callback?error=auth_failed");
-                                    exit;
-                                }
-
-                                $tokens = $result['tokens'];
-                                $user = $result['user'];
-
-                                $frontendUrl = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
-                                $successData = base64_encode(json_encode([
-                                    'success' => true,
-                                    'tokens' => $tokens,
-                                    'user' => $user
-                                ]));
-                                
-                                header("Location: {$frontendUrl}/oauth/callback?success=" . urlencode($successData));
-                                exit;
-
-                            } catch (Exception $e) {
-                                // For development: If SSL error, try with mock code
-                                if (strpos($e->getMessage(), 'SSL certificate problem') !== false) {
-                                    try {
-                                        $result = Auth::handleGoogleOAuth('dev_test_code');
-                                        
-                                        if ($result) {
-                                            $tokens = $result['tokens'];
-                                            $user = $result['user'];
-
-                                            $frontendUrl = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
-                                            $successData = base64_encode(json_encode([
-                                                'success' => true,
-                                                'tokens' => $tokens,
-                                                'user' => $user
-                                            ]));
-                                            
-                                            header("Location: {$frontendUrl}/oauth/callback?success=" . urlencode($successData));
-                                            exit;
-                                        }
-                                    } catch (Exception $mockError) {
-                                        // Fall through to error handling
-                                    }
-                                }
-                                
-                                $frontendUrl = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
-                                header("Location: {$frontendUrl}/oauth/callback?error=server_error");
-                                exit;
-                            }
-                        } else {
-                            http_response_code(405);
-                            echo json_encode(['error' => 'Method not allowed']);
-                        }
-                    } else {
-                        if ($method === 'POST') {
-                            $oauthController->googleLogin();
-                        } else {
-                            http_response_code(405);
-                            echo json_encode(['error' => 'Method not allowed']);
-                        }
-                    }
-                    break;
-                case 'google-url':
-                    if ($method === 'GET') {
-                        $oauthController->getGoogleAuthUrl();
-                    } else {
-                        http_response_code(405);
-                        echo json_encode(['error' => 'Method not allowed']);
-                    }
-                    break;
-                case 'refresh':
-                    if ($method === 'POST') {
-                        $oauthController->refreshToken();
-                    } else {
-                        http_response_code(405);
-                        echo json_encode(['error' => 'Method not allowed']);
-                    }
-                    break;
-                case 'logout':
-                    if ($method === 'POST') {
-                        $oauthController->logout();
-                    } else {
-                        http_response_code(405);
-                        echo json_encode(['error' => 'Method not allowed']);
-                    }
-                    break;
-                default:
-                    http_response_code(404);
-                    echo json_encode(['error' => 'OAuth endpoint not found']);
-            }
-            break;
 
         case 'plant-types':
             $plantTypeController = new PlantTypeController();
@@ -578,6 +471,126 @@ try {
                     } else {
                         http_response_code(400);
                         echo json_encode(['error' => 'User ID required']);
+                    }
+                    break;
+                default:
+                    http_response_code(405);
+                    echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+        case 'teams':
+            $teamController = new TeamController();
+            switch ($pathParts[1] ?? '') {
+                case 'add-member':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $teamController->addMember($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Team ID required']);
+                    }
+                    break;
+                case 'remove-member':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $teamController->removeMember($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Team ID required']);
+                    }
+                    break;
+                case 'members':
+                    if ($method === 'GET' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $teamController->getMembers($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Team ID required']);
+                    }
+                    break;
+                default:
+                    // Handle /teams/{id}/members pattern
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1]) && isset($pathParts[2]) && $pathParts[2] === 'members') {
+                        if ($method === 'GET') {
+                            $teamController->getMembers($pathParts[1]);
+                        } elseif ($method === 'POST') {
+                            // Handle add-member and remove-member for /teams/{id}/members pattern
+                            $input = json_decode(file_get_contents('php://input'), true);
+                            if (isset($input['action'])) {
+                                if ($input['action'] === 'add' && isset($input['userId'])) {
+                                    $teamController->addMember($pathParts[1]);
+                                } elseif ($input['action'] === 'remove' && isset($input['userId'])) {
+                                    $teamController->removeMember($pathParts[1]);
+                                } else {
+                                    http_response_code(400);
+                                    echo json_encode(['error' => 'Invalid action or missing userId']);
+                                }
+                            } else {
+                                http_response_code(400);
+                                echo json_encode(['error' => 'Action required']);
+                            }
+                        }
+                        break;
+                    }
+                    switch ($method) {
+                        case 'GET':
+                            if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                                $teamController->show($pathParts[1]);
+                            } else {
+                                $teamController->index();
+                            }
+                            break;
+                        case 'POST':
+                            $teamController->store();
+                            break;
+                        case 'PUT':
+                            if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                                $teamController->update($pathParts[1]);
+                            } else {
+                                http_response_code(400);
+                                echo json_encode(['error' => 'Team ID required']);
+                            }
+                            break;
+                        case 'DELETE':
+                            if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                                $teamController->delete($pathParts[1]);
+                            } else {
+                                http_response_code(400);
+                                echo json_encode(['error' => 'Team ID required']);
+                            }
+                            break;
+                        default:
+                            http_response_code(405);
+                            echo json_encode(['error' => 'Method not allowed']);
+                    }
+            }
+            break;
+
+        case 'work-assignments':
+            $workAssignmentController = new WorkAssignmentController();
+            switch ($method) {
+                case 'GET':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $workAssignmentController->show($pathParts[1]);
+                    } else {
+                        $workAssignmentController->index();
+                    }
+                    break;
+                case 'POST':
+                    $workAssignmentController->store();
+                    break;
+                case 'PUT':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $workAssignmentController->update($pathParts[1]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Work assignment ID required']);
+                    }
+                    break;
+                case 'DELETE':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $workAssignmentController->delete($pathParts[1]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Work assignment ID required']);
                     }
                     break;
                 default:

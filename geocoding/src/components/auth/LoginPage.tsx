@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, MapPin, Users, Shield, Camera, MessageSquare } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, MapPin, Users, Shield, Camera, MessageSquare, LogIn, UserPlus } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -10,37 +12,79 @@ import { useNavigate } from 'react-router-dom';
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [googleAuthUrl, setGoogleAuthUrl] = useState<string | null>(null);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  
+  // Login form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  // Registration form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   const { login } = useAuthStore();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Get Google OAuth URL using direct axios call (no auth required)
-    const fetchGoogleAuthUrl = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/api/oauth/google-url');
-        setGoogleAuthUrl(response.data.auth_url);
-      } catch (error) {
-        console.error('Failed to get Google auth URL:', error);
-        setError('Failed to initialize Google login. Please check if the backend server is running.');
-      }
-    };
-
-    fetchGoogleAuthUrl();
-  }, []);
-
-  const handleGoogleLogin = async () => {
-    if (!googleAuthUrl) return;
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
     
     try {
-      // Redirect to Google OAuth URL
-      window.location.href = googleAuthUrl;
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+        email,
+        password
+      });
+      
+      const { token, user } = response.data;
+      login(user, token);
+      navigate('/dashboard');
     } catch (error: any) {
-      setError(error.message || 'Failed to initiate Google login');
+      setError(error.response?.data?.error || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password || !firstName || !lastName) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
+        email,
+        password,
+        firstName,
+        lastName,
+        phone
+      });
+      
+      const { token, user } = response.data;
+      login(user, token);
+      navigate('/dashboard');
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Registration failed');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -59,7 +103,7 @@ const LoginPage: React.FC = () => {
     {
       icon: Shield,
       title: 'Secure Authentication',
-      description: 'OAuth 2.0 integration with Google for secure login'
+      description: 'JWT-based authentication with secure login and registration'
     },
     {
       icon: Camera,
@@ -110,15 +154,18 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right side - Login */}
+        {/* Right side - Login/Register */}
         <div className="flex items-center justify-center">
           <Card className="w-full max-w-md shadow-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold text-gray-900">
-                Welcome Back
+                {isRegisterMode ? 'Create Account' : 'Welcome Back'}
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Sign in to access your land management dashboard
+                {isRegisterMode 
+                  ? 'Sign up to access your land management dashboard'
+                  : 'Sign in to access your land management dashboard'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -128,45 +175,129 @@ const LoginPage: React.FC = () => {
                 </Alert>
               )}
 
-              <Button
-                onClick={handleGoogleLogin}
-                disabled={isLoading || !googleAuthUrl}
-                className="w-full h-12 text-lg font-medium"
-                variant="outline"
-              >
-                {isLoading ? (
+              <form onSubmit={isRegisterMode ? handleRegister : handleLogin} className="space-y-4">
+                {isRegisterMode && (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="firstName">First Name *</Label>
+                        <Input
+                          id="firstName"
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Input
+                          id="lastName"
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        disabled={isLoading}
                       />
-                      <path
-                        fill="currentColor"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    Continue with Google
+                    </div>
                   </>
                 )}
-              </Button>
+                
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                {isRegisterMode && (
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 text-lg font-medium"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {isRegisterMode ? 'Creating Account...' : 'Signing In...'}
+                    </>
+                  ) : (
+                    <>
+                      {isRegisterMode ? (
+                        <>
+                          <UserPlus className="mr-2.5 h-5 w-5" />
+                          Create Account
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="mr-2.5 h-5 w-5" />
+                          Sign In
+                        </>
+                      )}
+                    </>
+                  )}
+                </Button>
+              </form>
 
               <div className="text-center">
-                <p className="text-sm text-gray-500">
-                  By signing in, you agree to our{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterMode(!isRegisterMode)}
+                  disabled={isLoading}
+                  className="text-sm text-green-600 hover:underline"
+                >
+                  {isRegisterMode 
+                    ? 'Already have an account, sign in' 
+                    : "Don't have an account? Create one"
+                  }
+                </button>
+              </div>
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500">
+                  By {isRegisterMode ? 'creating an account' : 'signing in'}, you agree to our{' '}
                   <a href="#" className="text-green-600 hover:underline">
                     Terms of Service
                   </a>{' '}

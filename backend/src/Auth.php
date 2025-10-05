@@ -4,40 +4,16 @@ namespace App;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use League\OAuth2\Client\Provider\Google;
-use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
-use GuzzleHttp\Client;
 
 class Auth
 {
     private static $secretKey;
     private static $algorithm;
-    private static $googleProvider;
 
     public static function init()
     {
         self::$secretKey = $_ENV['JWT_SECRET'] ?? 'default_secret_key';
         self::$algorithm = $_ENV['JWT_ALGORITHM'] ?? 'HS256';
-        
-        // Initialize Google OAuth provider with SSL verification disabled for development
-        $handler = new \GuzzleHttp\Handler\CurlHandler();
-        
-        $httpClient = new Client([
-            'handler' => $handler,
-            'verify' => false,
-            'curl' => [
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false,
-            ],
-        ]);
-        
-        self::$googleProvider = new Google([
-            'clientId'     => $_ENV['GOOGLE_CLIENT_ID'] ?? '',
-            'clientSecret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? '',
-            'redirectUri'  => $_ENV['GOOGLE_REDIRECT_URI'] ?? '',
-            'scopes'       => ['email', 'profile'],
-            'httpClient'   => $httpClient,
-        ]);
     }
 
     public static function generateToken($userId, $userRole, $refreshToken = null)
@@ -190,74 +166,6 @@ class Auth
         return $user;
     }
 
-    public static function handleGoogleOAuth($code)
-    {
-        try {
-            // For development: Use mock data if SSL fails
-            if ($code === 'dev_test_code') {
-                $userInfo = [
-                    'id' => 'dev_user_123',
-                    'email' => 'dev@example.com',
-                    'given_name' => 'Dev',
-                    'family_name' => 'User',
-                    'picture' => 'https://via.placeholder.com/150'
-                ];
-            } else {
-                // Exchange authorization code for access token
-                $accessToken = self::$googleProvider->getAccessToken('authorization_code', [
-                    'code' => $code
-                ]);
-
-                // Get user info from Google
-                $resourceOwner = self::$googleProvider->getResourceOwner($accessToken);
-                $userInfo = $resourceOwner->toArray();
-            }
-
-            // Check if user exists
-            $db = Database::getInstance();
-            $stmt = $db->query("SELECT * FROM users WHERE oauth_provider = 'google' AND oauth_id = ?", [$userInfo['id']]);
-            $user = $stmt->fetch();
-
-            if (!$user) {
-                // Create new user
-                $db->query("INSERT INTO users (first_name, last_name, email, oauth_provider, oauth_id, avatar_url, role) VALUES (?, ?, ?, 'google', ?, ?, 'user')", [
-                    $userInfo['given_name'] ?? '',
-                    $userInfo['family_name'] ?? '',
-                    $userInfo['email'],
-                    $userInfo['id'],
-                    $userInfo['picture'] ?? null
-                ]);
-                $userId = $db->lastInsertId();
-                $userRole = 'user';
-            } else {
-                // Update last login
-                $db->query("UPDATE users SET last_login = NOW(), avatar_url = ? WHERE id = ?", [$userInfo['picture'] ?? $user['avatar_url'], $user['id']]);
-                $userId = $user['id'];
-                $userRole = $user['role'];
-            }
-
-            // Generate JWT tokens
-            $tokens = self::generateToken($userId, $userRole);
-            
-            // Get user data
-            $user = self::getUserById($userId);
-
-            return [
-                'tokens' => $tokens,
-                'user' => $user
-            ];
-
-        } catch (IdentityProviderException $e) {
-            return false;
-        }
-    }
-
-    public static function getGoogleAuthUrl()
-    {
-        return self::$googleProvider->getAuthorizationUrl([
-            'scope' => ['email', 'profile']
-        ]);
-    }
 
     public static function getUserById($userId)
     {

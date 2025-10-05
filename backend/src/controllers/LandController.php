@@ -40,7 +40,7 @@ class LandController
 
     public function store()
     {
-        $userData = Auth::requireRole('admin');
+        $userData = Auth::requireAnyRole(['admin', 'contributor']);
         
         $input = json_decode(file_get_contents('php://input'), true);
         
@@ -72,7 +72,7 @@ class LandController
 
     public function update($id)
     {
-        $userData = Auth::requireRole('admin');
+        $userData = Auth::requireAnyRole(['admin', 'contributor']);
         
         $input = json_decode(file_get_contents('php://input'), true);
         
@@ -87,7 +87,7 @@ class LandController
 
     public function delete($id)
     {
-        Auth::requireRole('admin');
+        Auth::requireAnyRole(['admin', 'contributor']);
         
         try {
             $this->landModel->delete($id);

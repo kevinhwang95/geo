@@ -14,6 +14,8 @@ export default interface LandRegistry {
   coordinations: string,
   planttypeid: number,
   categoryid: number,
+  category_name?: string,
+  category_color?: string,
   plant_date: Date | string,
   harvest_cycle: string,
   notes?: string,

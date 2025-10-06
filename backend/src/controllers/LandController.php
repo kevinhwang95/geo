@@ -91,6 +91,30 @@ class LandController
         
         $input = json_decode(file_get_contents('php://input'), true);
         
+        // Check if land exists
+        $existingLand = $this->landModel->findById($id);
+        if (!$existingLand) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Land not found']);
+            return;
+        }
+        
+        // Check if tree_count is required for Palm Oil
+        $plantTypeId = $input['planttypeid'] ?? $existingLand['plant_type_id'];
+        if ($plantTypeId === 3 || (isset($input['plant_type_name']) && strtolower($input['plant_type_name']) === 'palm oil')) {
+            $treeCount = $input['tree_count'] ?? $existingLand['tree_count'];
+            if ($treeCount === null || $treeCount === '') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Tree count is required for Palm Oil plantations']);
+                return;
+            }
+            if (!is_numeric($treeCount) || intval($treeCount) < 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Tree count must be a positive integer']);
+                return;
+            }
+        }
+        
         try {
             $land = $this->landModel->update($id, $input);
             echo json_encode($this->landModel->formatLand($land));

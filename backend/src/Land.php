@@ -95,13 +95,13 @@ class Land
         $params = ['id' => $id];
 
         foreach ($data as $key => $value) {
-            if ($key === 'landName') {
+            if ($key === 'land_name') {
                 $fields[] = 'land_name = :land_name';
                 $params['land_name'] = $value;
-            } elseif ($key === 'landCode') {
+            } elseif ($key === 'land_code') {
                 $fields[] = 'land_code = :land_code';
                 $params['land_code'] = $value;
-            } elseif ($key === 'deedNumber') {
+            } elseif ($key === 'land_number') {
                 $fields[] = 'deed_number = :deed_number';
                 $params['deed_number'] = $value;
             } elseif ($key === 'location') {
@@ -116,24 +116,41 @@ class Land
             } elseif ($key === 'city') {
                 $fields[] = 'city = :city';
                 $params['city'] = $value;
-            } elseif ($key === 'plantType') {
-                $fields[] = 'plant_type = :plant_type';
-                $params['plant_type'] = $value;
-            } elseif ($key === 'category') {
-                $fields[] = 'category = :category';
-                $params['category'] = $value;
-            } elseif ($key === 'plantYear') {
-                $fields[] = 'plant_year = :plant_year';
-                $params['plant_year'] = $value;
-            } elseif ($key === 'harvestCycle') {
-                $fields[] = 'harvest_cycle = :harvest_cycle';
-                $params['harvest_cycle'] = $value;
-            } elseif ($key === 'geometry') {
+            } elseif ($key === 'planttypeid') {
+                $fields[] = 'plant_type_id = :plant_type_id';
+                $params['plant_type_id'] = (int) $value;
+            } elseif ($key === 'categoryid') {
+                $fields[] = 'category_id = :category_id';
+                $params['category_id'] = (int) $value;
+            } elseif ($key === 'plant_date') {
+                $fields[] = 'plant_date = :plant_date';
+                $params['plant_date'] = $value;
+            } elseif ($key === 'harvest_cycle') {
+                // Handle harvest_cycle - extract first number if it's comma-separated
+                $harvestCycle = $value;
+                if (is_string($harvestCycle) && strpos($harvestCycle, ',') !== false) {
+                    $parts = explode(',', $harvestCycle);
+                    $harvestCycle = (int) trim($parts[0]);
+                } else {
+                    $harvestCycle = (int) $harvestCycle;
+                }
+                $fields[] = 'harvest_cycle_days = :harvest_cycle_days';
+                $params['harvest_cycle_days'] = $harvestCycle;
+            } elseif ($key === 'coordinations') {
                 $fields[] = 'geometry = :geometry';
                 $params['geometry'] = $value;
             } elseif ($key === 'size') {
                 $fields[] = 'size = :size';
-                $params['size'] = $value;
+                $params['size'] = (float) $value;
+            } elseif ($key === 'tree_count') {
+                $fields[] = 'tree_count = :tree_count';
+                $params['tree_count'] = isset($value) && $value !== '' ? (int) $value : null;
+            } elseif ($key === 'owner') {
+                $fields[] = 'owner_name = :owner_name';
+                $params['owner_name'] = $value;
+            } elseif ($key === 'notes') {
+                $fields[] = 'notes = :notes';
+                $params['notes'] = $value;
             }
         }
 

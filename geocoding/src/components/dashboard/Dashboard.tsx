@@ -16,7 +16,8 @@ import {
   Clock,
   Plus,
   LogOut,
-  Search
+  Search,
+  Edit
 } from 'lucide-react';
 import { useAuthStore, canManageLands, canManageUsers, canManageTeams, canManageWorkAssignments } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
@@ -26,11 +27,13 @@ import axiosClient from '@/api/axiosClient';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
 import NotificationCenter from '@/components/core/NotificationCenter';
 import CreateNotificationDialog from '@/components/core/CreateNotificationDialog';
+import { MyFormDialogLoad } from '@/components/core/my-form-dialog-load';
 import UserManagement from '@/components/admin/UserManagement';
 import TeamManagement from '@/components/admin/TeamManagement';
 import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
+import type LandRegistry from '@/types/landRegistry.type';
 // import { TokenDebugger } from '@/components/debug/TokenDebugger';
 // import { NotificationDebugger } from '@/components/debug/NotificationDebugger';
 // import NotificationAPITester from '@/components/debug/NotificationAPITester';
@@ -60,6 +63,7 @@ interface Land {
   geometry: string;
   size: number;
   owner_name: string;
+  tree_count?: number;
   notes: string;
   is_active: boolean;
   created_by: number;
@@ -84,9 +88,11 @@ const Dashboard: React.FC = () => {
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [selectedLandForNotification, setSelectedLandForNotification] = useState<Land | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedLandForEdit, setSelectedLandForEdit] = useState<LandRegistry | null>(null);
 
   // Use the same hook that other components use successfully
-  const { data: lands, loading: landsLoading, error: landsError } = useGenericCrud<Land>('lands');
+  const { data: lands, loading: landsLoading, error: landsError, fetchData: refetchLands } = useGenericCrud<Land>('lands');
 
   useEffect(() => {
     loadDashboardData();
@@ -240,6 +246,41 @@ const Dashboard: React.FC = () => {
     } else {
       console.error('Land not found with ID:', landId);
     }
+  };
+
+  const handleEditLand = (land: Land) => {
+    console.log('🔍 handleEditLand called with land:', land);
+    
+    // Convert Land to LandRegistry format
+    const landRegistry: LandRegistry = {
+      id: land.id,
+      land_name: land.land_name,
+      land_code: land.land_code,
+      land_number: land.land_number,
+      size: land.size,
+      location: land.location,
+      province: land.province,
+      district: land.district,
+      city: land.city,
+      owner: land.owner_name || '',
+      coordinations: land.geometry || land.coordinations || '',
+      planttypeid: land.plant_type_id,
+      categoryid: land.category_id,
+      category_name: land.category_name,
+      category_color: land.category_color,
+      plant_date: land.plant_date,
+      harvest_cycle: land.harvest_cycle_days?.toString() || '',
+      tree_count: land.tree_count,
+      notes: land.notes || '',
+      created: land.created_at,
+      createdby: userNames[land.created_by] || 'Unknown',
+      updated: land.updated_at,
+      updatedby: userNames[land.created_by] || 'Unknown'
+    };
+    
+    console.log('🔍 Converted landRegistry:', landRegistry);
+    setSelectedLandForEdit(landRegistry);
+    setEditDialogOpen(true);
   };
 
   const handleCreateNotification = (landId: number) => {
@@ -683,6 +724,19 @@ const Dashboard: React.FC = () => {
                           <div className="mt-4 flex justify-between items-center">
                             {getHarvestStatusBadge(land.harvest_status)}
                             <div className="flex space-x-2">
+                              {canManageLands() && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditLand(land);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm"
@@ -694,16 +748,7 @@ const Dashboard: React.FC = () => {
                                 <Bell className="h-4 w-4 mr-1" />
                                 Create Notification
                               </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewLandDetails(land.id);
-                                }}
-                              >
-                                View Details
-                              </Button>
+                              
                             </div>
                           </div>
                         </CardContent>
@@ -789,6 +834,17 @@ const Dashboard: React.FC = () => {
         selectedLand={selectedLandForNotification}
         onNotificationCreated={handleNotificationCreated}
       />
+
+      {/* Edit Land Dialog */}
+      {selectedLandForEdit && (
+        <MyFormDialogLoad
+          key={selectedLandForEdit.id} // Force re-render when land changes
+          open={editDialogOpen}
+          setOpen={setEditDialogOpen}
+          land={selectedLandForEdit}
+          onUpdateSuccess={refetchLands}
+        />
+      )}
 
       
     </div>

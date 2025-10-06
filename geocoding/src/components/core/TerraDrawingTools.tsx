@@ -197,21 +197,35 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
 
   // Enhanced polygon loading with retry mechanism
   const loadPolygonsToMap = useCallback(async () => {
-    if (!drawRef.current || !terraDrawInitialized || !isAuthenticated) {
-      console.log('Polygon loading skipped - conditions not met:', {
-        drawRef: !!drawRef.current,
-        terraDrawInitialized,
-        isAuthenticated
-      });
+    console.log('loadPolygonsToMap called with conditions:', {
+      drawRef: !!drawRef.current,
+      terraDrawInitialized,
+      isAuthenticated,
+      landsCount: lands?.length || 0,
+      polygonLoadAttempted
+    });
+
+    if (!drawRef.current) {
+      console.log('Polygon loading skipped - TerraDraw not ready');
+      return;
+    }
+
+    if (!terraDrawInitialized) {
+      console.log('Polygon loading skipped - TerraDraw not initialized');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      console.log('Polygon loading skipped - user not authenticated');
       return;
     }
 
     if (!lands || !Array.isArray(lands) || lands.length === 0) {
-      console.log('No lands data available for loading');
+      console.log('Polygon loading skipped - no lands data available');
       return;
     }
 
-    console.log('Loading lands onto map:', lands.length, 'lands');
+    console.log('✅ All conditions met - loading lands onto map:', lands.length, 'lands');
     
     try {
       // Check TerraDraw state
@@ -286,6 +300,14 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       // If no features were loaded but we had lands, there might be an issue
       if (loadedCount === 0 && lands.length > 0) {
         console.warn('⚠️ No polygons were loaded despite having lands data. This might indicate a TerraDraw issue.');
+        console.log('Available lands for debugging:', lands.map(land => ({
+          id: land.id,
+          name: land.land_name,
+          code: land.land_code,
+          hasCoordinations: !!land.coordinations,
+          coordinationsLength: land.coordinations?.length || 0
+        })));
+        
         // Retry after a short delay
         setTimeout(() => {
           if (!polygonLoadAttempted) {
@@ -293,7 +315,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             setPolygonLoadAttempted(true);
             loadPolygonsToMap();
           }
-        }, 1000);
+        }, 2000); // Increased delay to 2 seconds
       }
       
     } catch (error) {
@@ -303,7 +325,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
 
   useEffect(() => {
     // Debug logging
-    console.log('TerraDrawingTools - Authentication check:', {
+    console.log('TerraDrawingTools - useEffect triggered:', {
       isAuthenticated,
       user: user?.first_name,
       landsLoading,
@@ -314,14 +336,19 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
     });
 
     // Load polygons when all conditions are met
-    if (isAuthenticated && !landsLoading && !landsError && lands && Array.isArray(lands)) {
+    if (isAuthenticated && !landsLoading && !landsError && lands && Array.isArray(lands) && lands.length > 0) {
+      console.log('✅ Conditions met for polygon loading - calling loadPolygonsToMap');
       loadPolygonsToMap();
     } else if (!isAuthenticated) {
-      console.log('User not authenticated, skipping land loading');
+      console.log('❌ User not authenticated, skipping land loading');
     } else if (landsLoading) {
-      console.log('Still loading lands data...');
+      console.log('⏳ Still loading lands data...');
     } else if (landsError) {
-      console.error('Error loading lands:', landsError);
+      console.error('❌ Error loading lands:', landsError);
+    } else if (!lands || lands.length === 0) {
+      console.log('⚠️ No lands data available or empty lands array');
+    } else if (!terraDrawInitialized) {
+      console.log('⏳ TerraDraw not initialized yet');
     }
   }, [lands, terraDrawInitialized, isAuthenticated, landsLoading, landsError, loadPolygonsToMap]);
 
@@ -966,19 +993,35 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
 
   // Function to refresh lands data
   const refreshLandsData = async () => {
-    console.log('Refreshing lands data...');
+    console.log('🔄 Refreshing lands data...');
     setPolygonLoadAttempted(false); // Reset retry flag
     await fetchData();
   };
 
   // Function to manually reload polygons
   const reloadPolygons = () => {
-    console.log('Manually reloading polygons...');
+    console.log('🔄 Manually reloading polygons...');
+    console.log('Current state:', {
+      drawRef: !!drawRef.current,
+      terraDrawInitialized,
+      isAuthenticated,
+      landsCount: lands?.length || 0,
+      polygonLoadAttempted
+    });
+    
     setPolygonLoadAttempted(false); // Reset retry flag
-    if (drawRef.current && terraDrawInitialized && isAuthenticated && lands) {
+    
+    if (drawRef.current && terraDrawInitialized && isAuthenticated && lands && Array.isArray(lands) && lands.length > 0) {
+      console.log('✅ All conditions met for manual reload');
       loadPolygonsToMap();
     } else {
-      console.log('Cannot reload polygons - conditions not met');
+      console.log('❌ Cannot reload polygons - conditions not met:', {
+        drawRef: !!drawRef.current,
+        terraDrawInitialized,
+        isAuthenticated,
+        hasLands: !!lands,
+        landsCount: lands?.length || 0
+      });
     }
   };
 
@@ -1135,6 +1178,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           });
 
           draw.on("ready", () => {
+                console.log('🎯 TerraDraw ready event fired');
                 draw.setMode("select"); // Set select as default mode
             historyRef.current.push(processSnapshotForUndo(draw.getSnapshot()));
                 
@@ -1170,6 +1214,17 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
                 // Mark TerraDraw as initialized and ready to receive data
                 setTerraDrawInitialized(true);
                 console.log('✅ TerraDraw initialized successfully');
+                
+                // Try to load polygons immediately if we have lands data
+                setTimeout(() => {
+                  console.log('🔍 Checking if we can load polygons after TerraDraw ready...');
+                  if (isAuthenticated && lands && Array.isArray(lands) && lands.length > 0) {
+                    console.log('🚀 Loading polygons after TerraDraw ready event');
+                    loadPolygonsToMap();
+                  } else {
+                    console.log('⏳ Waiting for lands data after TerraDraw ready');
+                  }
+                }, 500); // Small delay to ensure TerraDraw is fully ready
               });
 
               // Start TerraDraw after all event listeners are set up
@@ -1536,8 +1591,8 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
         </div>
       )}
 
-      {/* Polygon Debug Panel (Development Only) */}
-      {/* {import.meta.env.DEV && !isFullscreen && (
+      {/* Polygon Debug Panel - Always visible for troubleshooting */}
+      {!isFullscreen && (
         <div 
           style={{ 
             position: "absolute", 
@@ -1625,11 +1680,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             flexWrap: "wrap"
           }}>
             <button 
-              onClick={() => {
-                console.log('🔄 Manual polygon reload triggered');
-                setPolygonLoadAttempted(false);
-                loadPolygonsToMap();
-              }}
+              onClick={reloadPolygons}
               style={{
                 background: "#3b82f6",
                 color: "white",
@@ -1665,7 +1716,32 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             </button>
             
             <button 
-              onClick={addTestPolygon}
+              onClick={() => {
+                console.log('🧪 Test button clicked - adding test polygon');
+                if (drawRef.current) {
+                  const testFeature = {
+                    type: "Feature" as const,
+                    geometry: {
+                      type: "Polygon" as const,
+                      coordinates: [[
+                        [99.820, 14.096],
+                        [99.821, 14.096],
+                        [99.821, 14.097],
+                        [99.820, 14.097],
+                        [99.820, 14.096]
+                      ]]
+                    },
+                    properties: {
+                      mode: "polygon",
+                      landId: "test",
+                      landName: "Test Land",
+                      landCode: "TEST"
+                    }
+                  };
+                  drawRef.current.addFeatures([testFeature]);
+                  console.log('✅ Test polygon added');
+                }
+              }}
               style={{
                 background: "#10b981",
                 color: "white",
@@ -1704,7 +1780,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             </button>
           </div>
         </div>
-      )} */}
+      )}
       
       {/* <div id="mode-ui">
         <button id="select-mode" className="mode-button" onClick={() => handleModeChange("select", "select-mode")}>Select</button>

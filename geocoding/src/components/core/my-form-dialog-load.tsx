@@ -174,7 +174,16 @@ export function MyFormDialogLoad({ open, setOpen, land }: MyFormDialogProps) {
                         <FormItem>
                           <FormLabel>Size</FormLabel>
                           <FormControl>
-                            <Input type="number" step={0.01} placeholder="Land size" {...field} />
+                            <Input 
+                              type="number" 
+                              step={0.01} 
+                              placeholder="Land size" 
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === '' ? undefined : parseFloat(value));
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

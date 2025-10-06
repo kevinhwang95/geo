@@ -15,7 +15,9 @@ import { useAuthStore } from '@/stores/authStore';
 let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
 let refreshAttempts = 0;
+let lastRefreshTime = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
+const MIN_REFRESH_INTERVAL = 5000; // Minimum 5 seconds between refresh attempts
 
 export interface TokenRefreshResult {
   success: boolean;
@@ -38,6 +40,13 @@ export const attemptTokenRefresh = async (source: string = 'unknown'): Promise<T
     return { success: false, error: 'Max refresh attempts exceeded' };
   }
 
+  // Check minimum interval between refresh attempts
+  const now = Date.now();
+  if (now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
+    console.log(`[TokenRefreshManager] Too soon since last refresh attempt (${now - lastRefreshTime}ms), skipping`);
+    return { success: false, error: 'Refresh attempt too soon' };
+  }
+
   // If already refreshing, wait for the existing refresh
   if (isRefreshing && refreshPromise) {
     console.log(`[TokenRefreshManager] Refresh already in progress, waiting for ${source}`);
@@ -55,6 +64,7 @@ export const attemptTokenRefresh = async (source: string = 'unknown'): Promise<T
     console.log(`[TokenRefreshManager] Starting new refresh process from ${source}`);
     isRefreshing = true;
     refreshAttempts++;
+    lastRefreshTime = now;
 
     const { tokens, logout } = useAuthStore.getState();
     
@@ -121,6 +131,7 @@ export const resetRefreshState = (): void => {
   isRefreshing = false;
   refreshPromise = null;
   refreshAttempts = 0;
+  lastRefreshTime = 0;
 };
 
 /**

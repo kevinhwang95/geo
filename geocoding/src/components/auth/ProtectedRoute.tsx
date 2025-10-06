@@ -5,8 +5,8 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'contributor' | 'user';
-  requiredRoles?: ('admin' | 'contributor' | 'user')[];
+  requiredRole?: 'admin' | 'contributor' | 'user' | 'team_lead';
+  requiredRoles?: ('admin' | 'contributor' | 'user' | 'team_lead')[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
@@ -39,6 +39,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const roleHierarchy = {
       user: 1,
       contributor: 2,
+      team_lead: 2.5,
       admin: 3
     };
     

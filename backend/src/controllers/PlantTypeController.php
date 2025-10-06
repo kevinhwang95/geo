@@ -58,7 +58,7 @@ class PlantTypeController
         $input = json_decode(file_get_contents('php://input'), true);
         
         // Validate required fields
-        $requiredFields = ['name', 'harvest_cycle_days'];
+        $requiredFields = ['name'];
         foreach ($requiredFields as $field) {
             if (!isset($input[$field]) || empty($input[$field])) {
                 http_response_code(400);
@@ -69,14 +69,13 @@ class PlantTypeController
 
         try {
             $sql = "
-                INSERT INTO plant_types (name, description, scientific_name, harvest_cycle_days, created_by)
-                VALUES (:name, :description, :scientific_name, :harvest_cycle_days, :created_by)
+                INSERT INTO plant_types (name, description, harvest_cycle_days, created_by)
+                VALUES (:name, :description, :harvest_cycle_days, :created_by)
             ";
             $params = [
                 'name' => $input['name'],
                 'description' => $input['description'] ?? null,
-                'scientific_name' => $input['scientific_name'] ?? null,
-                'harvest_cycle_days' => $input['harvest_cycle_days'],
+                'harvest_cycle_days' => $input['harvest_cycle_days'] ?? null,
                 'created_by' => $user['user_id']
             ];
             $this->db->query($sql, $params);
@@ -126,10 +125,6 @@ class PlantTypeController
             if (isset($input['description'])) {
                 $updateFields[] = "description = :description";
                 $params['description'] = $input['description'];
-            }
-            if (isset($input['scientific_name'])) {
-                $updateFields[] = "scientific_name = :scientific_name";
-                $params['scientific_name'] = $input['scientific_name'];
             }
             if (isset($input['harvest_cycle_days'])) {
                 $updateFields[] = "harvest_cycle_days = :harvest_cycle_days";

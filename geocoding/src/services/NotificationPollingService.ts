@@ -20,9 +20,10 @@ class NotificationPollingService {
   }
 
   public startPolling(interval: number = 30000): void {
+    // Stop any existing polling first
     if (this.isPolling) {
-      console.log('Notification polling already active');
-      return;
+      console.log('Restarting notification polling service with new interval');
+      this.stopPolling();
     }
 
     this.pollInterval = interval;
@@ -35,7 +36,16 @@ class NotificationPollingService {
     
     // Set up polling interval (silent)
     this.pollingInterval = setInterval(() => {
-      this.fetchNotifications(true);
+      // Only fetch if polling is still active and user is authenticated
+      if (this.isPolling) {
+        const { isAuthenticated } = useAuthStore.getState();
+        if (isAuthenticated) {
+          this.fetchNotifications(true);
+        } else {
+          console.log('User not authenticated, stopping polling');
+          this.stopPolling();
+        }
+      }
     }, this.pollInterval);
   }
 
@@ -52,8 +62,14 @@ class NotificationPollingService {
       this.pollingInterval = null;
     }
 
+    // Abort any ongoing requests
     if (this.abortController) {
-      this.abortController.abort();
+      try {
+        this.abortController.abort();
+      } catch (error) {
+        // Ignore errors when aborting - this is expected
+        console.log('Abort controller cleanup completed');
+      }
       this.abortController = null;
     }
   }
@@ -95,15 +111,22 @@ class NotificationPollingService {
         });
         const stats: NotificationStats[] = statsResponse.data.data || [];
         store.setStats(stats);
-      } catch (statsError) {
-        console.warn('Failed to fetch notification stats:', statsError);
+      } catch (statsError: any) {
+        // Only log stats errors if they're not cancellation errors
+        if (statsError.name !== 'AbortError' && statsError.name !== 'CanceledError' && !statsError.code?.includes('CANCELED')) {
+          console.warn('Failed to fetch notification stats:', statsError);
+        }
       }
 
       console.log(`📬 Polling: Fetched ${notifications.length} notifications (silent: ${silent})`);
 
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log('Notification fetch aborted');
+      // Handle different types of cancellation errors - these are expected and should be silent
+      if (error.name === 'AbortError' || 
+          error.name === 'CanceledError' || 
+          error.code === 'ERR_CANCELED' ||
+          error.message?.toLowerCase().includes('canceled')) {
+        // Silently handle cancellation - this is expected behavior
         return;
       }
       
@@ -114,6 +137,7 @@ class NotificationPollingService {
         store.setError(errorMessage);
       }
       
+      // Only log actual errors, not cancellations
       console.error('Notification polling error:', error);
     } finally {
       // Only hide loading if not silent

@@ -16,14 +16,23 @@ class Land
         $sql = "INSERT INTO lands (
                     land_name, land_code, deed_number, location, 
                     province, district, city, plant_type_id, category_id, 
-                    plant_date, harvest_cycle_days, geometry, size, 
+                    plant_date, harvest_cycle_days, tree_count, geometry, size, 
                     owner_name, notes, created_by, created_at, updated_at
                 ) VALUES (
                     :land_name, :land_code, :deed_number, :location,
                     :province, :district, :city, :plant_type_id, :category_id,
-                    :plant_date, :harvest_cycle_days, :geometry, :size,
+                    :plant_date, :harvest_cycle_days, :tree_count, :geometry, :size,
                     :owner_name, :notes, :created_by, NOW(), NOW()
                 )";
+
+        // Handle harvest_cycle - extract first number if it's comma-separated
+        $harvestCycle = $data['harvest_cycle'];
+        if (is_string($harvestCycle) && strpos($harvestCycle, ',') !== false) {
+            $parts = explode(',', $harvestCycle);
+            $harvestCycle = (int) trim($parts[0]);
+        } else {
+            $harvestCycle = (int) $harvestCycle;
+        }
 
         $params = [
             'land_name' => $data['land_name'],
@@ -33,12 +42,13 @@ class Land
             'province' => $data['province'],
             'district' => $data['district'],
             'city' => $data['city'],
-            'plant_type_id' => $data['planttypeid'],
-            'category_id' => $data['categoryid'],
+            'plant_type_id' => (int) $data['planttypeid'],
+            'category_id' => (int) $data['categoryid'],
             'plant_date' => $data['plant_date'],
-            'harvest_cycle_days' => $data['harvest_cycle'],
+            'harvest_cycle_days' => $harvestCycle,
+            'tree_count' => isset($data['tree_count']) ? (int) $data['tree_count'] : null,
             'geometry' => $data['coordinations'],
-            'size' => $data['size'],
+            'size' => (float) $data['size'],
             'owner_name' => $data['owner'] ?? null,
             'notes' => $data['notes'] ?? null,
             'created_by' => $data['created_by'] ?? 1,
@@ -165,15 +175,22 @@ class Land
             'category_color' => $land['category_color'] ?? '#4285F4',
             'plant_date' => $land['plant_date'],
             'harvest_cycle_days' => (int) $land['harvest_cycle_days'],
+            'harvest_cycle' => (string) $land['harvest_cycle_days'], // Add harvest_cycle field for frontend
             'next_harvest_date' => $land['next_harvest_date'],
             'coordinations' => $land['geometry'], // Map geometry to coordinations for frontend
             'geometry' => $land['geometry'], // Keep original geometry field too
             'size' => (float) $land['size'],
+            'tree_count' => isset($land['tree_count']) ? (int) $land['tree_count'] : null, // Add tree_count field
             'owner_name' => $land['owner_name'],
+            'owner' => $land['owner_name'], // Also map to owner for frontend compatibility
             'notes' => $land['notes'],
             'is_active' => (bool) $land['is_active'],
             'created_by' => (int) $land['created_by'],
+            'created' => $land['created_at'], // Add created field for frontend compatibility
+            'createdby' => $land['first_name'] . ' ' . $land['last_name'], // Add createdby field for frontend compatibility
             'created_at' => $land['created_at'],
+            'updated' => $land['updated_at'], // Add updated field for frontend compatibility
+            'updatedby' => $land['first_name'] . ' ' . $land['last_name'], // Add updatedby field for frontend compatibility
             'updated_at' => $land['updated_at'],
             'harvest_status' => $this->calculateHarvestStatus($land['next_harvest_date']),
         ];

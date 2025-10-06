@@ -34,9 +34,7 @@ import { useGenericCrud } from '@/hooks/useGenericCrud';
 // import { TokenDebugger } from '@/components/debug/TokenDebugger';
 // import { NotificationDebugger } from '@/components/debug/NotificationDebugger';
 // import NotificationAPITester from '@/components/debug/NotificationAPITester';
-import TokenExpirationDebugger from '@/components/debug/TokenExpirationDebugger';
 //import CommunicationAnalyzer from '@/components/debug/CommunicationAnalyzer';
-import { DebugOnly } from '@/utils/buildUtils';
 
 // Notification interface is now imported from the store
 
@@ -756,10 +754,6 @@ const Dashboard: React.FC = () => {
                 <TerraDrawingTools 
                   onNotificationDismissed={() => {
                     // Refresh notification counts when a notification is dismissed
-                    loadDashboardData();
-                  }}
-                  onNotificationMarkedAsRead={() => {
-                    // Refresh notification counts when a notification is marked as read
                     loadDashboardData();
                   }}
                 />

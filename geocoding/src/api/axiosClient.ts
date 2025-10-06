@@ -49,16 +49,29 @@ axiosClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${result.tokens.access_token}`;
           return axiosClient(originalRequest);
         } else {
-          console.error('[AxiosInterceptor] Token refresh failed, logging out');
-          const { logout } = useAuthStore.getState();
-          logout();
-          window.location.href = '/login';
+          console.error('[AxiosInterceptor] Token refresh failed:', result.error);
+          
+          // Only logout for certain types of errors
+          if (result.error === 'Max refresh attempts exceeded' || 
+              result.error === 'No refresh token available' ||
+              (result.error?.response?.status >= 400 && result.error?.response?.status < 500)) {
+            const { logout } = useAuthStore.getState();
+            logout();
+            window.location.href = '/login';
+          }
         }
       } catch (refreshError) {
         console.error('[AxiosInterceptor] Token refresh error:', refreshError);
-        const { logout } = useAuthStore.getState();
-        logout();
-        window.location.href = '/login';
+        
+        // Only logout for certain types of errors
+        if (refreshError && typeof refreshError === 'object' && 'response' in refreshError) {
+          const errorResponse = refreshError as any;
+          if (errorResponse.response?.status >= 400 && errorResponse.response?.status < 500) {
+            const { logout } = useAuthStore.getState();
+            logout();
+            window.location.href = '/login';
+          }
+        }
       }
     }
     

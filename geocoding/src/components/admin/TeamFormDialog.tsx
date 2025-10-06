@@ -23,8 +23,7 @@ import {
 } from '@/components/ui/form';
 import { z } from 'zod';
 import axiosClient from '@/api/axiosClient';
-import { Users, Crown, FileText, UserPlus, UserMinus, X, User } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Users, Crown, FileText, UserPlus, UserMinus, User } from 'lucide-react';
 
 const teamSchema = z.object({
   name: z.string().min(1, 'Team name is required'),
@@ -52,6 +51,7 @@ interface User {
   id: number;
   first_name: string;
   last_name: string;
+  email: string;
   role: string;
 }
 

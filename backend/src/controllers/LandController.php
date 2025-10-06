@@ -50,6 +50,21 @@ class LandController
             'plant_date', 'harvest_cycle', 'coordinations', 'size'
         ];
 
+        // Check if tree_count is required for Palm Oil
+        $plantTypeId = $input['planttypeid'] ?? null;
+        if ($plantTypeId === 3 || (isset($input['plant_type_name']) && strtolower($input['plant_type_name']) === 'palm oil')) {
+            if (!isset($input['tree_count']) || $input['tree_count'] === null || $input['tree_count'] === '') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Tree count is required for Palm Oil plantations']);
+                return;
+            }
+            if (!is_numeric($input['tree_count']) || intval($input['tree_count']) < 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Tree count must be a positive integer']);
+                return;
+            }
+        }
+
         foreach ($requiredFields as $field) {
             if (!isset($input[$field])) {
                 http_response_code(400);

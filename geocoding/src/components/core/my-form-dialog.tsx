@@ -51,7 +51,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
   const createItem = parentCreateItem || localCreateItem;
   
   // State for plant types and categories
-  const [plantTypes, setPlantTypes] = React.useState<Array<{id: number, name: string, description?: string, scientific_name?: string, harvest_cycle_days: number}>>([]);
+  const [plantTypes, setPlantTypes] = React.useState<Array<{id: number, name: string, description?: string, harvest_cycle_days?: number, requires_tree_count?: boolean}>>([]);
   const [categories, setCategories] = React.useState<Array<{id: number, name: string, description?: string, color: string}>>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(true);
   const [optionsError, setOptionsError] = React.useState<string | null>(null);
@@ -139,6 +139,7 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
       categoryid: undefined, // Will be set when data loads
       plant_date: currentdate,
       harvest_cycle: '',
+      tree_count: undefined, // Optional field
       notes: '',
       created: formattedDate,
       createdby: 'Test',
@@ -309,7 +310,11 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                               type="number" 
                               step={0.01} 
                               placeholder="Enter land size" 
-                              {...field} 
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === '' ? undefined : parseFloat(value));
+                              }}
                               className="h-10 border-gray-200 focus:border-orange-500 focus:ring-orange-500 transition-colors" 
                             />
                           </FormControl>
@@ -485,7 +490,6 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                                     <div className="flex items-center gap-2">
                                       <Leaf className="h-3 w-3 text-green-600" />
                                       {plantType.name}
-                                      {plantType.scientific_name && ` (${plantType.scientific_name})`}
                                     </div>
                                   </SelectItem>
                                 ))
@@ -590,6 +594,43 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="tree_count"
+                      render={({ field }) => {
+                        const selectedPlantType = plantTypes.find(pt => pt.id === form.watch('planttypeid'));
+                        const requiresTreeCount = selectedPlantType?.requires_tree_count || 
+                                                selectedPlantType?.name?.toLowerCase().includes('palm oil') || 
+                                                selectedPlantType?.name?.toLowerCase().includes('oil palm') ||
+                                                selectedPlantType?.id === 3;
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                              <Leaf className="h-4 w-4 text-orange-600" />
+                              Tree Count
+                              {requiresTreeCount && (
+                                <span className="text-red-500 text-xs ml-2">*Required</span>
+                              )}
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number"
+                                min="0"
+                                placeholder={requiresTreeCount ? "Enter number of trees (required)" : "Enter number of trees (optional)"} 
+                                {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === '' ? undefined : parseInt(value));
+                                }}
+                                className="h-10 border-gray-200 focus:border-orange-500 focus:ring-orange-500 transition-colors" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
 
@@ -774,7 +815,17 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Size</FormLabel>
                               <FormControl>
-                                <Input type="number" step={0.01} placeholder="Land size" {...field} className="h-9" />
+                                <Input 
+                                  type="number" 
+                                  step={0.01} 
+                                  placeholder="Land size" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    field.onChange(value === '' ? undefined : parseFloat(value));
+                                  }}
+                                  className="h-9" 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -893,7 +944,6 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                                     plantTypes.map((plantType) => (
                                       <SelectItem key={plantType.id} value={plantType.id.toString()}>
                                         {plantType.name}
-                                        {plantType.scientific_name && ` (${plantType.scientific_name})`}
                                       </SelectItem>
                                     ))
                                   )}

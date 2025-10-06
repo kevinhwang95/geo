@@ -18,6 +18,7 @@ export default interface LandRegistry {
   category_color?: string,
   plant_date: Date | string,
   harvest_cycle: string,
+  tree_count?: number,
   notes?: string,
   created: Date | string,
   createdby: string,
@@ -37,7 +38,7 @@ export const landRegistrySchema = z.object({
     message: "Land number must be at least 2 characters.",
   }),
   size: z.number().min(0, {
-    message: "Land number must be at least 0 size.",
+    message: "Size must be at least 0.",
   }),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
@@ -67,6 +68,9 @@ export const landRegistrySchema = z.object({
   harvest_cycle: z.string().min(2, {
     message: "Harvest cycle must be at least 2 characters.",
   }).optional(),
+  tree_count: z.number().int().min(0, {
+    message: "Tree count must be a positive integer.",
+  }).optional(),
   notes: z.string().min(2, {
     message: "Notes must be at least 2 characters.",
   }).optional(),
@@ -78,6 +82,22 @@ export const landRegistrySchema = z.object({
   updatedby: z.string().min(2, {
     message: "Updatedby must be at least 2 characters.",
   }).optional(),
+}).refine((data) => {
+  // Conditional validation: tree_count is required for certain plant types
+  // This will be enhanced with dynamic plant type data from the backend
+  // For now, we'll check for Palm Oil by ID (3) or by name if available
+  const palmOilIds = [3]; // Palm Oil IDs that require tree count
+  // const palmOilNames = ['palm oil', 'oil palm']; // Plant type names that require tree count
+  
+  // Check if this plant type requires tree count
+  if (palmOilIds.includes(data.planttypeid) && (data.tree_count === undefined || data.tree_count === null)) {
+    return false;
+  }
+  
+  return true;
+}, {
+  message: "Tree count is required for this plant type.",
+  path: ["tree_count"],
 });
 
 export type GeoJsonPolygon = {

@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   ClipboardList, 
@@ -17,9 +16,7 @@ import {
   MapPin,
   RefreshCw,
   AlertTriangle,
-  Clock,
-  CheckCircle,
-  XCircle
+  Clock
 } from 'lucide-react';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import { canManageUsers } from '@/stores/authStore';
@@ -130,18 +127,6 @@ const WorkAssignmentManagement: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-blue-500" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {

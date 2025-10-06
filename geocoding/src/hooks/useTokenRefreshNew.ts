@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import axios from 'axios';
 
 const ACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes of inactivity
-const TOKEN_REFRESH_BUFFER = 2 * 60 * 1000; // Refresh 2 minutes before expiry
+// const TOKEN_REFRESH_BUFFER = 2 * 60 * 1000; // Refresh 2 minutes before expiry
 
 export const useTokenRefresh = () => {
   const { tokens, isAuthenticated, setTokens, logout } = useAuthStore();

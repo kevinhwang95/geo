@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface CommunicationAnalyzerProps {
   onClose?: () => void;
@@ -14,7 +14,7 @@ interface APICall {
 }
 
 const CommunicationAnalyzer: React.FC<CommunicationAnalyzerProps> = ({ onClose }) => {
-  const [apiCalls, setApiCalls] = useState<APICall[]>([
+  const [apiCalls] = useState<APICall[]>([
     // Authentication & Token Management
     {
       endpoint: '/auth/refresh',

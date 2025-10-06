@@ -3,11 +3,10 @@ import { useAuthStore } from '@/stores/authStore';
 import { getTokenTimeRemaining, decodeJWT } from '@/utils/jwt';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, Clock, User, Shield } from 'lucide-react';
+import { Clock, User, Shield } from 'lucide-react';
 
 export const TokenDebugger: React.FC = () => {
-  const { tokens, user, isAuthenticated, isTokenExpired, getTokenTimeRemaining: getRemaining } = useAuthStore();
+  const { tokens, user, isAuthenticated, isTokenExpired } = useAuthStore();
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [tokenPayload, setTokenPayload] = useState<any>(null);
 

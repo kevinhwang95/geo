@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { isTokenExpired, getTokenTimeRemaining, decodeJWT } from '@/utils/jwt';
+import { isTokenExpired, getTokenTimeRemaining } from '@/utils/jwt';
 
 export interface User {
   id: number;

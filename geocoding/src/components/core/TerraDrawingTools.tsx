@@ -194,60 +194,6 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
   const [terraDrawInitialized, setTerraDrawInitialized] = useState(false);
   const [polygonLoadAttempted, setPolygonLoadAttempted] = useState(false);
 
-  // Test function to manually add a polygon
-  const addTestPolygon = useCallback(() => {
-    console.log('🧪 Test polygon function called');
-    console.log('TerraDraw instance:', drawRef.current);
-    console.log('Map instance:', mapInstanceRef.current);
-    
-    if (!drawRef.current) {
-      console.error('❌ TerraDraw not available for test polygon');
-      console.log('TerraDraw initialized:', terraDrawInitialized);
-      return;
-    }
-
-    if (!mapInstanceRef.current) {
-      console.error('❌ Map not available for test polygon');
-      return;
-    }
-
-    console.log('🧪 Adding test polygon...');
-    
-    const testPolygon = {
-      type: "Feature" as const,
-      geometry: {
-        type: "Polygon" as const,
-        coordinates: [[
-          [99.82120, 14.09480],
-          [99.82130, 14.09480],
-          [99.82130, 14.09490],
-          [99.82120, 14.09490],
-          [99.82120, 14.09480]
-        ]]
-      },
-      properties: {
-        mode: "polygon",
-        landId: "test",
-        landName: "Test Polygon",
-        landCode: "TEST"
-      }
-    };
-
-    try {
-      console.log('Adding test polygon to TerraDraw...');
-      drawRef.current.addFeatures([testPolygon]);
-      console.log('✅ Test polygon added successfully');
-      
-      // Check if it's visible
-      const snapshot = drawRef.current.getSnapshot();
-      console.log('📊 TerraDraw snapshot after test:', snapshot.length, 'features');
-      console.log('Snapshot details:', snapshot);
-      
-    } catch (error) {
-      console.error('❌ Failed to add test polygon:', error);
-      console.error('Error details:', error);
-    }
-  }, [terraDrawInitialized]);
 
   // Enhanced polygon loading with retry mechanism
   const loadPolygonsToMap = useCallback(async () => {
@@ -1074,7 +1020,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       }
       map = new Map(mapRef.current, {
         center: { lat: 14.09480,lng: 99.82120 },
-        zoom: 18,
+        zoom: 16,
         mapId: "c306b3c6dd3ed8d9",
         mapTypeId: "satellite",
         zoomControl: false,
@@ -1591,7 +1537,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       )}
 
       {/* Polygon Debug Panel (Development Only) */}
-      {import.meta.env.DEV && !isFullscreen && (
+      {/* {import.meta.env.DEV && !isFullscreen && (
         <div 
           style={{ 
             position: "absolute", 
@@ -1758,7 +1704,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             </button>
           </div>
         </div>
-      )}
+      )} */}
       
       {/* <div id="mode-ui">
         <button id="select-mode" className="mode-button" onClick={() => handleModeChange("select", "select-mode")}>Select</button>

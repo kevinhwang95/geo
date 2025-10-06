@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
         drop_console: mode === 'production',
         drop_debugger: mode === 'production',
       },
-    },
+    } as any,
     // Generate source maps only in development
     sourcemap: mode === 'development',
     // Remove unused code more aggressively in production

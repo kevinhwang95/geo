@@ -59,9 +59,18 @@ export const useNotificationPolling = (options: UseNotificationPollingOptions = 
       }
       params.append('limit', '50'); // Get more notifications for better polling
 
+      // Create abort controller if none provided
+      let abortController: AbortController | null = null;
+      let requestSignal = signal;
+      
+      if (!requestSignal) {
+        abortController = new AbortController();
+        requestSignal = abortController.signal;
+      }
+
       // Fetch notifications
       const notificationsResponse = await axiosClient.get(`/notifications?${params.toString()}`, {
-        signal
+        signal: requestSignal
       });
 
       const newNotifications = notificationsResponse.data.data || [];
@@ -77,21 +86,28 @@ export const useNotificationPolling = (options: UseNotificationPollingOptions = 
       if (onStatsUpdate) {
         try {
           const statsResponse = await axiosClient.get('/notifications/stats', {
-            signal
+            signal: requestSignal
           });
           const newStats = statsResponse.data.data || [];
           setStats(newStats);
           onStatsUpdate(newStats);
-        } catch (statsError) {
-          console.warn('Failed to fetch notification stats:', statsError);
+        } catch (statsError: any) {
+          // Only log stats errors if they're not cancellation errors
+          if (statsError.name !== 'AbortError' && statsError.name !== 'CanceledError' && !statsError.code?.includes('CANCELED')) {
+            console.warn('Failed to fetch notification stats:', statsError);
+          }
         }
       }
 
       console.log(`📬 Fetched ${newNotifications.length} notifications (${unreadCount} unread, ${highPriorityCount} high priority)`);
 
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log('Notification fetch aborted');
+      // Handle different types of cancellation errors - these are expected and should be silent
+      if (error.name === 'AbortError' || 
+          error.name === 'CanceledError' || 
+          error.code === 'ERR_CANCELED' ||
+          error.message?.toLowerCase().includes('canceled')) {
+        // Silently handle cancellation - this is expected behavior
         return;
       }
       

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { getTokenTimeRemaining, isTokenExpired, decodeJWT } from '@/utils/jwt';
+import { getTokenTimeRemaining, isTokenExpired } from '@/utils/jwt';
 import { attemptTokenRefresh, isRefreshInProgress } from '@/utils/tokenRefreshManager';
 
 const ACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes of inactivity (more reasonable)
@@ -8,7 +8,7 @@ const TOKEN_REFRESH_BUFFER = 2 * 60 * 1000; // Refresh 2 minutes before expiry
 
 export const useTokenRefresh = () => {
   console.log('useTokenRefresh hook initialized');
-  const { tokens, isAuthenticated, setTokens, logout } = useAuthStore();
+  const { tokens, isAuthenticated, logout } = useAuthStore();
   const trackerRef = useRef({
     lastActivity: Date.now(),
     refreshTimer: null as NodeJS.Timeout | null,
@@ -86,9 +86,16 @@ export const useTokenRefresh = () => {
     // Clear existing timer
     if (trackerRef.current.refreshTimer) {
       clearTimeout(trackerRef.current.refreshTimer);
+      trackerRef.current.refreshTimer = null;
     }
 
     if (!tokens?.access_token) {
+      return;
+    }
+
+    // Prevent recursive scheduling
+    if (trackerRef.current.refreshTimer) {
+      console.log('[useTokenRefresh] Timer already exists, skipping scheduling');
       return;
     }
 
@@ -100,16 +107,19 @@ export const useTokenRefresh = () => {
     
     if (refreshTime > 0) {
       trackerRef.current.refreshTimer = setTimeout(async () => {
+        // Clear the timer reference immediately
+        trackerRef.current.refreshTimer = null;
+        
         if (isUserActive() && !isRefreshInProgress()) {
           const success = await refreshToken();
           if (success) {
             // Only reschedule if we're still authenticated and have tokens
             const { tokens: currentTokens, isAuthenticated: stillAuthenticated } = useAuthStore.getState();
-            if (stillAuthenticated && currentTokens?.access_token) {
-              // Use a small delay to prevent immediate rescheduling
+            if (stillAuthenticated && currentTokens?.access_token && !trackerRef.current.refreshTimer) {
+              // Use a longer delay to prevent immediate rescheduling
               setTimeout(() => {
                 scheduleTokenRefresh().catch(console.error);
-              }, 1000);
+              }, 5000);
             }
           }
         } else {
@@ -123,11 +133,11 @@ export const useTokenRefresh = () => {
         if (success) {
           // Only reschedule if we're still authenticated and have tokens
           const { tokens: currentTokens, isAuthenticated: stillAuthenticated } = useAuthStore.getState();
-          if (stillAuthenticated && currentTokens?.access_token) {
-            // Use a small delay to prevent immediate rescheduling
+          if (stillAuthenticated && currentTokens?.access_token && !trackerRef.current.refreshTimer) {
+            // Use a longer delay to prevent immediate rescheduling
             setTimeout(() => {
               scheduleTokenRefresh().catch(console.error);
-            }, 1000);
+            }, 5000);
           }
         }
       }
@@ -186,19 +196,22 @@ export const useTokenRefresh = () => {
           updateActivity();
           
           // Check if token is close to expiry and refresh if needed
-          if (tokens?.access_token && !isRefreshInProgress()) {
+          if (tokens?.access_token && !isRefreshInProgress() && !trackerRef.current.refreshTimer) {
             const timeRemaining = getTokenTimeRemaining(tokens.access_token);
             
             if (timeRemaining <= TOKEN_REFRESH_BUFFER / 1000) {
               const success = await refreshToken();
               if (success) {
-                // Use a small delay to prevent immediate rescheduling
+                // Use a longer delay to prevent immediate rescheduling
                 setTimeout(() => {
                   scheduleTokenRefresh().catch(console.error);
-                }, 1000);
+                }, 5000);
               }
             } else {
-              scheduleTokenRefresh().catch(console.error);
+              // Only schedule if no timer exists
+              if (!trackerRef.current.refreshTimer) {
+                scheduleTokenRefresh().catch(console.error);
+              }
             }
           }
         }

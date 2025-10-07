@@ -19,7 +19,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
-import { canManageUsers } from '@/stores/authStore';
+import { canManageWorkAssignments } from '@/stores/authStore';
 import WorkAssignmentFormDialog from './WorkAssignmentFormDialog';
 
 interface WorkAssignmentData {
@@ -58,8 +58,8 @@ const WorkAssignmentManagement: React.FC = () => {
     deleteItem: deleteAssignment 
   } = useGenericCrud<WorkAssignmentData>('work-assignments');
 
-  // Check if user has admin permissions
-  if (!canManageUsers()) {
+  // Check if user has work assignment permissions
+  if (!canManageWorkAssignments()) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

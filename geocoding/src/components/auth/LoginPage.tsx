@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, MapPin, Users, Shield, Camera, MessageSquare, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, MapPin, Users, Shield, Camera, MessageSquare, LogIn, UserPlus, Mail } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,10 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false);
   
   // Login form state
   const [email, setEmail] = useState('');
@@ -22,7 +26,6 @@ const LoginPage: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   
   const { login } = useAuthStore();
   const navigate = useNavigate();
@@ -58,13 +61,8 @@ const LoginPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !firstName || !lastName) {
       setError('Please fill in all required fields');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
       return;
     }
     
@@ -74,20 +72,57 @@ const LoginPage: React.FC = () => {
     try {
       const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
         email,
-        password,
         firstName,
         lastName,
         phone
       });
       
-      const { token, user } = response.data;
-      
-      login(user, token);
-      navigate('/dashboard');
+      if (response.data.success) {
+        // Show success message instead of auto-login
+        setError(null);
+        alert('Registration successful! Please check your email for a password setup link.');
+        // Reset form
+        setEmail('');
+        setFirstName('');
+        setLastName('');
+        setPhone('');
+        setIsRegisterMode(false);
+      } else {
+        setError(response.data.error || 'Registration failed');
+      }
     } catch (error: any) {
       setError(error.response?.data?.error || 'Registration failed');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      setError('Please enter your email address');
+      return;
+    }
+    
+    setForgotPasswordLoading(true);
+    setError(null);
+    
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/password/reset-email`, {
+        email: forgotPasswordEmail
+      });
+      
+      if (response.data.success) {
+        setForgotPasswordSuccess(true);
+        setError(null);
+      } else {
+        setError(response.data.error || 'Failed to send reset email');
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Failed to send reset email');
+    } finally {
+      setForgotPasswordLoading(false);
     }
   };
 
@@ -125,12 +160,57 @@ const LoginPage: React.FC = () => {
         {/* Left side - Features */}
         <div className="space-y-8">
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Land Management System
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Comprehensive land management with interactive mapping, role-based access, and collaborative features.
-            </p>
+            {/* Logo Section */}
+            <div className="mb-8">
+              <div className="flex flex-col items-center lg:items-start space-y-6">
+                {/* Logo Image with Enhanced Effects */}
+                <div className="relative group">
+                  {/* Background glow */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/30 to-blue-400/30 rounded-2xl blur-2xl opacity-50 group-hover:opacity-70 transition-opacity duration-300 -z-10 scale-110"></div>
+                  
+                  {/* Logo container */}
+                  <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-white/50 group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
+                    <img 
+                      src="/logolong.PNG" 
+                      alt="Chokdee Logo" 
+                      className="h-16 sm:h-20 lg:h-24 w-auto object-contain"
+                    />
+                  </div>
+                  
+                  {/* Decorative elements */}
+                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-400 rounded-full opacity-60 animate-pulse"></div>
+                  <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-blue-400 rounded-full opacity-60 animate-pulse" style={{animationDelay: '1s'}}></div>
+                </div>
+                
+                {/* Enhanced Tagline */}
+                <div className="text-center lg:text-left space-y-3">
+                  <div className="relative">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                      Land Management System
+                    </h1>
+                    {/* Underline effect */}
+                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-green-400 to-blue-400 rounded-full opacity-60"></div>
+                  </div>
+                  
+                  <p className="text-sm sm:text-base text-gray-600 max-w-md leading-relaxed">
+                    Comprehensive land management with interactive mapping, role-based access, and collaborative features.
+                  </p>
+                  
+                  {/* Feature highlights */}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                      Interactive Mapping
+                    </span>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                      Role-Based Access
+                    </span>
+                    <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                      Real-time Collaboration
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -229,29 +309,30 @@ const LoginPage: React.FC = () => {
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                
-                {isRegisterMode && (
+                {!isRegisterMode && (
                   <div>
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Label htmlFor="password">Password *</Label>
                     <Input
-                      id="confirmPassword"
+                      id="password"
                       type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading}
                     />
+                  </div>
+                )}
+                
+                {!isRegisterMode && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      disabled={isLoading}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      Forgot your password?
+                    </button>
                   </div>
                 )}
 
@@ -263,14 +344,14 @@ const LoginPage: React.FC = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      {isRegisterMode ? 'Creating Account...' : 'Signing In...'}
+                      {isRegisterMode ? 'Sending Confirmation...' : 'Signing In...'}
                     </>
                   ) : (
                     <>
                       {isRegisterMode ? (
                         <>
                           <UserPlus className="mr-2.5 h-5 w-5" />
-                          Create Account
+                          Send Confirmation Email
                         </>
                       ) : (
                         <>
@@ -296,6 +377,102 @@ const LoginPage: React.FC = () => {
                   }
                 </button>
               </div>
+
+              {/* Forgot Password Modal */}
+              {showForgotPassword && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <Card className="w-full max-w-md mx-4">
+                    <CardHeader>
+                      <CardTitle className="text-center">Reset Password</CardTitle>
+                      <CardDescription className="text-center">
+                        Enter your email address and we'll send you a link to reset your password.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {forgotPasswordSuccess ? (
+                        <div className="text-center space-y-4">
+                          <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <Mail className="h-6 w-6 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">Check your email</h3>
+                            <p className="text-sm text-gray-600 mt-2">
+                              We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              The link will expire in 24 hours for security reasons.
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setShowForgotPassword(false);
+                              setForgotPasswordSuccess(false);
+                              setForgotPasswordEmail('');
+                            }}
+                            className="w-full"
+                          >
+                            Close
+                          </Button>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleForgotPassword} className="space-y-4">
+                          <div>
+                            <Label htmlFor="forgotEmail">Email Address</Label>
+                            <Input
+                              id="forgotEmail"
+                              type="email"
+                              value={forgotPasswordEmail}
+                              onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                              placeholder="Enter your email address"
+                              required
+                              disabled={forgotPasswordLoading}
+                            />
+                          </div>
+                          
+                          {error && (
+                            <Alert variant="destructive">
+                              <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          <div className="flex space-x-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setShowForgotPassword(false);
+                                setForgotPasswordEmail('');
+                                setError(null);
+                              }}
+                              disabled={forgotPasswordLoading}
+                              className="flex-1"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={forgotPasswordLoading || !forgotPasswordEmail}
+                              className="flex-1"
+                            >
+                              {forgotPasswordLoading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Mail className="mr-2 h-4 w-4" />
+                                  Send Reset Link
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </form>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               <div className="text-center">
                 <p className="text-xs text-gray-500">

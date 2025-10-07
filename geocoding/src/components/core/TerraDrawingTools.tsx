@@ -21,6 +21,8 @@ import { useAuthStore, canManageLands } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
 import NotificationMarkersManager from './NotificationMarkersManager';
 import { useDynamicMapHeight } from '@/hooks/useDynamicMapHeight';
+//import PolygonDebugger from '@/components/debug/PolygonDebugger';
+//import TokenExpirationMonitor from '@/components/debug/TokenExpirationMonitor';
 
 const colorPalette = [
   "#E74C3C", "#FF0066", "#9B59B6", "#673AB7", "#3F51B5", "#3498DB", "#03A9F4",
@@ -225,13 +227,19 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       return;
     }
 
-    console.log('✅ All conditions met - loading lands onto map:', lands.length, 'lands');
-    
-    try {
-      // Check TerraDraw state
-      console.log('TerraDraw instance:', drawRef.current);
-      console.log('TerraDraw mode:', drawRef.current?.getMode());
-      console.log('TerraDraw features count before clear:', drawRef.current?.getSnapshot().length || 0);
+      console.log('✅ All conditions met - loading lands onto map:', lands.length, 'lands');
+      
+      try {
+        // Check TerraDraw state
+        console.log('TerraDraw instance:', drawRef.current);
+        console.log('TerraDraw mode:', drawRef.current?.getMode());
+        console.log('TerraDraw features count before clear:', drawRef.current?.getSnapshot().length || 0);
+        
+        // Additional debugging - check if TerraDraw is actually ready
+        if (!drawRef.current.getSnapshot) {
+          console.error('❌ TerraDraw getSnapshot method not available - TerraDraw may not be fully initialized');
+          return;
+        }
       
       // Clear existing features first to avoid duplicates
       drawRef.current.clear();
@@ -241,28 +249,55 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       let errorCount = 0;
       
       for (const land of lands) {
+        console.log(`🔍 Processing land: ${land.land_name} (ID: ${land.id})`);
+        
         if (!land.coordinations) {
-          console.log('Land has no coordinations:', land.land_name);
+          console.log('❌ Land has no coordinations:', land.land_name);
           continue;
         }
         
+        console.log('📊 Coordinations data preview:', {
+          length: land.coordinations.length,
+          preview: land.coordinations.substring(0, 200) + '...',
+          startsWithBrace: land.coordinations.trim().startsWith('{'),
+          startsWithBracket: land.coordinations.trim().startsWith('[')
+        });
+        
         try {
           const geojson = JSON.parse(land.coordinations);
-          console.log('Parsed GeoJSON for land:', land.land_name, geojson);
+          console.log('✅ Parsed GeoJSON for land:', land.land_name, {
+            type: geojson.type,
+            hasGeometry: !!geojson.geometry,
+            geometryType: geojson.geometry?.type,
+            hasCoordinates: !!geojson.geometry?.coordinates,
+            coordinatesLength: geojson.geometry?.coordinates?.length
+          });
           
           if (geojson.type === "Feature") {
             console.log('Adding Feature to TerraDraw:', geojson);
-            drawRef.current!.addFeatures([geojson]);
-            loadedCount++;
-            console.log('✅ Successfully loaded land feature:', land.land_name);
+            try {
+              drawRef.current!.addFeatures([geojson]);
+              loadedCount++;
+              console.log('✅ Successfully loaded land feature:', land.land_name);
+            } catch (addError) {
+              console.error('❌ Error adding feature to TerraDraw:', addError);
+              console.error('Feature that failed:', geojson);
+              errorCount++;
+            }
           } else if (
             geojson.type === "FeatureCollection" &&
             Array.isArray(geojson.features)
           ) {
             console.log('Adding FeatureCollection to TerraDraw:', geojson.features);
-            drawRef.current!.addFeatures(geojson.features);
-            loadedCount += geojson.features.length;
-            console.log('✅ Successfully loaded land feature collection:', land.land_name, geojson.features.length, 'features');
+            try {
+              drawRef.current!.addFeatures(geojson.features);
+              loadedCount += geojson.features.length;
+              console.log('✅ Successfully loaded land feature collection:', land.land_name, geojson.features.length, 'features');
+            } catch (addError) {
+              console.error('❌ Error adding FeatureCollection to TerraDraw:', addError);
+              console.error('FeatureCollection that failed:', geojson);
+              errorCount++;
+            }
           } else if (geojson.type === "Polygon" || geojson.type === "Point" || geojson.type === "LineString") {
             // Handle raw geometry types by converting them to Features
             console.log('Converting raw geometry to Feature for land:', land.land_name, 'Type:', geojson.type);
@@ -277,9 +312,15 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
               }
             };
             console.log('Adding converted Feature to TerraDraw:', feature);
-            drawRef.current!.addFeatures([feature]);
-            loadedCount++;
-            console.log('✅ Successfully converted and loaded land geometry:', land.land_name);
+            try {
+              drawRef.current!.addFeatures([feature]);
+              loadedCount++;
+              console.log('✅ Successfully converted and loaded land geometry:', land.land_name);
+            } catch (addError) {
+              console.error('❌ Error adding converted feature to TerraDraw:', addError);
+              console.error('Converted feature that failed:', feature);
+              errorCount++;
+            }
           } else {
             console.warn('⚠️ Unknown GeoJSON type for land:', land.land_name, 'Type:', geojson.type);
             errorCount++;
@@ -335,10 +376,13 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       polygonLoadAttempted
     });
 
-    // Load polygons when all conditions are met
-    if (isAuthenticated && !landsLoading && !landsError && lands && Array.isArray(lands) && lands.length > 0) {
-      console.log('✅ Conditions met for polygon loading - calling loadPolygonsToMap');
-      loadPolygonsToMap();
+    // Load polygons when all conditions are met - with better timing
+    if (isAuthenticated && !landsLoading && !landsError && lands && Array.isArray(lands) && lands.length > 0 && terraDrawInitialized) {
+      console.log('✅ All conditions met for polygon loading - calling loadPolygonsToMap');
+      // Add a small delay to ensure TerraDraw is fully ready
+      setTimeout(() => {
+        loadPolygonsToMap();
+      }, 50);
     } else if (!isAuthenticated) {
       console.log('❌ User not authenticated, skipping land loading');
     } else if (landsLoading) {
@@ -351,6 +395,26 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
       console.log('⏳ TerraDraw not initialized yet');
     }
   }, [lands, terraDrawInitialized, isAuthenticated, landsLoading, landsError, loadPolygonsToMap]);
+
+  // Fallback mechanism to ensure polygons are loaded
+  useEffect(() => {
+    if (terraDrawInitialized && isAuthenticated && lands && lands.length > 0) {
+      // Set up a fallback timer to load polygons if they haven't been loaded yet
+      const fallbackTimer = setTimeout(() => {
+        const currentFeatures = drawRef.current?.getSnapshot() || [];
+        const hasLandFeatures = currentFeatures.some(feature => 
+          feature.properties?.landId || feature.properties?.landName
+        );
+        
+        if (!hasLandFeatures) {
+          console.log('🔄 Fallback: Loading polygons after delay');
+          loadPolygonsToMap();
+        }
+      }, 2000); // 2 second fallback
+      
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [terraDrawInitialized, isAuthenticated, lands, loadPolygonsToMap]);
 
   // Update markers when lands data changes
   useEffect(() => {
@@ -1211,7 +1275,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
               }, 200);
             });
 
-                // Mark TerraDraw as initialized and ready to receive data
+                // Mark TerraDraw as initialized and ready to receive data - MOVED INSIDE READY EVENT
                 setTerraDrawInitialized(true);
                 console.log('✅ TerraDraw initialized successfully');
                 
@@ -1224,7 +1288,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
                   } else {
                     console.log('⏳ Waiting for lands data after TerraDraw ready');
                   }
-                }, 500); // Small delay to ensure TerraDraw is fully ready
+                }, 100); // Reduced delay - TerraDraw is ready now
               });
 
               // Start TerraDraw after all event listeners are set up
@@ -1591,196 +1655,6 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
         </div>
       )}
 
-      {/* Polygon Debug Panel - Always visible for troubleshooting */}
-      {!isFullscreen && (
-        <div 
-          style={{ 
-            position: "absolute", 
-            top: "10px", 
-            right: "10px", 
-            background: "rgba(0,0,0,0.9)", 
-            color: "white", 
-            padding: "12px", 
-            borderRadius: "6px",
-            fontSize: "11px",
-            zIndex: 1001,
-            fontFamily: "monospace",
-            maxWidth: "350px",
-            minWidth: "300px"
-          }}
-        >
-          <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#60a5fa" }}>🔍 Polygon Debug</div>
-          
-          <div style={{ marginBottom: "6px" }}>
-            <strong>Status:</strong> 
-            <span style={{ 
-              color: terraDrawInitialized ? "#4ade80" : "#fbbf24",
-              marginLeft: "4px"
-            }}>
-              {terraDrawInitialized ? "✅ Ready" : "⏳ Loading"}
-            </span>
-          </div>
-          
-          <div style={{ marginBottom: "6px" }}>
-            <strong>Lands:</strong> {lands?.length || 0} total
-          </div>
-          
-          <div style={{ marginBottom: "6px" }}>
-            <strong>Features:</strong> {drawRef.current?.getSnapshot().length || 0} loaded
-          </div>
-          
-          <div style={{ marginBottom: "6px" }}>
-            <strong>Mode:</strong> {drawRef.current?.getMode() || "unknown"}
-          </div>
-          
-          <div style={{ marginBottom: "6px" }}>
-            <strong>Map:</strong> 
-            <span style={{ 
-              color: mapInstanceRef.current ? "#4ade80" : "#fbbf24",
-              marginLeft: "4px"
-            }}>
-              {mapInstanceRef.current ? "✅ Ready" : "⏳ Loading"}
-            </span>
-          </div>
-          
-          <div style={{ marginBottom: "8px" }}>
-            <strong>Auth:</strong> 
-            <span style={{ 
-              color: isAuthenticated ? "#4ade80" : "#fbbf24",
-              marginLeft: "4px"
-            }}>
-              {isAuthenticated ? "✅ Yes" : "❌ No"}
-            </span>
-          </div>
-          
-          <div style={{ marginBottom: "8px" }}>
-            <strong>Map Height:</strong> {dynamicHeight.mapHeight}
-          </div>
-          
-          <div style={{ marginBottom: "8px" }}>
-            <strong>Screen:</strong> {dynamicHeight.screenInfo.viewportWidth}×{dynamicHeight.screenInfo.viewportHeight}
-          </div>
-          
-          <div style={{ marginBottom: "8px" }}>
-            <strong>Optimal:</strong> 
-            <span style={{ 
-              color: dynamicHeight.isOptimal ? "#4ade80" : "#fbbf24",
-              marginLeft: "4px"
-            }}>
-              {dynamicHeight.isOptimal ? "✅ Yes" : "⚠️ Constrained"}
-            </span>
-          </div>
-          
-          <div style={{ 
-            display: "flex", 
-            gap: "6px", 
-            marginTop: "8px",
-            borderTop: "1px solid #374151",
-            paddingTop: "8px",
-            flexWrap: "wrap"
-          }}>
-            <button 
-              onClick={reloadPolygons}
-              style={{
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                padding: "4px 8px",
-                borderRadius: "4px",
-                fontSize: "10px",
-                cursor: "pointer"
-              }}
-            >
-              🔄 Reload
-            </button>
-            
-            <button 
-              onClick={() => {
-                console.log('🧹 Manual clear triggered');
-                if (drawRef.current) {
-                  drawRef.current.clear();
-                  console.log('✅ TerraDraw cleared');
-                }
-              }}
-              style={{
-                background: "#ef4444",
-                color: "white",
-                border: "none",
-                padding: "4px 8px",
-                borderRadius: "4px",
-                fontSize: "10px",
-                cursor: "pointer"
-              }}
-            >
-              🧹 Clear
-            </button>
-            
-            <button 
-              onClick={() => {
-                console.log('🧪 Test button clicked - adding test polygon');
-                if (drawRef.current) {
-                  const testFeature = {
-                    type: "Feature" as const,
-                    geometry: {
-                      type: "Polygon" as const,
-                      coordinates: [[
-                        [99.820, 14.096],
-                        [99.821, 14.096],
-                        [99.821, 14.097],
-                        [99.820, 14.097],
-                        [99.820, 14.096]
-                      ]]
-                    },
-                    properties: {
-                      mode: "polygon",
-                      landId: "test",
-                      landName: "Test Land",
-                      landCode: "TEST"
-                    }
-                  };
-                  drawRef.current.addFeatures([testFeature]);
-                  console.log('✅ Test polygon added');
-                }
-              }}
-              style={{
-                background: "#10b981",
-                color: "white",
-                border: "none",
-                padding: "4px 8px",
-                borderRadius: "4px",
-                fontSize: "10px",
-                cursor: "pointer"
-              }}
-            >
-              🧪 Test
-            </button>
-            
-            <button 
-              onClick={() => {
-                console.log('🔍 TerraDraw Debug Info:');
-                console.log('TerraDraw instance:', drawRef.current);
-                console.log('TerraDraw mode:', drawRef.current?.getMode());
-                console.log('TerraDraw snapshot:', drawRef.current?.getSnapshot());
-                console.log('Map instance:', mapInstanceRef.current);
-                console.log('Map center:', mapInstanceRef.current?.getCenter()?.toJSON());
-                console.log('Map zoom:', mapInstanceRef.current?.getZoom());
-                console.log('Lands data:', lands);
-              }}
-              style={{
-                background: "#8b5cf6",
-                color: "white",
-                border: "none",
-                padding: "4px 8px",
-                borderRadius: "4px",
-                fontSize: "10px",
-                cursor: "pointer"
-              }}
-            >
-              🔍 Debug
-            </button>
-          </div>
-        </div>
-      )}
       
       {/* <div id="mode-ui">
         <button id="select-mode" className="mode-button" onClick={() => handleModeChange("select", "select-mode")}>Select</button>
@@ -2016,6 +1890,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
         </div>
       )}
       
+      
       <MyFormDialog 
         open={open} 
         setOpen={(newOpen) => {
@@ -2041,6 +1916,19 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           console.log('Notification created successfully');
         }}
       />
+      
+      {/* Token Expiration Monitor - Only show in development */}
+      {/* {import.meta.env.DEV && <TokenExpirationMonitor />} */}
+      
+      {/* Polygon Debugger - Only show in development */}
+      {/* {import.meta.env.DEV && (
+        <div style={{ position: 'absolute', bottom: '10px', left: '10px', zIndex: 1000 }}>
+          <PolygonDebugger 
+            drawRef={drawRef} 
+            terraDrawInitialized={terraDrawInitialized} 
+          />
+        </div>
+      )} */}
     </div>
     
   );

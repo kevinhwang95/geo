@@ -23,6 +23,32 @@ class NotificationController
         $limit = min(50, max(10, intval($_GET['limit'] ?? 20)));
         $offset = ($page - 1) * $limit;
         
+        // Get filter parameters
+        $type = $_GET['type'] ?? 'all';
+        $priority = $_GET['priority'] ?? 'all';
+        
+        // Build WHERE conditions
+        $whereConditions = ["n.is_dismissed = 0"];
+        $params = [];
+        
+        // Add type filter
+        if ($type !== 'all') {
+            $whereConditions[] = "n.type = ?";
+            $params[] = $type;
+        }
+        
+        // Add priority filter
+        if ($priority !== 'all') {
+            $whereConditions[] = "n.priority = ?";
+            $params[] = $priority;
+        }
+        
+        $whereClause = implode(' AND ', $whereConditions);
+        
+        // Add pagination parameters
+        $params[] = $limit;
+        $params[] = $offset;
+        
         $stmt = $this->db->query("
             SELECT 
                 n.*,
@@ -39,10 +65,10 @@ class NotificationController
             FROM notifications n
             JOIN lands l ON n.land_id = l.id
             LEFT JOIN users u ON n.user_id = u.id
-            WHERE n.user_id = ? AND n.is_dismissed = 0
+            WHERE {$whereClause}
             ORDER BY n.created_at DESC
             LIMIT ? OFFSET ?
-        ", [$user['user_id'], $limit, $offset]);
+        ", $params);
         $notifications = $stmt->fetchAll();
         
         // Get photos for each notification
@@ -60,11 +86,26 @@ class NotificationController
             $notificationsWithPhotos[] = $notification;
         }
         
-        // Get total count
+        // Get total count with same filters
+        $countParams = [];
+        $countWhereConditions = ["is_dismissed = 0"];
+        
+        if ($type !== 'all') {
+            $countWhereConditions[] = "type = ?";
+            $countParams[] = $type;
+        }
+        
+        if ($priority !== 'all') {
+            $countWhereConditions[] = "priority = ?";
+            $countParams[] = $priority;
+        }
+        
+        $countWhereClause = implode(' AND ', $countWhereConditions);
+        
         $stmt = $this->db->query("
             SELECT COUNT(*) FROM notifications 
-            WHERE user_id = ? AND is_dismissed = 0
-        ", [$user['user_id']]);
+            WHERE {$countWhereClause}
+        ", $countParams);
         $total = $stmt->fetchColumn();
         
         echo json_encode([
@@ -105,8 +146,8 @@ class NotificationController
         $stmt = $this->db->query("
             UPDATE notifications 
             SET is_dismissed = 1, dismissed_by = ?, dismissed_at = NOW()
-            WHERE id = ? AND user_id = ?
-        ", [$user['user_id'], $id, $user['user_id']]);
+            WHERE id = ?
+        ", [$user['user_id'], $id]);
         
         if ($stmt->rowCount() === 0) {
             http_response_code(404);
@@ -124,8 +165,8 @@ class NotificationController
         $stmt = $this->db->query("
             UPDATE notifications 
             SET is_dismissed = 1, dismissed_by = ?, dismissed_at = NOW()
-            WHERE user_id = ? AND is_dismissed = 0
-        ", [$user['user_id'], $user['user_id']]);
+            WHERE is_dismissed = 0
+        ", [$user['user_id']]);
         
         echo json_encode([
             'success' => true, 
@@ -178,9 +219,20 @@ class NotificationController
         $notificationsCreated = 0;
         
         foreach ($lands as $land) {
-            $harvestDate = new \DateTime($land['next_harvest_date']);
-            $today = new \DateTime();
-            $daysUntilHarvest = $today->diff($harvestDate)->days;
+            // Skip lands without harvest dates
+            if (empty($land['next_harvest_date'])) {
+                error_log("Skipping land {$land['id']} ({$land['land_name']}) - no harvest date set");
+                continue;
+            }
+            
+            try {
+                $harvestDate = new \DateTime($land['next_harvest_date']);
+                $today = new \DateTime();
+                $daysUntilHarvest = $today->diff($harvestDate)->days;
+            } catch (\Exception $e) {
+                error_log("Invalid harvest date for land {$land['id']} ({$land['land_name']}): {$land['next_harvest_date']} - {$e->getMessage()}");
+                continue;
+            }
             
             // Create notification if harvest is due soon or overdue
             if ($daysUntilHarvest <= 7) {
@@ -208,7 +260,9 @@ class NotificationController
         
         echo json_encode([
             'success' => true,
-            'message' => "Created {$notificationsCreated} harvest notifications"
+            'message' => "Created {$notificationsCreated} harvest notifications",
+            'count' => $notificationsCreated,
+            'total_lands_checked' => count($lands)
         ]);
     }
 
@@ -334,8 +388,8 @@ class NotificationController
                 END as harvest_status
             FROM notifications n
             LEFT JOIN lands l ON n.land_id = l.id
-            WHERE n.id = ? AND n.user_id = ?
-        ", [$id, $user['user_id']]);
+            WHERE n.id = ?
+        ", [$id]);
         
         $notification = $stmt->fetch();
         

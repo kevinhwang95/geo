@@ -19,6 +19,7 @@ import {
   Search,
   Edit
 } from 'lucide-react';
+// Import logo image
 import { useAuthStore, canManageLands, canManageUsers, canManageTeams, canManageWorkAssignments } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -31,10 +32,11 @@ import { MyFormDialogLoad } from '@/components/core/my-form-dialog-load';
 import UserManagement from '@/components/admin/UserManagement';
 import TeamManagement from '@/components/admin/TeamManagement';
 import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
+import MenuManagement from '@/components/admin/MenuManagement';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
-// import { TokenDebugger } from '@/components/debug/TokenDebugger';
+//import { TokenDebugger } from '@/components/debug/TokenDebugger';
 // import { NotificationDebugger } from '@/components/debug/NotificationDebugger';
 // import NotificationAPITester from '@/components/debug/NotificationAPITester';
 //import CommunicationAnalyzer from '@/components/debug/CommunicationAnalyzer';
@@ -398,46 +400,41 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-200/50">
+      <header className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-200/50 mb-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="relative">
-                <MapPin className="h-8 w-8 text-green-600 mr-3 drop-shadow-sm" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                Land Management Dashboard
-              </h1>
+            {/* Logo and Title */}
+            <div className="flex items-center min-w-0 flex-1">
+              <img 
+                src="/logolong.PNG" 
+                alt="Chokdee Logo" 
+                className="h-8 sm:h-10 lg:h-12 w-auto object-contain"
+              />
             </div>
-            <div className="flex items-center space-x-4">
+            
+            {/* Mobile Menu Button */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Notifications */}
               <div 
-                className="flex items-center space-x-2 cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition-all duration-200 hover:shadow-md"
+                className="flex items-center space-x-1 sm:space-x-2 cursor-pointer hover:bg-purple-50 p-1 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md"
                 onClick={handleNotificationClick}
                 title="Click to view notifications"
               >
                 <div className="relative">
-                  <Bell className="h-5 w-5 text-gray-500 hover:text-purple-600 transition-colors" />
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 hover:text-purple-600 transition-colors" />
                   {unreadCount > 0 && (
                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   )}
                 </div>
                 {unreadCount > 0 && (
-                  <Badge variant="destructive" className="text-xs font-bold shadow-sm">
+                  <Badge variant="destructive" className="text-xs font-bold shadow-sm hidden sm:inline-flex">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center space-x-2">
-                {/* <Button variant="outline" size="sm" onClick={testMapStore}>
-                  Test Map Store
-                </Button>
-                <Button variant="outline" size="sm" onClick={testInfoWindow}>
-                  Test InfoWindow
-                </Button>
-                <Button variant="outline" size="sm" onClick={testSimpleInfoWindow}>
-                  Simple Test
-                </Button> */}
+              
+              {/* User Info - Hidden on mobile, shown on larger screens */}
+              <div className="hidden md:flex items-center space-x-2">
                 <Avatar
                   src={user?.avatar_url}
                   alt={user?.first_name}
@@ -449,16 +446,19 @@ const Dashboard: React.FC = () => {
                 <Badge variant="outline" className="text-xs">
                   {user?.role}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Logout
-                </Button>
               </div>
+              
+              {/* Logout Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-gray-900 p-2"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -481,9 +481,9 @@ const Dashboard: React.FC = () => {
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto">
           {activeSection === 'overview' && (
-            <div className="space-y-6 p-6">
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
               <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-blue-700">Total Lands</CardTitle>
@@ -625,11 +625,11 @@ const Dashboard: React.FC = () => {
           )}
 
           {activeSection === 'lands' && (
-            <div className="space-y-6 p-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">All Lands</h2>
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <h2 className="text-xl sm:text-2xl font-bold">All Lands</h2>
               {canManageLands() && (
-                <Button onClick={handleAddLand}>
+                <Button onClick={handleAddLand} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Land
                 </Button>
@@ -640,7 +640,7 @@ const Dashboard: React.FC = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search lands by name, code, location, plant type, or category..."
+                placeholder="Search lands..."
                 value={landSearchTerm}
                 onChange={(e) => setLandSearchTerm(e.target.value)}
                 className="pl-10"
@@ -679,7 +679,7 @@ const Dashboard: React.FC = () => {
             {!landsLoading && !landsError && (
               <div className="flex-1 min-h-0 flex flex-col">
                 {filteredLands.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 flex-1">
                     {filteredLands.map((land) => (
                       <Card 
                         key={land.id} 
@@ -721,9 +721,9 @@ const Dashboard: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="mt-4 flex justify-between items-center">
+                          <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                             {getHarvestStatusBadge(land.harvest_status)}
-                            <div className="flex space-x-2">
+                            <div className="flex flex-wrap gap-2">
                               {canManageLands() && (
                                 <Button 
                                   variant="outline" 
@@ -732,6 +732,7 @@ const Dashboard: React.FC = () => {
                                     e.stopPropagation();
                                     handleEditLand(land);
                                   }}
+                                  className="flex-1 sm:flex-none"
                                 >
                                   <Edit className="h-4 w-4 mr-1" />
                                   Edit
@@ -744,11 +745,12 @@ const Dashboard: React.FC = () => {
                                   e.stopPropagation();
                                   handleCreateNotification(land.id);
                                 }}
+                                className="flex-1 sm:flex-none"
                               >
                                 <Bell className="h-4 w-4 mr-1" />
-                                Create Notification
+                                <span className="hidden sm:inline">Create Notification</span>
+                                <span className="sm:hidden">Notify</span>
                               </Button>
-                              
                             </div>
                           </div>
                         </CardContent>
@@ -824,6 +826,12 @@ const Dashboard: React.FC = () => {
               <UserManagement />
             </div>
           )}
+
+          {canManageUsers() && activeSection === 'menu-management' && (
+            <div className="space-y-6 p-6">
+              <MenuManagement />
+            </div>
+          )}
         </div>
       </div>
 
@@ -834,7 +842,7 @@ const Dashboard: React.FC = () => {
         selectedLand={selectedLandForNotification}
         onNotificationCreated={handleNotificationCreated}
       />
-
+      {/* {import.meta.env.DEV && <TokenDebugger />} */}
       {/* Edit Land Dialog */}
       {selectedLandForEdit && (
         <MyFormDialogLoad

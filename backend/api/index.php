@@ -16,10 +16,18 @@ use App\Controllers\CommentController;
 use App\Controllers\PhotoController;
 use App\Controllers\NotificationController;
 use App\Controllers\EnhancedNotificationController;
+use App\Controllers\NavigationMenuController;
+use App\Controllers\PasswordController;
+use App\Controllers\EndpointPermissionController;
 
 // Load environment variables
-$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv->load();
+} catch (Exception $e) {
+    // If .env parsing fails, continue with defaults
+    error_log("Dotenv parsing warning: " . $e->getMessage());
+}
 
 // Initialize Auth
 Auth::init();
@@ -28,7 +36,9 @@ Auth::init();
 $corsOrigin = $_ENV['CORS_ORIGIN'] ?? 'http://localhost:5173';
 header("Access-Control-Allow-Origin: {$corsOrigin}");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Max-Age: 86400"); // Cache preflight for 24 hours
 header("Content-Type: application/json");
 
 // Handle preflight requests
@@ -72,10 +82,23 @@ try {
     exit;
 }
 
+// Initialize Auth class
+Auth::init();
+
 // Parse the request URI
 $path = parse_url($requestUri, PHP_URL_PATH);
 $path = str_replace('/api', '', $path);
 $path = trim($path, '/');
+
+// Helper function to check endpoint permissions
+function checkEndpointPermission($endpointKey, $method = null) {
+    try {
+        Auth::requireEndpointPermission($endpointKey, $method);
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
 
 // Route the request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -121,6 +144,30 @@ try {
                 case 'refresh':
                     if ($method === 'POST') {
                         $authController->refresh();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'setup-password':
+                    if ($method === 'POST') {
+                        $authController->setupPassword();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'request-password-reset':
+                    if ($method === 'POST') {
+                        $authController->requestPasswordReset();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'reset-password':
+                    if ($method === 'POST') {
+                        $authController->resetPassword();
                     } else {
                         http_response_code(405);
                         echo json_encode(['error' => 'Method not allowed']);
@@ -591,6 +638,173 @@ try {
                     } else {
                         http_response_code(400);
                         echo json_encode(['error' => 'Work assignment ID required']);
+                    }
+                    break;
+                default:
+                    http_response_code(405);
+                    echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+        case 'navigation-menus':
+            $navMenuController = new NavigationMenuController();
+            switch ($method) {
+                case 'GET':
+                    if (isset($pathParts[1]) && $pathParts[1] === 'role') {
+                        // Get menus for specific role: /api/navigation-menus/role/{role}
+                        $role = $pathParts[2] ?? '';
+                        if (empty($role)) {
+                            http_response_code(400);
+                            echo json_encode(['error' => 'Role parameter required']);
+                        } else {
+                            $result = $navMenuController->getMenusForRole($role);
+                            echo json_encode($result);
+                        }
+                    } else {
+                        // Get all menus (admin only)
+                        $result = $navMenuController->getAllMenus();
+                        echo json_encode($result);
+                    }
+                    break;
+                case 'POST':
+                    $input = json_decode(file_get_contents('php://input'), true);
+                    $result = $navMenuController->createMenu($input);
+                    echo json_encode($result);
+                    break;
+                case 'PUT':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $input = json_decode(file_get_contents('php://input'), true);
+                        $result = $navMenuController->updateMenu($pathParts[1], $input);
+                        echo json_encode($result);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Menu ID required']);
+                    }
+                    break;
+                case 'DELETE':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $result = $navMenuController->deleteMenu($pathParts[1]);
+                        echo json_encode($result);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Menu ID required']);
+                    }
+                    break;
+                default:
+                    http_response_code(405);
+                    echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+        case 'menu-order':
+            $navMenuController = new NavigationMenuController();
+            if ($method === 'PUT') {
+                $input = json_decode(file_get_contents('php://input'), true);
+                $result = $navMenuController->updateMenuOrder($input);
+                echo json_encode($result);
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+        case 'password':
+            $passwordController = new PasswordController();
+            switch ($pathParts[1] ?? '') {
+                case 'setup-email':
+                    if ($method === 'POST') {
+                        $passwordController->sendPasswordSetupEmail();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'validate-token':
+                    if ($method === 'POST') {
+                        $passwordController->validatePasswordSetupToken();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'validate-reset-token':
+                    if ($method === 'POST') {
+                        $passwordController->validatePasswordResetToken();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'setup':
+                    if ($method === 'POST') {
+                        $passwordController->setupPassword();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'reset-email':
+                    if ($method === 'POST') {
+                        $passwordController->sendPasswordResetEmail();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'reset':
+                    if ($method === 'POST') {
+                        $passwordController->resetPassword();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Password endpoint not found']);
+            }
+            break;
+
+        case 'endpoint-permissions':
+            $endpointPermissionController = new EndpointPermissionController();
+            switch ($method) {
+                case 'GET':
+                    if (isset($pathParts[1]) && $pathParts[1] === 'role') {
+                        // Get permissions for specific role: /api/endpoint-permissions/role/{role}
+                        $role = $pathParts[2] ?? '';
+                        if (empty($role)) {
+                            http_response_code(400);
+                            echo json_encode(['error' => 'Role parameter required']);
+                        } else {
+                            $result = $endpointPermissionController->getRolePermissions($role);
+                            echo json_encode($result);
+                        }
+                    } elseif (isset($pathParts[1]) && $pathParts[1] === 'matrix') {
+                        // Get permission matrix: /api/endpoint-permissions/matrix
+                        $result = $endpointPermissionController->getPermissionMatrix();
+                        echo json_encode($result);
+                    } else {
+                        // Get all endpoint permissions
+                        $result = $endpointPermissionController->index();
+                        echo json_encode($result);
+                    }
+                    break;
+                case 'POST':
+                    if (isset($pathParts[1]) && $pathParts[1] === 'bulk-update') {
+                        // Bulk update permissions
+                        $endpointPermissionController->bulkUpdatePermissions();
+                    } else {
+                        // Update single permission
+                        $endpointPermissionController->updatePermission();
+                    }
+                    break;
+                case 'PUT':
+                    if (isset($pathParts[1]) && $pathParts[1] === 'reset-defaults') {
+                        // Reset to default permissions
+                        $endpointPermissionController->resetToDefaults();
+                    } else {
+                        // Update single permission
+                        $endpointPermissionController->updatePermission();
                     }
                     break;
                 default:

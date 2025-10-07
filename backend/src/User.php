@@ -22,7 +22,7 @@ class User
             'email' => $data['email'],
             'phone' => $data['phone'],
             'role' => $data['role'],
-            'password_hash' => password_hash($data['password'] ?? 'defaultpassword123', PASSWORD_DEFAULT),
+            'password_hash' => $data['password'] ? password_hash($data['password'], PASSWORD_DEFAULT) : null,
         ];
 
         $this->db->query($sql, $params);
@@ -101,6 +101,18 @@ class User
         }
 
         return password_verify($password, $user['password_hash']);
+    }
+
+    public function updatePassword($userId, $hashedPassword)
+    {
+        $sql = "UPDATE users SET password_hash = :password_hash, updated_at = NOW() WHERE id = :id";
+        $params = [
+            'password_hash' => $hashedPassword,
+            'id' => $userId
+        ];
+        
+        $this->db->query($sql, $params);
+        return $this->findById($userId);
     }
 
     public function formatUser($user)

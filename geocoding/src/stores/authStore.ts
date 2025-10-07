@@ -41,6 +41,7 @@ interface AuthActions {
   updateUser: (updates: Partial<User>) => void;
   isTokenExpired: () => boolean;
   getTokenTimeRemaining: () => number;
+  checkTokenExpiryAndLogout: () => boolean;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -96,6 +97,34 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         if (!tokens?.access_token) return 0;
         
         return getTokenTimeRemaining(tokens.access_token);
+      },
+
+      // Check if both access and refresh tokens are expired and logout if needed
+      checkTokenExpiryAndLogout: () => {
+        const { tokens, logout } = get();
+        
+        if (!tokens?.access_token || !tokens?.refresh_token) {
+          console.log('[AuthStore] No tokens available, logging out');
+          logout();
+          return true;
+        }
+
+        const accessExpired = isTokenExpired(tokens.access_token, 0);
+        const refreshExpired = isTokenExpired(tokens.refresh_token, 0);
+
+        if (refreshExpired) {
+          console.log('[AuthStore] Refresh token expired, logging out');
+          logout();
+          return true;
+        }
+
+        if (accessExpired) {
+          console.log('[AuthStore] Access token expired, will attempt refresh');
+          // Don't logout immediately for access token expiry - let refresh mechanism handle it
+          return false;
+        }
+
+        return false;
       }
     }),
     {

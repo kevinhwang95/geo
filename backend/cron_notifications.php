@@ -55,34 +55,44 @@ try {
  * Example function to check weather conditions
  * You can integrate this with weather APIs
  */
-function checkWeatherConditions() {
-    // Example implementation with OpenWeatherMap API
-    /*
-    $apiKey = 'your_openweathermap_api_key';
-    $lat = '14.095840581'; // Your default latitude
-    $lon = '99.820381926'; // Your default longitude
+// function checkWeatherConditions() {
+//     // Example implementation with OpenWeatherMap API
     
-    $url = "http://api.openweathermap.org/data/2.5/weather?lat={$lat}&lon={$lon}&appid={$apiKey}";
+//     //lat: 14.09480,lng: 99.82120
+//     $apiKey = '55f43cb45e52e91515ed6bfd0cec05df';
+//     $lat = '14.095840581'; // Your default latitude
+//     $lon = '99.820381926'; // Your default longitude
     
-    $response = file_get_contents($url);
-    $weather = json_decode($response, true);
+//     // $curl_handle=curl_init();
+//     // curl_setopt($curl_handle, CURLOPT_URL,"https://api.openweathermap.org/data/3.0/onecall?lat={$lat}&lon={$lon}&appid={$apiKey}");
+//     // curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 2);
+//     // curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, 1);
+//     // curl_setopt($curl_handle, CURLOPT_USERAGENT, 'Chokdee App');
+//     // $response = curl_exec($curl_handle);
+//     // echo " Weather API - {$response}\n";
+//     // curl_close($curl_handle);
+
+//     $url = "https://api.openweathermap.org/data/3.0/onecall?lat={$lat}&lon={$lon}&appid={$apiKey}";
     
-    if ($weather && isset($weather['weather'][0]['main'])) {
-        $condition = $weather['weather'][0]['main'];
-        $severity = 'medium';
+//     $response = file_get_contents($url);
+//     $weather = json_decode($response, true);
+    
+//     if ($weather && isset($weather['weather'][0]['main'])) {
+//         $condition = $weather['weather'][0]['main'];
+//         $severity = 'medium';
         
-        // Check for severe weather conditions
-        if (in_array($condition, ['Thunderstorm', 'Tornado', 'Hurricane'])) {
-            $severity = 'high';
-        }
+//         // Check for severe weather conditions
+//         if (in_array($condition, ['Thunderstorm', 'Tornado', 'Hurricane'])) {
+//             $severity = 'high';
+//         }
         
-        // Create weather alert notification
-        $notificationService = new NotificationService();
-        $notificationService->createWeatherAlert(null, null, $condition, $severity);
+//         // Create weather alert notification
+//         $notificationService = new NotificationService();
+//         $notificationService->createWeatherAlert(null, null, $condition, $severity);
         
-        return 1;
-    }
-    */
+//         return 1;
+//     }
     
-    return 0;
-}
+    
+//     return 0;
+// }

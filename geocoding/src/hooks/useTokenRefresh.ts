@@ -1,13 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { getTokenTimeRemaining, isTokenExpired } from '@/utils/jwt';
+import { getTokenTimeRemaining } from '@/utils/jwt';
 import { attemptTokenRefresh, isRefreshInProgress } from '@/utils/tokenRefreshManager';
 
-const ACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes of inactivity (more reasonable)
-const TOKEN_REFRESH_BUFFER = 2 * 60 * 1000; // Refresh 2 minutes before expiry
+const ACTIVITY_TIMEOUT = 20 * 60 * 1000; // 15 minutes of inactivity (more reasonable)
+const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000; // Refresh 2 minutes before expiry
 
 export const useTokenRefresh = () => {
-  console.log('useTokenRefresh hook initialized');
+  //console.log('useTokenRefresh hook initialized');
   const { tokens, isAuthenticated, logout } = useAuthStore();
   const trackerRef = useRef({
     lastActivity: Date.now(),
@@ -23,6 +23,8 @@ export const useTokenRefresh = () => {
 
   const updateActivity = useCallback(() => {
     trackerRef.current.lastActivity = Date.now();
+    // Also store in localStorage for axios interceptor access
+    localStorage.setItem('lastActivity', Date.now().toString());
   }, []);
 
   const refreshToken = useCallback(async () => {
@@ -32,14 +34,17 @@ export const useTokenRefresh = () => {
       return false;
     }
 
-    if (!tokens?.refresh_token) {
-      console.warn('[useTokenRefresh] No refresh token available');
+    // Use the centralized token expiry check
+    const { checkTokenExpiryAndLogout } = useAuthStore.getState();
+    const wasLoggedOut = checkTokenExpiryAndLogout();
+    
+    if (wasLoggedOut) {
+      console.log('[useTokenRefresh] User logged out due to expired tokens');
       return false;
     }
 
-    // Check if refresh token is expired
-    if (isTokenExpired(tokens.refresh_token, 0)) {
-      console.warn('[useTokenRefresh] Refresh token is expired');
+    if (!tokens?.refresh_token) {
+      console.warn('[useTokenRefresh] No refresh token available');
       logout();
       return false;
     }
@@ -110,7 +115,9 @@ export const useTokenRefresh = () => {
         // Clear the timer reference immediately
         trackerRef.current.refreshTimer = null;
         
+        // Check user activity at the actual refresh time, not just when scheduling
         if (isUserActive() && !isRefreshInProgress()) {
+          console.log('[useTokenRefresh] User is active, proceeding with token refresh');
           const success = await refreshToken();
           if (success) {
             // Only reschedule if we're still authenticated and have tokens
@@ -123,12 +130,14 @@ export const useTokenRefresh = () => {
             }
           }
         } else {
-          console.log('[useTokenRefresh] User inactive or refresh in progress, skipping token refresh');
+          console.log('[useTokenRefresh] User inactive or refresh in progress, skipping token refresh - user will be logged out when token expires');
+          // Don't reschedule - let the token expire naturally for inactive users
         }
       }, refreshTime);
     } else {
       // Token is already close to expiry, refresh immediately if user is active
       if (isUserActive() && !isRefreshInProgress()) {
+        console.log('[useTokenRefresh] Token close to expiry and user is active, refreshing immediately');
         const success = await refreshToken();
         if (success) {
           // Only reschedule if we're still authenticated and have tokens
@@ -140,6 +149,8 @@ export const useTokenRefresh = () => {
             }, 5000);
           }
         }
+      } else {
+        console.log('[useTokenRefresh] Token close to expiry but user is inactive, will be logged out when token expires');
       }
     }
   }, [refreshToken, tokens?.access_token, isUserActive]);
@@ -193,6 +204,7 @@ export const useTokenRefresh = () => {
       if (document.visibilityState === 'visible') {
         // Page became visible, check if user is still active and refresh if needed
         if (isUserActive()) {
+          console.log('[useTokenRefresh] Page visible and user is active, updating activity and checking tokens');
           updateActivity();
           
           // Check if token is close to expiry and refresh if needed
@@ -200,6 +212,7 @@ export const useTokenRefresh = () => {
             const timeRemaining = getTokenTimeRemaining(tokens.access_token);
             
             if (timeRemaining <= TOKEN_REFRESH_BUFFER / 1000) {
+              console.log('[useTokenRefresh] Token close to expiry on page visibility, refreshing');
               const success = await refreshToken();
               if (success) {
                 // Use a longer delay to prevent immediate rescheduling
@@ -214,9 +227,12 @@ export const useTokenRefresh = () => {
               }
             }
           }
+        } else {
+          console.log('[useTokenRefresh] Page visible but user is inactive, not refreshing tokens');
         }
       } else {
         // Page became hidden, stop automatic refresh
+        console.log('[useTokenRefresh] Page hidden, stopping automatic refresh');
         if (trackerRef.current.refreshTimer) {
           clearTimeout(trackerRef.current.refreshTimer);
           trackerRef.current.refreshTimer = null;

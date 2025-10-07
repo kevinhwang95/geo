@@ -74,7 +74,7 @@ class NotificationPollingService {
     }
   }
 
-  public async fetchNotifications(silent: boolean = true): Promise<void> {
+  public async fetchNotifications(silent: boolean = true, filters?: { type?: string, priority?: string }): Promise<void> {
     const store = useNotificationStore.getState();
     
     // Check if user is authenticated
@@ -94,8 +94,20 @@ class NotificationPollingService {
       // Create abort controller for this request
       this.abortController = new AbortController();
 
-      // Fetch notifications
-      const notificationsResponse = await axiosClient.get('/notifications?limit=50', {
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('limit', '50');
+      
+      if (filters?.type && filters.type !== 'all') {
+        params.append('type', filters.type);
+      }
+      
+      if (filters?.priority && filters.priority !== 'all') {
+        params.append('priority', filters.priority);
+      }
+
+      // Fetch notifications with filters
+      const notificationsResponse = await axiosClient.get(`/notifications?${params.toString()}`, {
         signal: this.abortController.signal
       });
 
@@ -163,14 +175,21 @@ class NotificationPollingService {
 
   public async markAsDismissed(notificationId: number): Promise<void> {
     try {
-      await axiosClient.post(`/notifications/dismiss/${notificationId}`);
+      console.log(`[NotificationPollingService] Making API call to dismiss notification ${notificationId}`);
+      const response = await axiosClient.post(`/notifications/dismiss/${notificationId}`);
+      console.log(`[NotificationPollingService] API response for dismiss:`, response.data);
       
       const store = useNotificationStore.getState();
       store.markAsDismissed(notificationId);
       
       console.log(`✅ Marked notification ${notificationId} as dismissed`);
-    } catch (error) {
-      console.error('Failed to dismiss notification:', error);
+    } catch (error: any) {
+      console.error(`[NotificationPollingService] Failed to dismiss notification ${notificationId}:`, error);
+      console.error('Error details:', {
+        message: error?.message || 'Unknown error',
+        status: error?.response?.status,
+        data: error?.response?.data
+      });
       throw error;
     }
   }

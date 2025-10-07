@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, RefreshCw, Filter, CheckCircle, XCircle, AlertTriangle, Info, Camera, MessageSquare, MapPin } from 'lucide-react';
+import { Bell, RefreshCw, Filter, CheckCircle, XCircle, AlertTriangle, Info, Camera, MessageSquare, MapPin, X, Trash2 } from 'lucide-react';
 import axiosClient from '@/api/axiosClient';
 import { useMapStore } from '@/stores/mapStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -34,9 +34,19 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
   // Get map store for land navigation
   const { centerMapOnLand } = useMapStore();
 
+  // Client-side filtering as fallback
+  const filteredNotifications = notifications.filter(notification => {
+    const typeMatch = filterType === 'all' || notification.type === filterType;
+    const priorityMatch = filterPriority === 'all' || notification.priority === filterPriority;
+    return typeMatch && priorityMatch;
+  });
+
   const loadNotifications = async () => {
-    // Use the polling service to refresh notifications silently
-    notificationPollingService.refreshNow(true);
+    // Use the polling service to refresh notifications with current filters
+    await notificationPollingService.fetchNotifications(true, {
+      type: filterType,
+      priority: filterPriority
+    });
   };
 
   useEffect(() => {
@@ -53,9 +63,18 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
 
   const handleDismissNotification = async (notificationId: number) => {
     try {
+      console.log(`[NotificationCenter] Attempting to dismiss notification ${notificationId}`);
       await notificationPollingService.markAsDismissed(notificationId);
+      console.log(`[NotificationCenter] Successfully dismissed notification ${notificationId}`);
+      
+      // Optionally refresh the notifications to ensure UI is updated
+      // This is redundant since the store should update automatically, but helps with debugging
+      setTimeout(() => {
+        notificationPollingService.refreshNow(true);
+      }, 100);
     } catch (error) {
-      console.error('Failed to dismiss notification:', error);
+      console.error(`[NotificationCenter] Failed to dismiss notification ${notificationId}:`, error);
+      // You could add a toast notification here to inform the user
     }
   };
 
@@ -111,7 +130,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
 
   const createHarvestNotifications = async () => {
     try {
-      await axiosClient.post('/notifications/create-harvest');
+      const response = await axiosClient.post('/notifications/create-harvest');
+      console.log('Harvest notifications created:', response.data);
+      
+      // Show success message
+      if (response.data.success) {
+        const count = response.data.count || 0;
+        const totalChecked = response.data.total_lands_checked || 0;
+        console.log(`Created ${count} harvest notifications from ${totalChecked} lands checked`);
+      }
+      
+      // Refresh notifications to show new ones
       await loadNotifications();
     } catch (error) {
       console.error('Failed to create harvest notifications:', error);
@@ -196,7 +225,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
   return (
     <div className="space-y-6">
       {/* Header with Actions */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center space-x-4">
           <h2 className="text-2xl font-bold">Notifications</h2>
           {unreadCount > 0 && (
@@ -205,17 +234,23 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
             </Badge>
           )}
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={createHarvestNotifications}>
+        <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
+          <Button variant="outline" onClick={createHarvestNotifications} className="w-full sm:w-auto">
             <AlertTriangle className="h-4 w-4 mr-2" />
-            Check Harvest
+            Generate Harvest Alerts
           </Button>
-          <Button variant="outline" onClick={loadNotifications}>
+          <Button variant="outline" onClick={loadNotifications} className="w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          {notifications.length > 0 && (
-            <Button variant="ghost" onClick={dismissAll}>
+          {filteredNotifications.length > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={dismissAll}
+              className="text-gray-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto"
+              title="Dismiss all notifications"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
               Dismiss All
             </Button>
           )}
@@ -231,7 +266,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-4">
+          <div className="flex flex-col sm:flex-row gap-4 sm:space-x-4">
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Type</label>
               <Select value={filterType} onValueChange={setFilterType}>
@@ -274,10 +309,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
             <CardTitle>Notification Statistics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {stats.map((stat) => (
-                <div key={stat.type} className="text-center">
-                  <div className="text-2xl font-bold">{stat.count}</div>
+                <div key={stat.type} className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-900">{stat.count}</div>
                   <div className="text-sm text-gray-600 capitalize">
                     {stat.type.replace('_', ' ')}
                   </div>
@@ -293,7 +328,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {notifications.map((notification) => (
+        {filteredNotifications.map((notification) => (
           <Card 
             key={notification.id} 
             className={`${!notification.is_read ? 'border-l-4 border-l-blue-500' : ''} ${getPriorityColor(notification.priority)} cursor-pointer hover:shadow-md transition-shadow`}
@@ -328,7 +363,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                     </div>
                   </div>
                 </div>
-                <div className="flex space-x-2">
+                {/* Mobile-friendly button layout */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 sm:ml-4 mt-3 sm:mt-0">
                   {notification.land_id && (
                     <Button
                       size="sm"
@@ -337,10 +373,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                         e.stopPropagation();
                         handleViewLandOnMap(notification.land_id);
                       }}
+                      className="text-gray-600 hover:text-green-600 hover:border-green-300 hover:bg-green-50 transition-colors duration-200 w-full sm:w-auto"
                       title="View land on map"
                     >
-                      <MapPin className="h-4 w-4 mr-1" />
-                      View on Map
+                      <MapPin className="h-4 w-4 sm:mr-1" />
+                      <span className="sm:inline">View on Map</span>
                     </Button>
                   )}
                   {!notification.is_read && (
@@ -351,19 +388,25 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                         e.stopPropagation();
                         handleMarkAsRead(notification.id);
                       }}
+                      className="text-gray-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 w-full sm:w-auto"
+                      title="Mark as read"
                     >
-                      Mark Read
+                      <CheckCircle className="h-4 w-4 sm:mr-1" />
+                      <span className="sm:inline">Mark Read</span>
                     </Button>
                   )}
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDismissNotification(notification.id);
                     }}
+                    className="text-gray-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto"
+                    title="Dismiss notification"
                   >
-                    Dismiss
+                    <X className="h-4 w-4 sm:mr-1" />
+                    <span className="sm:inline">Dismiss</span>
                   </Button>
                 </div>
               </div>
@@ -371,7 +414,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
           </Card>
         ))}
         
-        {notifications.length === 0 && (
+        {filteredNotifications.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center">
               <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />

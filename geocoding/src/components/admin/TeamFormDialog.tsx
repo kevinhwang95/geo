@@ -214,7 +214,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Users className="h-5 w-5" />
@@ -286,7 +286,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                         <SelectValue placeholder="Select a team lead (optional)" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="max-h-60 overflow-y-auto" style={{scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6'}}>
                       <SelectItem value="none">
                         <div className="flex flex-col">
                           <span>No team lead</span>
@@ -331,7 +331,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                   ) : !Array.isArray(teamMembers) || teamMembers.length === 0 ? (
                     <div className="text-sm text-gray-500">No team members yet</div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="max-h-48 overflow-y-auto space-y-2 pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6'}}>
                       {teamMembers.map((member) => (
                         <div key={member.id} className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-3">
@@ -366,7 +366,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                 {Array.isArray(availableUsers) && availableUsers.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-xs text-gray-500">Add Members</div>
-                    <div className="space-y-1">
+                    <div className="max-h-48 overflow-y-auto space-y-1 pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6'}}>
                       {availableUsers.map((user) => (
                         <div key={user.id} className="flex items-center justify-between p-2 border rounded-lg">
                           <div className="flex items-center space-x-3">

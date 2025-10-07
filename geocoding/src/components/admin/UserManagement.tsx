@@ -22,6 +22,7 @@ import { canManageUsers } from '@/stores/authStore';
 import UserFormDialog from './UserFormDialog';
 import TeamManagement from './TeamManagement';
 import WorkAssignmentManagement from './WorkAssignmentManagement';
+import { toast } from 'sonner';
 
 interface UserData {
   id: number;
@@ -76,14 +77,33 @@ const UserManagement: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      try {
-        await deleteUser(userId);
-        await refreshUsers();
-      } catch (error) {
-        console.error('Failed to delete user:', error);
-      }
-    }
+    const userToDelete = users?.find(u => u.id === userId);
+    const userName = userToDelete ? `${userToDelete.first_name} ${userToDelete.last_name}` : 'this user';
+    
+    toast.error('Delete User', {
+      description: `Are you sure you want to delete ${userName}? This action cannot be undone.`,
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await deleteUser(userId);
+            await refreshUsers();
+            toast.success('User deleted successfully', {
+              description: `${userName} has been removed from the system.`,
+            });
+          } catch (error) {
+            console.error('Failed to delete user:', error);
+            toast.error('Failed to delete user', {
+              description: 'An error occurred while deleting the user. Please try again.',
+            });
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleUserFormClose = () => {

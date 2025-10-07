@@ -15,7 +15,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
-import { canManageUsers } from '@/stores/authStore';
+import { canManageTeams } from '@/stores/authStore';
 import TeamFormDialog from './TeamFormDialog';
 
 interface TeamData {
@@ -46,8 +46,8 @@ const TeamManagement: React.FC = () => {
     deleteItem: deleteTeam 
   } = useGenericCrud<TeamData>('teams');
 
-  // Check if user has admin permissions
-  if (!canManageUsers()) {
+  // Check if user has team management permissions
+  if (!canManageTeams()) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

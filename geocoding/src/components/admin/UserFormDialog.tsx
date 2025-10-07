@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import {
@@ -22,7 +23,8 @@ import {
 } from '@/components/ui/form';
 import { z } from 'zod';
 import axiosClient from '@/api/axiosClient';
-import { User, Mail, Phone, Shield } from 'lucide-react';
+import { User, Mail, Phone, Shield, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const userSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -58,6 +60,9 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   isEditing,
   onUserSaved,
 }) => {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = React.useState<string | null>(null);
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -88,24 +93,71 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         role: 'user',
       });
     }
-  }, [user, form]);
+    // Clear any previous error/success messages when dialog opens
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  }, [user, form, open]);
 
   const onSubmit = async (values: UserFormData) => {
     try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+      setSubmitSuccess(null);
+      
+      // Convert snake_case to camelCase for API
+      const apiData = {
+        firstName: values.first_name,
+        lastName: values.last_name,
+        email: values.email,
+        phone: values.phone,
+        role: values.role,
+      };
+      
       if (isEditing && user) {
         // Update existing user
-        await axiosClient.put(`/users/${user.id}`, values);
+        await axiosClient.put(`/users/${user.id}`, apiData);
+        toast.success('User updated successfully!', {
+          description: `${values.first_name} ${values.last_name} has been updated.`,
+        });
+        setSubmitSuccess('User updated successfully!');
       } else {
         // Create new user
-        await axiosClient.post('/users', values);
+        const response = await axiosClient.post('/users', apiData);
+        const responseData = response.data;
+        
+        if (responseData.email_sent) {
+          toast.success('User created successfully!', {
+            description: `${values.first_name} ${values.last_name} has been added. Password setup email sent!`,
+          });
+          setSubmitSuccess('User created successfully! Password setup email has been sent.');
+        } else {
+          toast.warning('User created with warning', {
+            description: `${values.first_name} ${values.last_name} was created, but email could not be sent.`,
+          });
+          setSubmitSuccess(responseData.warning || 'User created but email could not be sent.');
+        }
       }
       
-      onUserSaved();
-      onOpenChange(false);
+      // Close dialog after a short delay to show success message
+      setTimeout(() => {
+        onUserSaved();
+        onOpenChange(false);
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Failed to save user:', error);
-      // You could add toast notification here
-      alert(error.response?.data?.error || 'Failed to save user');
+      
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to save user. Please try again.';
+      
+      setSubmitError(errorMessage);
+      
+      toast.error('Failed to save user', {
+        description: errorMessage,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -142,6 +194,25 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Success Message */}
+            {submitSuccess && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  {submitSuccess}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Error Message */}
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {submitError}
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -279,11 +350,19 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {isEditing ? 'Update User' : 'Create User'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {isEditing ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  isEditing ? 'Update User' : 'Create User'
+                )}
               </Button>
             </DialogFooter>
           </form>

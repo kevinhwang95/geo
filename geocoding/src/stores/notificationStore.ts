@@ -93,12 +93,9 @@ export const useNotificationStore = create<NotificationState & NotificationActio
   },
 
   markAsDismissed: (notificationId) => {
+    // Remove the notification from the list when dismissed
     set((state) => ({
-      notifications: state.notifications.map(notification =>
-        notification.id === notificationId
-          ? { ...notification, is_dismissed: true }
-          : notification
-      )
+      notifications: state.notifications.filter(notification => notification.id !== notificationId)
     }));
     get().refreshCounts();
   },

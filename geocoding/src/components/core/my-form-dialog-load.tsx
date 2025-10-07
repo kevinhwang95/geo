@@ -11,7 +11,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -45,24 +46,59 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
 
   // State for plant types and categories
   const [plantTypes, setPlantTypes] = React.useState<Array<{id: number, name: string, description?: string, harvest_cycle_days?: number, requires_tree_count?: boolean}>>([]);
+  const [categories, setCategories] = React.useState<Array<{id: number, name: string, description?: string, color: string}>>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(true);
+  const [optionsError, setOptionsError] = React.useState<string | null>(null);
 
-  // Fetch plant types data
+  // Fetch plant types and categories data
   React.useEffect(() => {
-    const fetchPlantTypes = async () => {
+    const fetchOptions = async () => {
       try {
-        const response = await axiosClient.get('/plant-types');
-        if (response.data && Array.isArray(response.data)) {
-          setPlantTypes(response.data);
+        setLoadingOptions(true);
+        setOptionsError(null);
+        
+        console.log('Fetching plant types and categories...');
+        
+        // Fetch plant types and categories in parallel
+        const [plantTypesResponse, categoriesResponse] = await Promise.allSettled([
+          axiosClient.get('/plant-types'),
+          axiosClient.get('/categories')
+        ]);
+        
+        // Handle plant types response
+        if (plantTypesResponse.status === 'fulfilled' && plantTypesResponse.value.data.success) {
+          const plantTypesData = plantTypesResponse.value.data.data;
+          console.log('Plant types loaded:', plantTypesData.length);
+          setPlantTypes(plantTypesData);
+        } else {
+          console.error('Plant types fetch failed:', plantTypesResponse);
+          setOptionsError('Failed to load plant types');
         }
+        
+        // Handle categories response
+        if (categoriesResponse.status === 'fulfilled' && categoriesResponse.value.data.success) {
+          const categoriesData = categoriesResponse.value.data.data;
+          console.log('Categories loaded:', categoriesData.length);
+          setCategories(categoriesData);
+        } else {
+          console.error('Categories fetch failed:', categoriesResponse);
+          setOptionsError('Failed to load categories');
+        }
+        
+        // Check if both failed
+        if (plantTypesResponse.status === 'rejected' && categoriesResponse.status === 'rejected') {
+          setOptionsError('Failed to load both plant types and categories');
+        }
+        
       } catch (error) {
-        console.error('Error fetching plant types:', error);
+        console.error('Error fetching options:', error);
+        setOptionsError('Network error loading options');
       } finally {
         setLoadingOptions(false);
       }
     };
 
-    fetchPlantTypes();
+    fetchOptions();
   }, []);
  
   const currentdate = new Date().toISOString().slice(0, 10)
@@ -422,15 +458,48 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Leaf className="h-4 w-4 text-green-600" />
                             Plant Type
+                            {optionsError && (
+                              <span className="text-red-500 text-xs ml-2">⚠️ {optionsError}</span>
+                            )}
                           </FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              placeholder="Plant Type ID" 
-                              {...field} 
-                              className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors" 
-                            />
-                          </FormControl>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={loadingOptions || plantTypes.length === 0}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <SelectValue 
+                                  placeholder={
+                                    loadingOptions 
+                                      ? "Loading plant types..." 
+                                      : plantTypes.length === 0 
+                                        ? "No plant types available" 
+                                        : "Select plant type"
+                                  } 
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="z-[10001]">
+                              {plantTypes.length === 0 && !loadingOptions ? (
+                                <SelectItem value="no-data" disabled>
+                                  <div className="flex items-center gap-2 text-gray-500">
+                                    <Leaf className="h-3 w-3" />
+                                    No plant types available
+                                  </div>
+                                </SelectItem>
+                              ) : (
+                                plantTypes.map((plantType) => (
+                                  <SelectItem key={plantType.id} value={plantType.id.toString()}>
+                                    <div className="flex items-center gap-2">
+                                      <Leaf className="h-3 w-3 text-green-600" />
+                                      {plantType.name}
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -441,17 +510,53 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Hash className="h-4 w-4 text-violet-600" />
+                            <Building className="h-4 w-4 text-blue-600" />
                             Category
+                            {optionsError && (
+                              <span className="text-red-500 text-xs ml-2">⚠️ {optionsError}</span>
+                            )}
                           </FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              placeholder="Category ID" 
-                              {...field} 
-                              className="h-10 border-gray-200 focus:border-violet-500 focus:ring-violet-500 transition-colors" 
-                            />
-                          </FormControl>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={loadingOptions || categories.length === 0}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <SelectValue 
+                                  placeholder={
+                                    loadingOptions 
+                                      ? "Loading categories..." 
+                                      : categories.length === 0 
+                                        ? "No categories available" 
+                                        : "Select category"
+                                  } 
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="z-[10001]">
+                              {categories.length === 0 && !loadingOptions ? (
+                                <SelectItem value="no-data" disabled>
+                                  <div className="flex items-center gap-2 text-gray-500">
+                                    <Building className="h-3 w-3" />
+                                    No categories available
+                                  </div>
+                                </SelectItem>
+                              ) : (
+                                categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id.toString()}>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full border border-gray-300" 
+                                        style={{ backgroundColor: category.color }}
+                                      />
+                                      {category.name}
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -508,7 +613,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                               <Leaf className="h-4 w-4 text-orange-600" />
                               Tree Count
                               {requiresTreeCount && (
-                                <span className="text-red-500 text-xs">*</span>
+                                <span className="text-red-500 text-xs ml-2">*Required</span>
                               )}
                             </FormLabel>
                             <FormControl>
@@ -516,7 +621,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                                 type="number" 
                                 min="0"
                                 step="1"
-                                placeholder="Enter number of trees"
+                                placeholder={requiresTreeCount ? "Enter number of trees (required)" : "Enter number of trees (optional)"}
                                 {...field}
                                 onChange={(e) => {
                                   const value = e.target.value;
@@ -525,11 +630,6 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                                 className="h-10 border-gray-200 focus:border-orange-500 focus:ring-orange-500 transition-colors"
                               />
                             </FormControl>
-                            {requiresTreeCount && (
-                              <p className="text-xs text-orange-600 mt-1">
-                                Tree count is required for {selectedPlantType?.name || 'this plant type'}
-                              </p>
-                            )}
                             <FormMessage />
                           </FormItem>
                         );

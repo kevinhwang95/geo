@@ -3,17 +3,23 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
+import { useTokenExpiryChecker } from '@/hooks/useTokenExpiryChecker';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 import LoginPage from '@/components/auth/LoginPage';
 import Dashboard from '@/components/dashboard/Dashboard';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
+import PasswordSetupPage from '@/pages/PasswordSetupPage';
+import PasswordResetPage from '@/pages/PasswordResetPage';
 
 function App() {
   const { isAuthenticated, setLoading, setError } = useAuthStore();
   
   // Initialize automatic token refresh for active users
   useTokenRefresh();
+  
+  // Initialize periodic token expiry checker
+  useTokenExpiryChecker();
 
   useEffect(() => {
     // Check if user has stored tokens on app load
@@ -48,6 +54,14 @@ function App() {
             element={
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
             } 
+          />
+          <Route 
+            path="/setup-password" 
+            element={<PasswordSetupPage />} 
+          />
+          <Route 
+            path="/reset-password" 
+            element={<PasswordResetPage />} 
           />
           <Route 
             path="/dashboard" 

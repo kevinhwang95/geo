@@ -17,6 +17,7 @@ import {
   RefreshCw,
   AlertTriangle
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import { canManageUsers } from '@/stores/authStore';
 import UserFormDialog from './UserFormDialog';
@@ -38,6 +39,7 @@ interface UserData {
 }
 
 const UserManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
@@ -57,8 +59,8 @@ const UserManagement: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to manage users.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('userManagement.accessDenied')}</h1>
+          <p className="text-gray-600">{t('userManagement.noPermission')}</p>
         </div>
       </div>
     );
@@ -129,13 +131,13 @@ const UserManagement: React.FC = () => {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
-        return <Badge variant="destructive">Admin</Badge>;
+        return <Badge variant="destructive">{t('userManagement.admin')}</Badge>;
       case 'team_lead':
-        return <Badge variant="secondary">Team Lead</Badge>;
+        return <Badge variant="secondary">{t('userManagement.teamLead')}</Badge>;
       case 'contributor':
-        return <Badge variant="outline">Contributor</Badge>;
+        return <Badge variant="outline">{t('userManagement.contributor')}</Badge>;
       default:
-        return <Badge variant="outline">User</Badge>;
+        return <Badge variant="outline">{t('userManagement.user')}</Badge>;
     }
   };
 
@@ -150,7 +152,7 @@ const UserManagement: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('userManagement.title')}</h1>
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
@@ -171,10 +173,10 @@ const UserManagement: React.FC = () => {
 
           <TabsContent value="users" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">All Users</h2>
+              <h2 className="text-2xl font-bold">{t('userManagement.allUsers')}</h2>
               <Button onClick={handleCreateUser}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add User
+                {t('userManagement.addUser')}
               </Button>
             </div>
 
@@ -182,7 +184,7 @@ const UserManagement: React.FC = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search users by name, email, or role..."
+                placeholder={t('userManagement.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -193,7 +195,7 @@ const UserManagement: React.FC = () => {
             {usersLoading && (
               <div className="text-center py-8">
                 <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <div className="text-gray-500">Loading users...</div>
+                <div className="text-gray-500">{t('userManagement.loading')}</div>
               </div>
             )}
 

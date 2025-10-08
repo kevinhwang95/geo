@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bell, RefreshCw, Filter, CheckCircle, XCircle, AlertTriangle, Info, Camera, MessageSquare, MapPin, X, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { useMapStore } from '@/stores/mapStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -17,6 +18,8 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap }) => {
+  const { t } = useTranslation();
+  
   // Use notification store instead of local state
   const { 
     notifications, 
@@ -186,11 +189,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <Badge variant="destructive" className="text-xs">High</Badge>;
+        return <Badge variant="destructive" className="text-xs">{t('badges.high')}</Badge>;
       case 'medium':
-        return <Badge variant="secondary" className="text-xs">Medium</Badge>;
+        return <Badge variant="secondary" className="text-xs">{t('badges.medium')}</Badge>;
       case 'low':
-        return <Badge variant="outline" className="text-xs">Low</Badge>;
+        return <Badge variant="outline" className="text-xs">{t('badges.low')}</Badge>;
       default:
         return null;
     }
@@ -201,7 +204,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
       <Card>
         <CardContent className="p-8 text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading notifications...</p>
+          <p>{t('notifications.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -215,7 +218,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
           <p className="text-red-600">{error}</p>
           <Button onClick={loadNotifications} className="mt-4">
             <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
+            {t('notifications.retry')}
           </Button>
         </CardContent>
       </Card>
@@ -227,31 +230,31 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
       {/* Header with Actions */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center space-x-4">
-          <h2 className="text-2xl font-bold">Notifications</h2>
+          <h2 className="text-2xl font-bold">{t('notifications.title')}</h2>
           {unreadCount > 0 && (
             <Badge variant="destructive" className="text-sm">
-              {unreadCount} unread
+              {unreadCount} {t('notifications.unread')}
             </Badge>
           )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
           <Button variant="outline" onClick={createHarvestNotifications} className="w-full sm:w-auto">
             <AlertTriangle className="h-4 w-4 mr-2" />
-            Generate Harvest Alerts
+            {t('notifications.generateHarvestAlerts')}
           </Button>
           <Button variant="outline" onClick={loadNotifications} className="w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            {t('notifications.refresh')}
           </Button>
           {filteredNotifications.length > 0 && (
             <Button 
               variant="outline" 
               onClick={dismissAll}
               className="text-gray-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto"
-              title="Dismiss all notifications"
+              title={t('notifications.dismissAllTooltip')}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Dismiss All
+              {t('notifications.dismissAll')}
             </Button>
           )}
         </div>
@@ -262,39 +265,39 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {t('notifications.filters')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 sm:space-x-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Type</label>
+              <label className="text-sm font-medium mb-2 block">{t('notifications.type')}</label>
               <Select value={filterType} onValueChange={setFilterType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder={t('notifications.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="harvest_due">Harvest Due</SelectItem>
-                  <SelectItem value="harvest_overdue">Harvest Overdue</SelectItem>
-                  <SelectItem value="maintenance_due">Maintenance Due</SelectItem>
-                  <SelectItem value="comment_added">Comments</SelectItem>
-                  <SelectItem value="photo_added">Photos</SelectItem>
-                  <SelectItem value="weather_alert">Weather Alerts</SelectItem>
+                  <SelectItem value="all">{t('notifications.allTypesOption')}</SelectItem>
+                  <SelectItem value="harvest_due">{t('notifications.harvestDue')}</SelectItem>
+                  <SelectItem value="harvest_overdue">{t('notifications.harvestOverdue')}</SelectItem>
+                  <SelectItem value="maintenance_due">{t('notifications.maintenanceDue')}</SelectItem>
+                  <SelectItem value="comment_added">{t('notifications.comments')}</SelectItem>
+                  <SelectItem value="photo_added">{t('notifications.photos')}</SelectItem>
+                  <SelectItem value="weather_alert">{t('notifications.weatherAlerts')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Priority</label>
+              <label className="text-sm font-medium mb-2 block">{t('notifications.priority')}</label>
               <Select value={filterPriority} onValueChange={setFilterPriority}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All priorities" />
+                  <SelectValue placeholder={t('notifications.allPriorities')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="high">High Priority</SelectItem>
-                  <SelectItem value="medium">Medium Priority</SelectItem>
-                  <SelectItem value="low">Low Priority</SelectItem>
+                  <SelectItem value="all">{t('notifications.allPrioritiesOption')}</SelectItem>
+                  <SelectItem value="high">{t('notifications.highPriority')}</SelectItem>
+                  <SelectItem value="medium">{t('notifications.mediumPriority')}</SelectItem>
+                  <SelectItem value="low">{t('notifications.lowPriority')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -306,7 +309,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
       {stats.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Notification Statistics</CardTitle>
+            <CardTitle>{t('notifications.statistics')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -317,7 +320,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                     {stat.type.replace('_', ' ')}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {stat.unread_count} unread
+                    {stat.unread_count} {t('notifications.unread')}
                   </div>
                 </div>
               ))}
@@ -342,14 +345,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                     <div className="flex items-center space-x-2 mb-2">
                       <h4 className="font-medium">{notification.title}</h4>
                       {!notification.is_read && (
-                        <Badge variant="secondary" className="text-xs">New</Badge>
+                        <Badge variant="secondary" className="text-xs">{t('notifications.new')}</Badge>
                       )}
                       {getPriorityBadge(notification.priority)}
                     </div>
                     <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
                     <div className="flex items-center space-x-4 text-xs text-gray-500">
                       {notification.land_name && (
-                        <span>Land: {notification.land_name} ({notification.land_code})</span>
+                        <span>{t('notifications.land')}: {notification.land_name} ({notification.land_code})</span>
                       )}
                       <span>{new Date(notification.created_at).toLocaleString()}</span>
                       {notification.harvest_status && (
@@ -374,10 +377,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                         handleViewLandOnMap(notification.land_id);
                       }}
                       className="text-gray-600 hover:text-green-600 hover:border-green-300 hover:bg-green-50 transition-colors duration-200 w-full sm:w-auto"
-                      title="View land on map"
+                      title={t('notifications.viewOnMapTooltip')}
                     >
                       <MapPin className="h-4 w-4 sm:mr-1" />
-                      <span className="sm:inline">View on Map</span>
+                      <span className="sm:inline">{t('notifications.viewOnMap')}</span>
                     </Button>
                   )}
                   {!notification.is_read && (
@@ -389,10 +392,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                         handleMarkAsRead(notification.id);
                       }}
                       className="text-gray-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 w-full sm:w-auto"
-                      title="Mark as read"
+                      title={t('notifications.markReadTooltip')}
                     >
                       <CheckCircle className="h-4 w-4 sm:mr-1" />
-                      <span className="sm:inline">Mark Read</span>
+                      <span className="sm:inline">{t('notifications.markRead')}</span>
                     </Button>
                   )}
                   <Button
@@ -403,10 +406,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                       handleDismissNotification(notification.id);
                     }}
                     className="text-gray-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto"
-                    title="Dismiss notification"
+                    title={t('notifications.dismissTooltip')}
                   >
                     <X className="h-4 w-4 sm:mr-1" />
-                    <span className="sm:inline">Dismiss</span>
+                    <span className="sm:inline">{t('notifications.dismiss')}</span>
                   </Button>
                 </div>
               </div>
@@ -418,8 +421,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
           <Card>
             <CardContent className="p-8 text-center">
               <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-              <p className="text-gray-500">You're all caught up! No new notifications at the moment.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('notifications.noNotifications')}</h3>
+              <p className="text-gray-500">{t('notifications.noNotificationsMessage')}</p>
             </CardContent>
           </Card>
         )}

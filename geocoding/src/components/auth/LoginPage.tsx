@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, MapPin, Users, Shield, Camera, MessageSquare, LogIn, UserPlus, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -29,12 +30,13 @@ const LoginPage: React.FC = () => {
   
   const { login } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError(t('auth.fillAllFields'));
       return;
     }
     
@@ -52,7 +54,7 @@ const LoginPage: React.FC = () => {
       login(user, token);
       navigate('/dashboard');
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Login failed');
+      setError(error.response?.data?.error || t('auth.loginError'));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +64,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     
     if (!email || !firstName || !lastName) {
-      setError('Please fill in all required fields');
+      setError(t('auth.fillAllFields'));
       return;
     }
     
@@ -80,7 +82,7 @@ const LoginPage: React.FC = () => {
       if (response.data.success) {
         // Show success message instead of auto-login
         setError(null);
-        alert('Registration successful! Please check your email for a password setup link.');
+        alert(t('auth.registerSuccess'));
         // Reset form
         setEmail('');
         setFirstName('');
@@ -88,10 +90,10 @@ const LoginPage: React.FC = () => {
         setPhone('');
         setIsRegisterMode(false);
       } else {
-        setError(response.data.error || 'Registration failed');
+        setError(response.data.error || t('auth.registerError'));
       }
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Registration failed');
+      setError(error.response?.data?.error || t('auth.registerError'));
     } finally {
       setIsLoading(false);
     }
@@ -117,10 +119,10 @@ const LoginPage: React.FC = () => {
         setForgotPasswordSuccess(true);
         setError(null);
       } else {
-        setError(response.data.error || 'Failed to send reset email');
+        setError(response.data.error || t('forgotPassword.errors.sendFailed'));
       }
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to send reset email');
+      setError(error.response?.data?.error || t('forgotPassword.errors.sendFailed'));
     } finally {
       setForgotPasswordLoading(false);
     }
@@ -129,28 +131,28 @@ const LoginPage: React.FC = () => {
   const features = [
     {
       icon: MapPin,
-      title: 'Interactive Mapping',
-      description: 'Draw and manage land boundaries with precision using Google Maps'
+      title: t('landing.features.interactiveMapping.title'),
+      description: t('landing.features.interactiveMapping.description')
     },
     {
       icon: Users,
-      title: 'Role-Based Access',
-      description: 'Admin, Contributor, and User roles with appropriate permissions'
+      title: t('landing.features.roleBasedAccess.title'),
+      description: t('landing.features.roleBasedAccess.description')
     },
     {
       icon: Shield,
-      title: 'Secure Authentication',
-      description: 'JWT-based authentication with secure login and registration'
+      title: t('landing.features.secureAuthentication.title'),
+      description: t('landing.features.secureAuthentication.description')
     },
     {
       icon: Camera,
-      title: 'Photo Documentation',
-      description: 'Attach photos with GPS coordinates to land records'
+      title: t('landing.features.photoDocumentation.title'),
+      description: t('landing.features.photoDocumentation.description')
     },
     {
       icon: MessageSquare,
-      title: 'Collaborative Notes',
-      description: 'Share comments and notes about land management activities'
+      title: t('landing.features.collaborativeNotes.title'),
+      description: t('landing.features.collaborativeNotes.description')
     }
   ];
 
@@ -172,7 +174,7 @@ const LoginPage: React.FC = () => {
                   <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-white/50 group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
                     <img 
                       src="/logolong.PNG" 
-                      alt="Chokdee Logo" 
+                      alt={t('landing.logoAlt')} 
                       className="h-16 sm:h-20 lg:h-24 w-auto object-contain"
                     />
                   </div>
@@ -186,26 +188,26 @@ const LoginPage: React.FC = () => {
                 <div className="text-center lg:text-left space-y-3">
                   <div className="relative">
                     <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                      Land Management System
+                      {t('landing.title')}
                     </h1>
                     {/* Underline effect */}
                     <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-green-400 to-blue-400 rounded-full opacity-60"></div>
                   </div>
                   
                   <p className="text-sm sm:text-base text-gray-600 max-w-md leading-relaxed">
-                    Comprehensive land management with interactive mapping, role-based access, and collaborative features.
+                    {t('landing.tagline')}
                   </p>
                   
                   {/* Feature highlights */}
                   <div className="flex flex-wrap gap-2 mt-4">
                     <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                      Interactive Mapping
+                      {t('landing.badges.interactiveMapping')}
                     </span>
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                      Role-Based Access
+                      {t('landing.badges.roleBasedAccess')}
                     </span>
                     <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                      Real-time Collaboration
+                      {t('landing.badges.realTimeCollaboration')}
                     </span>
                   </div>
                 </div>
@@ -241,12 +243,12 @@ const LoginPage: React.FC = () => {
           <Card className="w-full max-w-md shadow-xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold text-gray-900">
-                {isRegisterMode ? 'Create Account' : 'Welcome Back'}
+                {isRegisterMode ? t('auth.createAccount') : t('auth.login')}
               </CardTitle>
               <CardDescription className="text-gray-600">
                 {isRegisterMode 
-                  ? 'Sign up to access your land management dashboard'
-                  : 'Sign in to access your land management dashboard'
+                  ? t('auth.register')
+                  : t('auth.login')
                 }
               </CardDescription>
             </CardHeader>
@@ -262,7 +264,7 @@ const LoginPage: React.FC = () => {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="firstName">First Name *</Label>
+                        <Label htmlFor="firstName">{t('auth.firstName')} *</Label>
                         <Input
                           id="firstName"
                           type="text"
@@ -273,7 +275,7 @@ const LoginPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Label htmlFor="lastName">{t('auth.lastName')} *</Label>
                         <Input
                           id="lastName"
                           type="text"
@@ -285,7 +287,7 @@ const LoginPage: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone</Label>
+                      <Label htmlFor="phone">{t('auth.phone')}</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -298,7 +300,7 @@ const LoginPage: React.FC = () => {
                 )}
                 
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t('auth.email')} *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -311,7 +313,7 @@ const LoginPage: React.FC = () => {
                 
                 {!isRegisterMode && (
                   <div>
-                    <Label htmlFor="password">Password *</Label>
+                    <Label htmlFor="password">{t('auth.password')} *</Label>
                     <Input
                       id="password"
                       type="password"
@@ -331,7 +333,7 @@ const LoginPage: React.FC = () => {
                       disabled={isLoading}
                       className="text-sm text-blue-600 hover:underline"
                     >
-                      Forgot your password?
+                      {t('auth.forgotPassword')}
                     </button>
                   </div>
                 )}
@@ -344,19 +346,19 @@ const LoginPage: React.FC = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      {isRegisterMode ? 'Sending Confirmation...' : 'Signing In...'}
+                      {isRegisterMode ? t('common.loading') : t('common.loading')}
                     </>
                   ) : (
                     <>
                       {isRegisterMode ? (
                         <>
                           <UserPlus className="mr-2.5 h-5 w-5" />
-                          Send Confirmation Email
+                          {t('auth.createAccount')}
                         </>
                       ) : (
                         <>
                           <LogIn className="mr-2.5 h-5 w-5" />
-                          Sign In
+                          {t('auth.login')}
                         </>
                       )}
                     </>
@@ -372,8 +374,8 @@ const LoginPage: React.FC = () => {
                   className="text-sm text-green-600 hover:underline"
                 >
                   {isRegisterMode 
-                    ? 'Already have an account, sign in' 
-                    : "Don't have an account? Create one"
+                    ? t('auth.alreadyHaveAccount') 
+                    : t('auth.dontHaveAccount')
                   }
                 </button>
               </div>
@@ -383,9 +385,9 @@ const LoginPage: React.FC = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                   <Card className="w-full max-w-md mx-4">
                     <CardHeader>
-                      <CardTitle className="text-center">Reset Password</CardTitle>
-                      <CardDescription className="text-center">
-                        Enter your email address and we'll send you a link to reset your password.
+                      <CardTitle className="text-center">{t('forgotPassword.modal.title')}</CardTitle>
+                      <CardDescription className='text-center'>
+                        {t('forgotPassword.modal.description')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -395,12 +397,12 @@ const LoginPage: React.FC = () => {
                             <Mail className="h-6 w-6 text-green-600" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-medium text-gray-900">Check your email</h3>
+                            <h3 className="text-lg font-medium text-gray-900">{t('forgotPassword.modal.success.title')}</h3>
                             <p className="text-sm text-gray-600 mt-2">
-                              We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>
+                              {t('forgotPassword.modal.success.message')} <strong>{forgotPasswordEmail}</strong>
                             </p>
                             <p className="text-xs text-gray-500 mt-2">
-                              The link will expire in 24 hours for security reasons.
+                              {t('forgotPassword.modal.success.expiry')}
                             </p>
                           </div>
                           <Button
@@ -411,19 +413,19 @@ const LoginPage: React.FC = () => {
                             }}
                             className="w-full"
                           >
-                            Close
+{t('forgotPassword.modal.success.close')}
                           </Button>
                         </div>
                       ) : (
                         <form onSubmit={handleForgotPassword} className="space-y-4">
                           <div>
-                            <Label htmlFor="forgotEmail">Email Address</Label>
+                            <Label htmlFor="forgotEmail">{t('forgotPassword.modal.emailLabel')}</Label>
                             <Input
                               id="forgotEmail"
                               type="email"
                               value={forgotPasswordEmail}
                               onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                              placeholder="Enter your email address"
+                              placeholder={t('forgotPassword.modal.emailPlaceholder')}
                               required
                               disabled={forgotPasswordLoading}
                             />
@@ -447,7 +449,7 @@ const LoginPage: React.FC = () => {
                               disabled={forgotPasswordLoading}
                               className="flex-1"
                             >
-                              Cancel
+{t('forgotPassword.modal.cancel')}
                             </Button>
                             <Button
                               type="submit"
@@ -457,12 +459,12 @@ const LoginPage: React.FC = () => {
                               {forgotPasswordLoading ? (
                                 <>
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Sending...
+                                  {t('forgotPassword.modal.sending')}
                                 </>
                               ) : (
                                 <>
                                   <Mail className="mr-2 h-4 w-4" />
-                                  Send Reset Link
+                                  {t('forgotPassword.modal.sendResetLink')}
                                 </>
                               )}
                             </Button>
@@ -476,13 +478,13 @@ const LoginPage: React.FC = () => {
 
               <div className="text-center">
                 <p className="text-xs text-gray-500">
-                  By {isRegisterMode ? 'creating an account' : 'signing in'}, you agree to our{' '}
+                  {isRegisterMode ? t('landing.terms.byCreatingAccount') : t('landing.terms.bySigningIn')}, {t('landing.terms.agreeTo')}{' '}
                   <a href="#" className="text-green-600 hover:underline">
-                    Terms of Service
+                    {t('landing.terms.termsOfService')}
                   </a>{' '}
-                  and{' '}
+                  {t('landing.terms.and')}{' '}
                   <a href="#" className="text-green-600 hover:underline">
-                    Privacy Policy
+                    {t('landing.terms.privacyPolicy')}
                   </a>
                 </p>
               </div>

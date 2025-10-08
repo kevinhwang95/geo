@@ -22,16 +22,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { Users, Crown, FileText, UserPlus, UserMinus, User } from 'lucide-react';
-
-const teamSchema = z.object({
-  name: z.string().min(1, 'Team name is required'),
-  description: z.string().optional(),
-  teamLeadId: z.union([z.number(), z.literal("none")]).optional(),
-});
-
-type TeamFormData = z.infer<typeof teamSchema>;
 
 interface TeamFormDialogProps {
   open: boolean;
@@ -62,6 +55,15 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
   isEditing,
   onTeamSaved,
 }) => {
+  const { t } = useTranslation();
+  
+  const teamSchema = z.object({
+    name: z.string().min(1, t('createTeam.teamNameRequired')),
+    description: z.string().optional(),
+    teamLeadId: z.union([z.number(), z.literal("none")]).optional(),
+  });
+
+  type TeamFormData = z.infer<typeof teamSchema>;
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
@@ -208,7 +210,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to save team:', error);
-      alert(error.response?.data?.error || 'Failed to save team');
+      alert(error.response?.data?.error || t('createTeam.failedToSaveTeam'));
     }
   };
 
@@ -218,12 +220,12 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Users className="h-5 w-5" />
-            <span>{isEditing ? 'Edit Team' : 'Create New Team'}</span>
+            <span>{isEditing ? t('createTeam.editTeam') : t('createTeam.createNewTeam')}</span>
           </DialogTitle>
           <DialogDescription>
             {isEditing 
-              ? 'Update team information, assign a team lead, and manage team members.'
-              : 'Create a new team and assign a team lead to manage it.'
+              ? t('createTeam.editTeamDescription')
+              : t('createTeam.createTeamDescription')
             }
           </DialogDescription>
         </DialogHeader>
@@ -237,10 +239,10 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <Users className="h-4 w-4" />
-                    <span>Team Name</span>
+                    <span>{t('createTeam.teamName')}</span>
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter team name" {...field} />
+                    <Input placeholder={t('createTeam.enterTeamName')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -254,11 +256,11 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <FileText className="h-4 w-4" />
-                    <span>Description</span>
+                    <span>{t('createTeam.description')}</span>
                   </FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Enter team description (optional)" 
+                      placeholder={t('createTeam.enterTeamDescription')} 
                       {...field} 
                       rows={3}
                     />
@@ -275,7 +277,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <Crown className="h-4 w-4" />
-                    <span>Team Lead</span>
+                    <span>{t('createTeam.teamLead')}</span>
                   </FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(value === "none" ? "none" : (value ? parseInt(value) : undefined))} 
@@ -283,15 +285,15 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a team lead (optional)" />
+                        <SelectValue placeholder={t('createTeam.selectTeamLead')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-60 overflow-y-auto" style={{scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6'}}>
                       <SelectItem value="none">
                         <div className="flex flex-col">
-                          <span>No team lead</span>
+                          <span>{t('createTeam.noTeamLead')}</span>
                           <span className="text-xs text-gray-500">
-                            Team will be managed by admin
+                            {t('createTeam.teamManagedByAdmin')}
                           </span>
                         </div>
                       </SelectItem>
@@ -300,7 +302,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                           <div className="flex flex-col">
                             <span>{user.first_name} {user.last_name}</span>
                             <span className="text-xs text-gray-500">
-                              {user.role} • {user.email}
+                              {t(`userManagement.${user.role}`)} • {user.email}
                             </span>
                           </div>
                         </SelectItem>
@@ -309,7 +311,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                   </Select>
                   <FormMessage />
                   <p className="text-xs text-gray-500">
-                    Team leads can manage team members and assign work to the team
+                    {t('createTeam.teamLeadCanManage')}
                   </p>
                 </FormItem>
               )}
@@ -320,16 +322,16 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4" />
-                  <span className="text-sm font-medium">Team Members</span>
+                  <span className="text-sm font-medium">{t('createTeam.teamMembers')}</span>
                 </div>
                 
                 {/* Current Team Members */}
                 <div className="space-y-2">
-                  <div className="text-xs text-gray-500">Current Members ({Array.isArray(teamMembers) ? teamMembers.length : 0})</div>
+                  <div className="text-xs text-gray-500">{t('createTeam.currentMembers')} ({Array.isArray(teamMembers) ? teamMembers.length : 0})</div>
                   {loadingMembers ? (
-                    <div className="text-sm text-gray-500">Loading members...</div>
+                    <div className="text-sm text-gray-500">{t('createTeam.loadingMembers')}</div>
                   ) : !Array.isArray(teamMembers) || teamMembers.length === 0 ? (
-                    <div className="text-sm text-gray-500">No team members yet</div>
+                    <div className="text-sm text-gray-500">{t('createTeam.noTeamMembersYet')}</div>
                   ) : (
                     <div className="max-h-48 overflow-y-auto space-y-2 pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6'}}>
                       {teamMembers.map((member) => (
@@ -365,7 +367,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                 {/* Add Team Members */}
                 {Array.isArray(availableUsers) && availableUsers.length > 0 && (
                   <div className="space-y-2">
-                    <div className="text-xs text-gray-500">Add Members</div>
+                    <div className="text-xs text-gray-500">{t('createTeam.addMembers')}</div>
                     <div className="max-h-48 overflow-y-auto space-y-1 pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6'}}>
                       {availableUsers.map((user) => (
                         <div key={user.id} className="flex items-center justify-between p-2 border rounded-lg">
@@ -378,7 +380,7 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                                 {user.first_name} {user.last_name}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {user.role} • {user.email}
+                                {t(`userManagement.${user.role}`)} • {user.email}
                               </div>
                             </div>
                           </div>
@@ -405,10 +407,10 @@ const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                {t('createTeam.cancel')}
               </Button>
               <Button type="submit" disabled={loadingUsers}>
-                {isEditing ? 'Update Team' : 'Create Team'}
+                {isEditing ? t('createTeam.updateTeam') : t('createTeam.createTeam')}
               </Button>
             </DialogFooter>
           </form>

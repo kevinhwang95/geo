@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Plus
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import { canManageTeams } from '@/stores/authStore';
 import TeamFormDialog from './TeamFormDialog';
@@ -33,6 +34,7 @@ interface TeamData {
 }
 
 const TeamManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<TeamData | null>(null);
   const [isTeamFormOpen, setIsTeamFormOpen] = useState(false);
@@ -52,8 +54,8 @@ const TeamManagement: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to manage teams.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('teams.accessDenied')}</h1>
+          <p className="text-gray-600">{t('teams.noPermission')}</p>
         </div>
       </div>
     );
@@ -72,7 +74,7 @@ const TeamManagement: React.FC = () => {
   };
 
   const handleDeleteTeam = async (teamId: number) => {
-    if (window.confirm('Are you sure you want to delete this team? This action cannot be undone.')) {
+    if (window.confirm(t('teams.deleteConfirm'))) {
       try {
         await deleteTeam(teamId);
         await refreshTeams();
@@ -98,10 +100,10 @@ const TeamManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Team Management</h2>
+        <h2 className="text-2xl font-bold">{t('teams.title')}</h2>
         <Button onClick={handleCreateTeam}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Team
+          {t('teams.createTeam')}
         </Button>
       </div>
 
@@ -109,7 +111,7 @@ const TeamManagement: React.FC = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         <Input
-          placeholder="Search teams by name, description, or team lead..."
+          placeholder={t('teams.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -120,7 +122,7 @@ const TeamManagement: React.FC = () => {
       {teamsLoading && (
         <div className="text-center py-8">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <div className="text-gray-500">Loading teams...</div>
+          <div className="text-gray-500">{t('teams.loading')}</div>
         </div>
       )}
 
@@ -129,7 +131,7 @@ const TeamManagement: React.FC = () => {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Error loading teams: {teamsError.message}
+{t('teams.errorLoading')}: {teamsError.message}
           </AlertDescription>
         </Alert>
       )}
@@ -137,10 +139,10 @@ const TeamManagement: React.FC = () => {
       {/* Results Count */}
       {!teamsLoading && !teamsError && (
         <div className="text-sm text-gray-600">
-          Showing {filteredTeams.length} of {teams?.length || 0} teams
+{t('teams.showing')} {filteredTeams.length} {t('teams.of')} {teams?.length || 0} {t('teams.teams')}
           {searchTerm && (
             <span className="ml-2">
-              for "{searchTerm}"
+              {t('teams.for')} "{searchTerm}"
             </span>
           )}
         </div>
@@ -155,7 +157,7 @@ const TeamManagement: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{team.name}</CardTitle>
                   <Badge variant="outline">
-                    {team.memberCount} members
+                    {team.memberCount} {t('teams.members')}
                   </Badge>
                 </div>
                 <CardDescription>{team.description}</CardDescription>
@@ -163,7 +165,7 @@ const TeamManagement: React.FC = () => {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Team Lead:</span>
+                    <span className="text-sm text-gray-500">{t('teams.teamLead')}</span>
                     <div className="flex items-center space-x-1">
                       {team.teamLeadName ? (
                         <>
@@ -171,16 +173,16 @@ const TeamManagement: React.FC = () => {
                           <span className="text-sm font-medium">{team.teamLeadName}</span>
                         </>
                       ) : (
-                        <span className="text-sm text-gray-400">Not assigned</span>
+                        <span className="text-sm text-gray-400">{t('teams.notAssigned')}</span>
                       )}
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Created by:</span>
+                    <span className="text-sm text-gray-500">{t('teams.createdBy')}</span>
                     <span className="text-sm font-medium">{team.createdByName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Created:</span>
+                    <span className="text-sm text-gray-500">{t('teams.created')}</span>
                     <span className="text-sm font-medium">
                       {new Date(team.createdAt).toLocaleDateString()}
                     </span>
@@ -194,7 +196,7 @@ const TeamManagement: React.FC = () => {
                       onClick={() => handleEditTeam(team)}
                     >
                       <Edit className="h-4 w-4 mr-1" />
-                      Edit
+                      {t('teams.edit')}
                     </Button>
                     <Button 
                       variant="outline" 
@@ -203,7 +205,7 @@ const TeamManagement: React.FC = () => {
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
+                      {t('teams.delete')}
                     </Button>
                   </div>
                 </div>
@@ -217,17 +219,17 @@ const TeamManagement: React.FC = () => {
       {!teamsLoading && !teamsError && filteredTeams.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-medium mb-2">No teams found</h3>
+          <h3 className="text-lg font-medium mb-2">{t('teams.noTeamsFound')}</h3>
           <p className="text-sm text-gray-500 mb-4">
             {searchTerm 
-              ? `No teams match your search for "${searchTerm}"`
-              : "No teams have been created yet"
+              ? `${t('teams.noTeamsMatchSearch')} "${searchTerm}"`
+              : t('teams.noTeamsCreatedYet')
             }
           </p>
           {!searchTerm && (
             <Button onClick={handleCreateTeam}>
               <Plus className="h-4 w-4 mr-2" />
-              Create First Team
+              {t('teams.createFirstTeam')}
             </Button>
           )}
         </div>

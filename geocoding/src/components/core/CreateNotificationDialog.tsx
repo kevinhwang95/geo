@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, X, AlertTriangle, MessageSquare, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { resizeImages, formatFileSize, getFileSizeReduction, RESIZE_PRESETS } from '@/utils/imageResize';
 
@@ -28,26 +29,27 @@ interface CreateNotificationDialogProps {
   onNotificationCreated?: () => void;
 }
 
-const notificationTypes = [
-  { value: 'harvest_due', label: 'Harvest Due', icon: CheckCircle, color: 'text-green-500' },
-  { value: 'harvest_overdue', label: 'Harvest Overdue', icon: AlertTriangle, color: 'text-red-500' },
-  { value: 'maintenance_due', label: 'Maintenance Due', icon: AlertTriangle, color: 'text-yellow-500' },
-  { value: 'comment_added', label: 'Comment Added', icon: MessageSquare, color: 'text-blue-500' },
-  { value: 'photo_added', label: 'Photo Added', icon: Camera, color: 'text-purple-500' },
-];
-
-const priorityLevels = [
-  { value: 'low', label: 'Low', color: 'bg-gray-100 text-gray-800' },
-  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'high', label: 'High', color: 'bg-red-100 text-red-800' },
-];
-
 const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
   open,
   onOpenChange,
   selectedLand,
   onNotificationCreated
 }) => {
+  const { t } = useTranslation();
+  
+  const notificationTypes = [
+    { value: 'harvest_due', label: t('createNotification.harvestDue'), icon: CheckCircle, color: 'text-green-500' },
+    { value: 'harvest_overdue', label: t('createNotification.harvestOverdue'), icon: AlertTriangle, color: 'text-red-500' },
+    { value: 'maintenance_due', label: t('createNotification.maintenanceDue'), icon: AlertTriangle, color: 'text-yellow-500' },
+    { value: 'comment_added', label: t('createNotification.commentAdded'), icon: MessageSquare, color: 'text-blue-500' },
+    { value: 'photo_added', label: t('createNotification.photoAdded'), icon: Camera, color: 'text-purple-500' },
+  ];
+
+  const priorityLevels = [
+    { value: 'low', label: t('createNotification.low'), color: 'bg-gray-100 text-gray-800' },
+    { value: 'medium', label: t('createNotification.medium'), color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'high', label: t('createNotification.high'), color: 'bg-red-100 text-red-800' },
+  ];
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState<string>('');
@@ -92,7 +94,7 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
     );
 
     if (validFiles.length === 0) {
-      toast.error('No valid image files selected');
+      toast.error(t('createNotification.noValidImageFiles'));
       return;
     }
 
@@ -185,9 +187,9 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Notification</DialogTitle>
+          <DialogTitle>{t('createNotification.title')}</DialogTitle>
           <DialogDescription>
-            Create a notification for the selected land. Fill in all required fields to enable the Create button.
+            {t('createNotification.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -195,17 +197,17 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
           {/* Selected Land Info */}
           {selectedLand && (
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-medium text-gray-900 mb-2">Selected Land</h3>
+              <h3 className="font-medium text-gray-900 mb-2">{t('createNotification.selectedLand')}</h3>
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Name:</strong> {selectedLand.land_name}</p>
-                <p><strong>Code:</strong> {selectedLand.land_code}</p>
-                <p><strong>Location:</strong> {
+                <p><strong>{t('createNotification.name')}:</strong> {selectedLand.land_name}</p>
+                <p><strong>{t('createNotification.code')}:</strong> {selectedLand.land_code}</p>
+                <p><strong>{t('createNotification.location')}:</strong> {
                   [
                     selectedLand.location,
                     selectedLand.city,
                     selectedLand.district,
                     selectedLand.province
-                  ].filter(Boolean).join(', ') || 'Not specified'
+                  ].filter(Boolean).join(', ') || t('createNotification.notSpecified')
                 }</p>
               </div>
             </div>
@@ -213,10 +215,10 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
 
           {/* Notification Type */}
           <div className="space-y-2">
-            <Label htmlFor="type">Notification Type *</Label>
+            <Label htmlFor="type">{t('createNotification.notificationType')} *</Label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger>
-                <SelectValue placeholder="Select notification type" />
+                <SelectValue placeholder={t('createNotification.selectNotificationType')} />
               </SelectTrigger>
               <SelectContent>
                 {notificationTypes.map((notificationType) => {
@@ -236,10 +238,10 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
 
           {/* Priority Level */}
           <div className="space-y-2">
-            <Label htmlFor="priority">Priority Level</Label>
+            <Label htmlFor="priority">{t('createNotification.priorityLevel')}</Label>
             <Select value={priority} onValueChange={setPriority}>
               <SelectTrigger>
-                <SelectValue placeholder="Select priority level" />
+                <SelectValue placeholder={t('createNotification.selectPriorityLevel')} />
               </SelectTrigger>
               <SelectContent>
                 {priorityLevels.map((level) => (
@@ -253,35 +255,35 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
 
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title">{t('createNotification.titleLabel')} *</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter notification title"
+              placeholder={t('createNotification.enterNotificationTitle')}
               maxLength={100}
             />
           </div>
 
           {/* Message */}
           <div className="space-y-2">
-            <Label htmlFor="message">Message *</Label>
+            <Label htmlFor="message">{t('createNotification.messageLabel')} *</Label>
             <Textarea
               id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter notification message"
+              placeholder={t('createNotification.enterNotificationMessage')}
               rows={4}
               maxLength={500}
             />
             <div className="text-sm text-gray-500 text-right">
-              {message.length}/500 characters
+              {message.length}/500 {t('createNotification.characters')}
             </div>
           </div>
 
           {/* Photo Upload */}
           <div className="space-y-2">
-            <Label>Photos (Optional)</Label>
+            <Label>{t('createNotification.photosOptional')}</Label>
             <div className="flex space-x-2">
               <Button
                 type="button"
@@ -290,7 +292,7 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
                 className="flex items-center space-x-2"
               >
                 <Camera className="h-4 w-4" />
-                <span>Take Photo</span>
+                <span>{t('createNotification.takePhoto')}</span>
               </Button>
               <Button
                 type="button"
@@ -304,7 +306,7 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
-                <span>{isResizing ? 'Processing...' : 'Upload Photo'}</span>
+                <span>{isResizing ? t('createNotification.creating') : t('createNotification.uploadPhotos')}</span>
               </Button>
             </div>
             
@@ -352,16 +354,16 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
           <div className="text-sm text-muted-foreground">
             <div className="flex items-center gap-4">
               <span className={`flex items-center gap-1 ${selectedLand ? 'text-green-600' : 'text-orange-600'}`}>
-                {selectedLand ? '✓' : '✗'} Land Selected
+                {selectedLand ? '✓' : '✗'} {t('createNotification.landSelected')}
               </span>
               <span className={`flex items-center gap-1 ${title.trim() ? 'text-green-600' : 'text-orange-600'}`}>
-                {title.trim() ? '✓' : '✗'} Title
+                {title.trim() ? '✓' : '✗'} {t('createNotification.titleStatus')}
               </span>
               <span className={`flex items-center gap-1 ${message.trim() ? 'text-green-600' : 'text-orange-600'}`}>
-                {message.trim() ? '✓' : '✗'} Message
+                {message.trim() ? '✓' : '✗'} {t('createNotification.messageStatus')}
               </span>
               <span className={`flex items-center gap-1 ${type ? 'text-green-600' : 'text-orange-600'}`}>
-                {type ? '✓' : '✗'} Type
+                {type ? '✓' : '✗'} {t('createNotification.typeStatus')}
               </span>
             </div>
           </div>
@@ -369,13 +371,13 @@ const CreateNotificationDialog: React.FC<CreateNotificationDialogProps> = ({
           {/* Action buttons */}
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('createNotification.cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!selectedLand || !title.trim() || !message.trim() || !type || isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create Notification'}
+              {isSubmitting ? t('createNotification.creating') : t('createNotification.createNotification')}
             </Button>
           </div>
         </DialogFooter>

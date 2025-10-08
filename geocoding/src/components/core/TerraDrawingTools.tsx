@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslation } from 'react-i18next';
 import {MyFormDialog} from "@/components/core/my-form-dialog";
 import CreateNotificationDialog from "@/components/core/CreateNotificationDialog";
 import { Loader } from "@googlemaps/js-api-loader";
@@ -95,7 +96,7 @@ interface TerraDrawingToolsProps {
 const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({ 
   onNotificationDismissed
 }) => {
-  
+  const { t } = useTranslation();
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -864,7 +865,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
               " 
               onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)'"
               onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.3)'"
-              title="Left-click: View details | Right-click: Create notification"
+              title={t('maps.viewDetailsTooltip')}
               >
                 <span style="
                   color: white; 
@@ -1543,7 +1544,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           aria-live="polite"
           aria-label="Authentication status"
         >
-          Authentication required. Please log in to view lands.
+{t('maps.authenticationRequired')}
         </div>
       )}
       
@@ -1564,7 +1565,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           aria-live="polite"
           aria-label="Loading status"
         >
-          Loading lands data from backend...
+{t('maps.loadingLands')}
         </div>
       )}
       
@@ -1585,7 +1586,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           aria-live="polite"
           aria-label="Error status"
         >
-          Error loading lands: {landsError.message}
+{t('maps.errorLoadingLands')}: {landsError.message}
         </div>
       )}
       
@@ -1606,7 +1607,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           aria-live="polite"
           aria-label="No data status"
         >
-          No lands data available.
+{t('maps.noLandsData')}
         </div>
       )}
       
@@ -1628,7 +1629,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           aria-live="polite"
           aria-label="Initialization status"
         >
-          Initializing drawing tools...
+{t('maps.initializingTools')}
         </div>
       )}
 
@@ -1650,8 +1651,8 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             gap: "8px"
           }}
         >
-          <span>⛶ Fullscreen Mode</span>
-          <span style={{ fontSize: "10px", opacity: 0.7 }}>Press ESC to exit</span>
+          <span>{t('maps.fullscreenMode')}</span>
+          <span style={{ fontSize: "10px", opacity: 0.7 }}>{t('maps.pressEscToExit')}</span>
         </div>
       )}
 
@@ -1684,8 +1685,8 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             <button 
               id="polygon-mode" 
               className="mode-button" 
-              title="Draw polygon" 
-              aria-label="Draw polygon - Click to draw polygon shapes on the map"
+              title={t('maps.drawPolygon')} 
+              aria-label={t('maps.drawPolygonTooltip')}
               aria-pressed="false"
               onClick={() => handleModeChange("polygon", "polygon-mode")}
             >
@@ -1697,8 +1698,8 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             <button 
               id="resize-button" 
               className="mode-button" 
-              title="Toggle resize mode" 
-              aria-label="Toggle resize mode - Enable or disable resizing of selected shapes"
+              title={t('maps.toggleResizeMode')} 
+              aria-label={t('maps.toggleResizeModeTooltip')}
               aria-pressed="false"
               onClick={handleResize}
             >
@@ -1708,8 +1709,8 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             <button 
               id="delete-selected-button" 
               className="mode-button" 
-              title="Delete selected or last shape" 
-              aria-label="Delete selected shape - Remove the currently selected shape or the last drawn shape"
+              title={t('maps.deleteSelected')} 
+              aria-label={t('maps.deleteSelectedTooltip')}
               onClick={handleDeleteSelected}
             >
               <img src="./img/delete-selected.svg" alt="Delete Selected" draggable="false" />

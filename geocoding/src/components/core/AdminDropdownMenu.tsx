@@ -11,6 +11,7 @@ import {
   Settings, 
   ChevronDown
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { canManageUsers } from '@/stores/authStore';
 
 interface AdminDropdownMenuProps {
@@ -24,19 +25,20 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
   onSectionChange,
   isMobile = false
 }) => {
+  const { t } = useTranslation();
   const isAdminActive = activeSection === 'admin' || activeSection === 'menu-management';
   
   // Admin submenu items
   const adminItems = [
     {
       id: 'admin',
-      label: 'User Management',
+      label: t('navigation.admin.userManagement'),
       icon: Users,
       visible: canManageUsers()
     },
     {
       id: 'menu-management',
-      label: 'Menu Management',
+      label: t('navigation.admin.menuManagement'),
       icon: Settings,
       visible: canManageUsers()
     }
@@ -67,7 +69,7 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
           }`}
         >
           <Users className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-          <span className={isMobile ? "flex-1 text-left" : "hidden sm:inline"}>Admin</span>
+          <span className={isMobile ? "flex-1 text-left" : "hidden sm:inline"}>{t('navigation.admin.title')}</span>
           <ChevronDown className={isMobile ? "h-4 w-4" : "h-3 w-3"} />
         </Button>
       </DropdownMenuTrigger>

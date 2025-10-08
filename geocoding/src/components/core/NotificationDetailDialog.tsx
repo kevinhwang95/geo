@@ -106,11 +106,11 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <Badge variant="destructive" className="text-xs">High Priority</Badge>;
+        return <Badge variant="destructive" className="text-xs">{t('badges.highPriority')}</Badge>;
       case 'medium':
-        return <Badge variant="secondary" className="text-xs">Medium Priority</Badge>;
+        return <Badge variant="secondary" className="text-xs">{t('badges.mediumPriority')}</Badge>;
       case 'low':
-        return <Badge variant="outline" className="text-xs">Low Priority</Badge>;
+        return <Badge variant="outline" className="text-xs">{t('badges.lowPriority')}</Badge>;
       default:
         return null;
     }

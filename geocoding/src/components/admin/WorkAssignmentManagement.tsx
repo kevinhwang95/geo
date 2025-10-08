@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Clock
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import { canManageWorkAssignments } from '@/stores/authStore';
 import WorkAssignmentFormDialog from './WorkAssignmentFormDialog';
@@ -44,6 +45,7 @@ interface WorkAssignmentData {
 }
 
 const WorkAssignmentManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<WorkAssignmentData | null>(null);
@@ -64,8 +66,8 @@ const WorkAssignmentManagement: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to manage work assignments.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('workAssignments.accessDenied')}</h1>
+          <p className="text-gray-600">{t('workAssignments.noPermission')}</p>
         </div>
       </div>
     );
@@ -84,7 +86,7 @@ const WorkAssignmentManagement: React.FC = () => {
   };
 
   const handleDeleteAssignment = async (assignmentId: number) => {
-    if (window.confirm('Are you sure you want to delete this work assignment? This action cannot be undone.')) {
+    if (window.confirm(t('workAssignments.deleteConfirm'))) {
       try {
         await deleteAssignment(assignmentId);
         await refreshAssignments();
@@ -117,13 +119,13 @@ const WorkAssignmentManagement: React.FC = () => {
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'urgent':
-        return <Badge variant="destructive">Urgent</Badge>;
+        return <Badge variant="destructive">{t('workAssignments.urgent')}</Badge>;
       case 'high':
-        return <Badge variant="destructive">High</Badge>;
+        return <Badge variant="destructive">{t('workAssignments.high')}</Badge>;
       case 'medium':
-        return <Badge variant="secondary">Medium</Badge>;
+        return <Badge variant="secondary">{t('workAssignments.medium')}</Badge>;
       default:
-        return <Badge variant="outline">Low</Badge>;
+        return <Badge variant="outline">{t('workAssignments.low')}</Badge>;
     }
   };
 
@@ -131,13 +133,13 @@ const WorkAssignmentManagement: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge variant="default" className="bg-green-500">Completed</Badge>;
+        return <Badge variant="default" className="bg-green-500">{t('workAssignments.completed')}</Badge>;
       case 'in_progress':
-        return <Badge variant="default" className="bg-blue-500">In Progress</Badge>;
+        return <Badge variant="default" className="bg-blue-500">{t('workAssignments.inProgress')}</Badge>;
       case 'cancelled':
-        return <Badge variant="destructive">Cancelled</Badge>;
+        return <Badge variant="destructive">{t('workAssignments.cancelled')}</Badge>;
       default:
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="outline">{t('workAssignments.pending')}</Badge>;
     }
   };
 
@@ -157,10 +159,10 @@ const WorkAssignmentManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Work Assignment Management</h2>
+        <h2 className="text-2xl font-bold">{t('workAssignments.title')}</h2>
         <Button onClick={handleCreateAssignment}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Assignment
+          {t('workAssignments.createAssignment')}
         </Button>
       </div>
 
@@ -169,7 +171,7 @@ const WorkAssignmentManagement: React.FC = () => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search assignments by title, description, land, team, or assignee..."
+            placeholder={t('workAssignments.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -180,11 +182,11 @@ const WorkAssignmentManagement: React.FC = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="all">{t('workAssignments.allStatus')}</option>
+          <option value="pending">{t('workAssignments.pending')}</option>
+          <option value="in_progress">{t('workAssignments.inProgress')}</option>
+          <option value="completed">{t('workAssignments.completed')}</option>
+          <option value="cancelled">{t('workAssignments.cancelled')}</option>
         </select>
       </div>
 
@@ -192,7 +194,7 @@ const WorkAssignmentManagement: React.FC = () => {
       {assignmentsLoading && (
         <div className="text-center py-8">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <div className="text-gray-500">Loading work assignments...</div>
+          <div className="text-gray-500">{t('workAssignments.loading')}</div>
         </div>
       )}
 
@@ -201,7 +203,7 @@ const WorkAssignmentManagement: React.FC = () => {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Error loading work assignments: {assignmentsError.message}
+{t('workAssignments.errorLoading')}: {assignmentsError.message}
           </AlertDescription>
         </Alert>
       )}
@@ -209,10 +211,10 @@ const WorkAssignmentManagement: React.FC = () => {
       {/* Results Count */}
       {!assignmentsLoading && !assignmentsError && (
         <div className="text-sm text-gray-600">
-          Showing {filteredAssignments.length} of {assignments?.length || 0} assignments
+{t('workAssignments.showing')} {filteredAssignments.length} {t('workAssignments.of')} {assignments?.length || 0} {t('workAssignments.assignments')}
           {searchTerm && (
             <span className="ml-2">
-              for "{searchTerm}"
+              {t('workAssignments.for')} "{searchTerm}"
             </span>
           )}
           {statusFilter !== 'all' && (
@@ -241,7 +243,7 @@ const WorkAssignmentManagement: React.FC = () => {
                 <div className="space-y-2">
                   {assignment.landName && (
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Land:</span>
+                      <span className="text-sm text-gray-500">{t('workAssignments.land')}:</span>
                       <div className="flex items-center space-x-1">
                         <MapPin className="h-3 w-3 text-green-500" />
                         <span className="text-sm font-medium">{assignment.landName}</span>
@@ -251,7 +253,7 @@ const WorkAssignmentManagement: React.FC = () => {
                   
                   {assignment.teamName ? (
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Team:</span>
+                      <span className="text-sm text-gray-500">{t('workAssignments.team')}:</span>
                       <div className="flex items-center space-x-1">
                         <Users className="h-3 w-3 text-blue-500" />
                         <span className="text-sm font-medium">{assignment.teamName}</span>
@@ -259,7 +261,7 @@ const WorkAssignmentManagement: React.FC = () => {
                     </div>
                   ) : assignment.assignedToUserName && (
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Assigned to:</span>
+                      <span className="text-sm text-gray-500">{t('workAssignments.assignedTo')}:</span>
                       <div className="flex items-center space-x-1">
                         <User className="h-3 w-3 text-purple-500" />
                         <span className="text-sm font-medium">{assignment.assignedToUserName}</span>
@@ -268,18 +270,18 @@ const WorkAssignmentManagement: React.FC = () => {
                   )}
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Priority:</span>
+                    <span className="text-sm text-gray-500">{t('workAssignments.priority')}:</span>
                     {getPriorityBadge(assignment.priority)}
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Status:</span>
+                    <span className="text-sm text-gray-500">{t('workAssignments.status')}:</span>
                     {getStatusBadge(assignment.status)}
                   </div>
 
                   {assignment.dueDate && (
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Due Date:</span>
+                      <span className="text-sm text-gray-500">{t('workAssignments.dueDate')}:</span>
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3 text-gray-500" />
                         <span className="text-sm font-medium">
@@ -290,7 +292,7 @@ const WorkAssignmentManagement: React.FC = () => {
                   )}
 
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Created by:</span>
+                    <span className="text-sm text-gray-500">{t('workAssignments.assignedBy')}:</span>
                     <span className="text-sm font-medium">{assignment.assignedByUserName}</span>
                   </div>
                 </div>
@@ -302,7 +304,7 @@ const WorkAssignmentManagement: React.FC = () => {
                       onClick={() => handleEditAssignment(assignment)}
                     >
                       <Edit className="h-4 w-4 mr-1" />
-                      Edit
+                      {t('workAssignments.edit')}
                     </Button>
                     <Button 
                       variant="outline" 
@@ -311,7 +313,7 @@ const WorkAssignmentManagement: React.FC = () => {
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
+                      {t('workAssignments.delete')}
                     </Button>
                   </div>
                 </div>
@@ -325,17 +327,17 @@ const WorkAssignmentManagement: React.FC = () => {
       {!assignmentsLoading && !assignmentsError && filteredAssignments.length === 0 && (
         <div className="text-center py-12">
           <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-medium mb-2">No work assignments found</h3>
+          <h3 className="text-lg font-medium mb-2">{t('workAssignments.noAssignmentsFound')}</h3>
           <p className="text-sm text-gray-500 mb-4">
             {searchTerm || statusFilter !== 'all'
-              ? `No assignments match your current filters`
-              : "No work assignments have been created yet"
+              ? `${t('workAssignments.noAssignmentsMatchSearch')} "${searchTerm || statusFilter}"`
+              : t('workAssignments.noAssignmentsCreatedYet')
             }
           </p>
           {!searchTerm && statusFilter === 'all' && (
             <Button onClick={handleCreateAssignment}>
               <Plus className="h-4 w-4 mr-2" />
-              Create First Assignment
+              {t('workAssignments.createFirstAssignment')}
             </Button>
           )}
         </div>

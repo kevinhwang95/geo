@@ -22,33 +22,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { ClipboardList, Users, User, MapPin, Calendar, AlertTriangle } from 'lucide-react';
-
-const workAssignmentSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
-  landId: z.union([z.number(), z.literal("none")]).optional(),
-  teamId: z.number().optional(),
-  assignedToUserId: z.number().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
-  dueDate: z.string().optional(),
-}).refine(
-  (data) => data.teamId || data.assignedToUserId,
-  {
-    message: "Either team or individual user must be assigned",
-    path: ["teamId"],
-  }
-).refine(
-  (data) => !(data.teamId && data.assignedToUserId),
-  {
-    message: "Cannot assign to both team and individual user",
-    path: ["assignedToUserId"],
-  }
-);
-
-type WorkAssignmentFormData = z.infer<typeof workAssignmentSchema>;
 
 interface WorkAssignmentFormDialogProps {
   open: boolean;
@@ -93,6 +69,32 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
   isEditing,
   onAssignmentSaved,
 }) => {
+  const { t } = useTranslation();
+  
+  const workAssignmentSchema = z.object({
+    title: z.string().min(1, t('createWorkAssignment.titleRequired')),
+    description: z.string().optional(),
+    landId: z.union([z.number(), z.literal("none")]).optional(),
+    teamId: z.number().optional(),
+    assignedToUserId: z.number().optional(),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+    status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
+    dueDate: z.string().optional(),
+  }).refine(
+    (data) => data.teamId || data.assignedToUserId,
+    {
+      message: t('createWorkAssignment.eitherTeamOrUserMustBeAssigned'),
+      path: ["teamId"],
+    }
+  ).refine(
+    (data) => !(data.teamId && data.assignedToUserId),
+    {
+      message: t('createWorkAssignment.cannotAssignToBothTeamAndUser'),
+      path: ["assignedToUserId"],
+    }
+  );
+
+  type WorkAssignmentFormData = z.infer<typeof workAssignmentSchema>;
   const [lands, setLands] = useState<Land[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -193,7 +195,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to save work assignment:', error);
-      alert(error.response?.data?.error || 'Failed to save work assignment');
+      alert(error.response?.data?.error || t('createWorkAssignment.failedToSaveAssignment'));
     }
   };
 
@@ -213,12 +215,12 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <ClipboardList className="h-5 w-5" />
-            <span>{isEditing ? 'Edit Work Assignment' : 'Create New Work Assignment'}</span>
+            <span>{isEditing ? t('createWorkAssignment.editWorkAssignment') : t('createWorkAssignment.createNewWorkAssignment')}</span>
           </DialogTitle>
           <DialogDescription>
             {isEditing 
-              ? 'Update work assignment details and assignment target.'
-              : 'Create a new work assignment and assign it to a team or individual user.'
+              ? t('createWorkAssignment.editWorkAssignmentDescription')
+              : t('createWorkAssignment.createWorkAssignmentDescription')
             }
           </DialogDescription>
         </DialogHeader>
@@ -230,9 +232,9 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t('createWorkAssignment.title')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter assignment title" {...field} />
+                    <Input placeholder={t('createWorkAssignment.enterAssignmentTitle')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -244,10 +246,10 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('createWorkAssignment.description')}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Enter assignment description (optional)" 
+                      placeholder={t('createWorkAssignment.enterAssignmentDescription')} 
                       {...field} 
                       rows={3}
                     />
@@ -264,7 +266,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <MapPin className="h-4 w-4" />
-                    <span>Land (Optional)</span>
+                    <span>{t('createWorkAssignment.landOptional')}</span>
                   </FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
@@ -272,15 +274,15 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a land (optional)" />
+                        <SelectValue placeholder={t('createWorkAssignment.selectLandOptional')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">
                         <div className="flex flex-col">
-                          <span>No specific land</span>
+                          <span>{t('createWorkAssignment.noSpecificLand')}</span>
                           <span className="text-xs text-gray-500">
-                            General assignment
+                            {t('createWorkAssignment.generalAssignment')}
                           </span>
                         </div>
                       </SelectItem>
@@ -303,7 +305,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
 
             {/* Assignment Type Selection */}
             <div className="space-y-2">
-              <FormLabel>Assignment Type</FormLabel>
+              <FormLabel>{t('createWorkAssignment.assignmentType')}</FormLabel>
               <div className="flex space-x-4">
                 <Button
                   type="button"
@@ -312,7 +314,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                   className="flex items-center space-x-2"
                 >
                   <Users className="h-4 w-4" />
-                  <span>Assign to Team</span>
+                  <span>{t('createWorkAssignment.assignToTeam')}</span>
                 </Button>
                 <Button
                   type="button"
@@ -321,7 +323,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                   className="flex items-center space-x-2"
                 >
                   <User className="h-4 w-4" />
-                  <span>Assign to Individual</span>
+                  <span>{t('createWorkAssignment.assignToIndividual')}</span>
                 </Button>
               </div>
             </div>
@@ -334,7 +336,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center space-x-2">
                       <Users className="h-4 w-4" />
-                      <span>Team</span>
+                      <span>{t('createWorkAssignment.team')}</span>
                     </FormLabel>
                     <Select 
                       onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
@@ -342,7 +344,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a team" />
+                          <SelectValue placeholder={t('createWorkAssignment.selectTeam')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -367,7 +369,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center space-x-2">
                       <User className="h-4 w-4" />
-                      <span>Assigned User</span>
+                      <span>{t('createWorkAssignment.assignedUser')}</span>
                     </FormLabel>
                     <Select 
                       onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
@@ -375,7 +377,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a user" />
+                          <SelectValue placeholder={t('createWorkAssignment.selectUser')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -384,7 +386,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                             <div className="flex flex-col">
                               <span>{user.first_name} {user.last_name}</span>
                               <span className="text-xs text-gray-500">
-                                {user.role}
+                                {t(`userManagement.${user.role}`)}
                               </span>
                             </div>
                           </SelectItem>
@@ -405,19 +407,19 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center space-x-2">
                       <AlertTriangle className="h-4 w-4" />
-                      <span>Priority</span>
+                      <span>{t('createWorkAssignment.priority')}</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
+                          <SelectValue placeholder={t('createWorkAssignment.selectPriority')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="low">{t('createWorkAssignment.low')}</SelectItem>
+                        <SelectItem value="medium">{t('createWorkAssignment.medium')}</SelectItem>
+                        <SelectItem value="high">{t('createWorkAssignment.high')}</SelectItem>
+                        <SelectItem value="urgent">{t('createWorkAssignment.urgent')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -430,18 +432,18 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>{t('createWorkAssignment.status')}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder={t('createWorkAssignment.selectStatus')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="pending">{t('createWorkAssignment.pending')}</SelectItem>
+                        <SelectItem value="in_progress">{t('createWorkAssignment.inProgress')}</SelectItem>
+                        <SelectItem value="completed">{t('createWorkAssignment.completed')}</SelectItem>
+                        <SelectItem value="cancelled">{t('createWorkAssignment.cancelled')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -457,7 +459,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Due Date (Optional)</span>
+                    <span>{t('createWorkAssignment.dueDateOptional')}</span>
                   </FormLabel>
                   <FormControl>
                     <Input 
@@ -476,10 +478,10 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                {t('createWorkAssignment.cancel')}
               </Button>
               <Button type="submit" disabled={loadingData}>
-                {isEditing ? 'Update Assignment' : 'Create Assignment'}
+                {isEditing ? t('createWorkAssignment.updateAssignment') : t('createWorkAssignment.createAssignment')}
               </Button>
             </DialogFooter>
           </form>

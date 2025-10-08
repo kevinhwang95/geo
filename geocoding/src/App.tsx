@@ -1,19 +1,25 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import { useTokenExpiryChecker } from '@/hooks/useTokenExpiryChecker';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+
+// Initialize i18n
+import '@/i18n';
 
 import LoginPage from '@/components/auth/LoginPage';
 import Dashboard from '@/components/dashboard/Dashboard';
 import TerraDrawingTools from '@/components/core/TerraDrawingTools';
 import PasswordSetupPage from '@/pages/PasswordSetupPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
+import GlobalLanguageSwitcher from '@/components/core/GlobalLanguageSwitcher';
 
 function App() {
   const { isAuthenticated, setLoading, setError } = useAuthStore();
+  const { t } = useTranslation();
   
   // Initialize automatic token refresh for active users
   useTokenRefresh();
@@ -35,7 +41,7 @@ function App() {
           // No stored tokens, user needs to login
           // This is normal for first-time visitors
         }
-      } catch (error) {
+      } catch {
         // Silently handle any errors
       } finally {
         setLoading(false);
@@ -48,6 +54,8 @@ function App() {
   return (
     <Router>
       <div className="App">
+        {/* Global Language Switcher - appears on all pages */}
+        <GlobalLanguageSwitcher />
         <Routes>
           <Route 
             path="/login" 
@@ -84,8 +92,8 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <div className="p-8">
-                  <h1 className="text-2xl font-bold">Admin Panel</h1>
-                  <p>Admin-only content will go here</p>
+                  <h1 className="text-2xl font-bold">{t('pages.admin.title')}</h1>
+                  <p>{t('pages.admin.description')}</p>
                 </div>
               </ProtectedRoute>
             } 
@@ -95,13 +103,13 @@ function App() {
             element={
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Unauthorized</h1>
-                  <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('pages.unauthorized.title')}</h1>
+                  <p className="text-gray-600 mb-4">{t('pages.unauthorized.message')}</p>
                   <button 
                     onClick={() => window.history.back()}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
-                    Go Back
+                    {t('pages.unauthorized.goBack')}
                   </button>
                 </div>
               </div>
@@ -116,13 +124,13 @@ function App() {
             element={
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Page Not Found</h1>
-                  <p className="text-gray-600 mb-4">The page you're looking for doesn't exist.</p>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('pages.notFound.title')}</h1>
+                  <p className="text-gray-600 mb-4">{t('pages.notFound.message')}</p>
                   <button 
                     onClick={() => window.location.href = '/dashboard'}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
-                    Go to Dashboard
+                    {t('pages.notFound.goToDashboard')}
                   </button>
                 </div>
               </div>

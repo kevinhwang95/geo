@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useTranslation } from 'react-i18next';
 import { 
   Dialog, 
   DialogContent, 
@@ -58,6 +59,7 @@ interface NavigationMenu {
 }
 
 const MenuManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [menus, setMenus] = useState<NavigationMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,10 +94,10 @@ const MenuManagement: React.FC = () => {
 
   // Available roles
   const roles = [
-    { key: 'admin', label: 'Admin', color: 'bg-red-100 text-red-800' },
-    { key: 'contributor', label: 'Contributor', color: 'bg-blue-100 text-blue-800' },
-    { key: 'team_lead', label: 'Team Lead', color: 'bg-green-100 text-green-800' },
-    { key: 'user', label: 'User', color: 'bg-gray-100 text-gray-800' }
+    { key: 'admin', label: t('menuManagement.admin'), color: 'bg-red-100 text-red-800' },
+    { key: 'contributor', label: t('menuManagement.contributor'), color: 'bg-blue-100 text-blue-800' },
+    { key: 'team_lead', label: t('menuManagement.teamLead'), color: 'bg-green-100 text-green-800' },
+    { key: 'user', label: t('menuManagement.user'), color: 'bg-gray-100 text-gray-800' }
   ];
 
   useEffect(() => {
@@ -114,10 +116,10 @@ const MenuManagement: React.FC = () => {
           console.log(`Menu ${menu.label} permissions:`, menu.permissions);
         });
       } else {
-        setError(response.data.error || 'Failed to fetch menus');
+        setError(response.data.error || t('menuManagement.failedToFetchMenus'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch menus');
+      setError(err.response?.data?.error || t('menuManagement.failedToFetchMenus'));
     } finally {
       setLoading(false);
     }
@@ -127,15 +129,15 @@ const MenuManagement: React.FC = () => {
     try {
       const response = await axiosClient.post('/navigation-menus', formData);
       if (response.data.success) {
-        setSuccess('Menu created successfully');
+        setSuccess(t('menuManagement.menuCreatedSuccess'));
         setIsCreateDialogOpen(false);
         resetForm();
         fetchMenus();
       } else {
-        setError(response.data.error || 'Failed to create menu');
+        setError(response.data.error || t('menuManagement.failedToCreateMenu'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create menu');
+      setError(err.response?.data?.error || t('menuManagement.failedToCreateMenu'));
     }
   };
 
@@ -145,32 +147,32 @@ const MenuManagement: React.FC = () => {
     try {
       const response = await axiosClient.put(`/navigation-menus/${editingMenu.id}`, formData);
       if (response.data.success) {
-        setSuccess('Menu updated successfully');
+        setSuccess(t('menuManagement.menuUpdatedSuccess'));
         setIsEditDialogOpen(false);
         setEditingMenu(null);
         resetForm();
         fetchMenus();
       } else {
-        setError(response.data.error || 'Failed to update menu');
+        setError(response.data.error || t('menuManagement.failedToUpdateMenu'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update menu');
+      setError(err.response?.data?.error || t('menuManagement.failedToUpdateMenu'));
     }
   };
 
   const handleDeleteMenu = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this menu item?')) return;
+    if (!confirm(t('menuManagement.deleteMenuItemConfirm'))) return;
 
     try {
       const response = await axiosClient.delete(`/navigation-menus/${id}`);
       if (response.data.success) {
-        setSuccess('Menu deleted successfully');
+        setSuccess(t('menuManagement.menuDeletedSuccess'));
         fetchMenus();
       } else {
-        setError(response.data.error || 'Failed to delete menu');
+        setError(response.data.error || t('menuManagement.failedToDeleteMenu'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete menu');
+      setError(err.response?.data?.error || t('menuManagement.failedToDeleteMenu'));
     }
   };
 
@@ -239,9 +241,9 @@ const MenuManagement: React.FC = () => {
       }));
       
       await axiosClient.put('/menu-order', orderData);
-      setSuccess('Menu order updated successfully');
+      setSuccess(t('menuManagement.menuOrderUpdatedSuccess'));
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update menu order');
+      setError(err.response?.data?.error || t('menuManagement.failedToUpdateMenuOrder'));
       fetchMenus(); // Revert on error
     }
 
@@ -282,7 +284,7 @@ const MenuManagement: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500">Loading menu management...</div>
+        <div className="text-gray-500">{t('menuManagement.loadingMenuManagement')}</div>
       </div>
     );
   }
@@ -290,46 +292,46 @@ const MenuManagement: React.FC = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Navigation Menu Management</h2>
+        <h2 className="text-2xl font-bold">{t('menuManagement.title')}</h2>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Menu Item
+{t('menuManagement.addMenuItem')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Create New Menu Item</DialogTitle>
+              <DialogTitle>{t('menuManagement.createNewMenuItem')}</DialogTitle>
               <DialogDescription>
-                Add a new navigation menu item with role-based permissions.
+                {t('menuManagement.createNewMenuItemDescription')}
               </DialogDescription>
             </DialogHeader>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="menu_key">Menu Key</Label>
+                <Label htmlFor="menu_key">{t('menuManagement.menuKey')}</Label>
                 <Input
                   id="menu_key"
                   value={formData.menu_key}
                   onChange={(e) => setFormData({ ...formData, menu_key: e.target.value })}
-                  placeholder="e.g., reports"
+                  placeholder={t('menuManagement.menuKeyPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="label">Label</Label>
+                <Label htmlFor="label">{t('menuManagement.label')}</Label>
                 <Input
                   id="label"
                   value={formData.label}
                   onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                  placeholder="e.g., Reports"
+                  placeholder={t('menuManagement.labelPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="icon">Icon</Label>
+                <Label htmlFor="icon">{t('menuManagement.icon')}</Label>
                 <Select value={formData.icon} onValueChange={(value) => setFormData({ ...formData, icon: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an icon" />
+                    <SelectValue placeholder={t('menuManagement.selectIconPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableIcons.map(icon => (
@@ -339,18 +341,18 @@ const MenuManagement: React.FC = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="route">Route</Label>
+                <Label htmlFor="route">{t('menuManagement.route')}</Label>
                 <Input
                   id="route"
                   value={formData.route}
                   onChange={(e) => setFormData({ ...formData, route: e.target.value })}
-                  placeholder="e.g., reports"
+                  placeholder={t('menuManagement.routePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="space-y-4">
-              <Label>Role Permissions</Label>
+              <Label>{t('menuManagement.rolePermissions')}</Label>
               <div className="grid grid-cols-2 gap-4">
                 {roles.map(role => (
                   <div key={role.key} className="flex items-center space-x-2">
@@ -374,11 +376,11 @@ const MenuManagement: React.FC = () => {
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
+                {t('menuManagement.cancel')}
               </Button>
               <Button onClick={handleCreateMenu}>
                 <Save className="h-4 w-4 mr-2" />
-                Create Menu
+                {t('menuManagement.createMenu')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -401,20 +403,20 @@ const MenuManagement: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Navigation Menu Items</CardTitle>
+          <CardTitle>{t('menuManagement.navigationMenuItems')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">Order</TableHead>
-                <TableHead>Menu Key</TableHead>
-                <TableHead>Label</TableHead>
-                <TableHead>Icon</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Permissions</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
+                <TableHead className="w-12">{t('menuManagement.order')}</TableHead>
+                <TableHead>{t('menuManagement.menuKey')}</TableHead>
+                <TableHead>{t('menuManagement.label')}</TableHead>
+                <TableHead>{t('menuManagement.icon')}</TableHead>
+                <TableHead>{t('menuManagement.route')}</TableHead>
+                <TableHead>{t('menuManagement.status')}</TableHead>
+                <TableHead>{t('menuManagement.permissions')}</TableHead>
+                <TableHead className="w-24">{t('menuManagement.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -439,7 +441,7 @@ const MenuManagement: React.FC = () => {
                   <TableCell className="font-mono text-sm">{menu.route}</TableCell>
                   <TableCell>
                     <Badge variant={menu.is_active ? "default" : "secondary"}>
-                      {menu.is_active ? 'Active' : 'Inactive'}
+                      {menu.is_active ? t('menuManagement.active') : t('menuManagement.inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -477,15 +479,15 @@ const MenuManagement: React.FC = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Menu Item</DialogTitle>
+            <DialogTitle>{t('menuManagement.editMenuItem')}</DialogTitle>
             <DialogDescription>
-              Update the navigation menu item and its permissions.
+              {t('menuManagement.editMenuItemDescription')}
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit_menu_key">Menu Key</Label>
+              <Label htmlFor="edit_menu_key">{t('menuManagement.menuKey')}</Label>
               <Input
                 id="edit_menu_key"
                 value={formData.menu_key}
@@ -493,7 +495,7 @@ const MenuManagement: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_label">Label</Label>
+              <Label htmlFor="edit_label">{t('menuManagement.label')}</Label>
               <Input
                 id="edit_label"
                 value={formData.label}
@@ -501,7 +503,7 @@ const MenuManagement: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_icon">Icon</Label>
+              <Label htmlFor="edit_icon">{t('menuManagement.icon')}</Label>
               <Select value={formData.icon} onValueChange={(value) => setFormData({ ...formData, icon: value })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -514,7 +516,7 @@ const MenuManagement: React.FC = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_route">Route</Label>
+              <Label htmlFor="edit_route">{t('menuManagement.route')}</Label>
               <Input
                 id="edit_route"
                 value={formData.route}
@@ -529,11 +531,11 @@ const MenuManagement: React.FC = () => {
                 checked={formData.is_active}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />
-              <Label>Active</Label>
+              <Label>{t('menuManagement.active')}</Label>
             </div>
 
             <div className="space-y-2">
-              <Label>Role Permissions</Label>
+              <Label>{t('menuManagement.rolePermissions')}</Label>
               <div className="grid grid-cols-2 gap-4">
                 {roles.map(role => (
                   <div key={role.key} className="flex items-center space-x-2">
@@ -558,11 +560,11 @@ const MenuManagement: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
+              {t('menuManagement.cancel')}
             </Button>
             <Button onClick={handleUpdateMenu}>
               <Save className="h-4 w-4 mr-2" />
-              Update Menu
+              {t('menuManagement.updateMenu')}
             </Button>
           </DialogFooter>
         </DialogContent>

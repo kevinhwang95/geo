@@ -22,21 +22,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { User, Mail, Phone, Shield, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-const userSchema = z.object({
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(1, 'Phone number is required'),
-  role: z.enum(['admin', 'contributor', 'user', 'team_lead'], {
-    message: 'Please select a role',
-  }),
-});
-
-type UserFormData = z.infer<typeof userSchema>;
 
 interface UserFormDialogProps {
   open: boolean;
@@ -60,6 +49,19 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   isEditing,
   onUserSaved,
 }) => {
+  const { t } = useTranslation();
+  
+  const userSchema = z.object({
+    first_name: z.string().min(1, t('createUser.firstNameRequired')),
+    last_name: z.string().min(1, t('createUser.lastNameRequired')),
+    email: z.string().email(t('createUser.invalidEmailAddress')),
+    phone: z.string().min(1, t('createUser.phoneNumberRequired')),
+    role: z.enum(['admin', 'contributor', 'user', 'team_lead'], {
+      message: t('createUser.pleaseSelectRole'),
+    }),
+  });
+
+  type UserFormData = z.infer<typeof userSchema>;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = React.useState<string | null>(null);
@@ -149,11 +151,11 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
       
       const errorMessage = error.response?.data?.error || 
                           error.response?.data?.message || 
-                          'Failed to save user. Please try again.';
+                          t('createUser.failedToSaveUser');
       
       setSubmitError(errorMessage);
       
-      toast.error('Failed to save user', {
+      toast.error(t('createUser.failedToSaveUser'), {
         description: errorMessage,
       });
     } finally {
@@ -164,13 +166,13 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   const getRoleDescription = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'Full system access, can manage all users and settings';
+        return t('createUser.fullSystemAccess');
       case 'team_lead':
-        return 'Can manage team members and assign work to teams';
+        return t('createUser.canManageTeams');
       case 'contributor':
-        return 'Can create and manage lands, view all data';
+        return t('createUser.canCreateAndManageLands');
       case 'user':
-        return 'Can view lands and create notifications, cannot create lands';
+        return t('createUser.canViewLandsAndCreateNotifications');
       default:
         return '';
     }
@@ -182,12 +184,12 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Shield className="h-5 w-5" />
-            <span>{isEditing ? 'Edit User' : 'Create New User'}</span>
+            <span>{isEditing ? t('createUser.editUser') : t('createUser.createNewUser')}</span>
           </DialogTitle>
           <DialogDescription>
             {isEditing 
-              ? 'Update user information and role permissions.'
-              : 'Add a new user to the system with appropriate role permissions.'
+              ? t('createUser.editUserDescription')
+              : t('createUser.createUserDescription')
             }
           </DialogDescription>
         </DialogHeader>
@@ -221,10 +223,10 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                   <FormItem>
                     <FormLabel className="flex items-center space-x-2">
                       <User className="h-4 w-4" />
-                      <span>First Name</span>
+                      <span>{t('createUser.firstName')}</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter first name" {...field} />
+                      <Input placeholder={t('createUser.enterFirstName')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -236,9 +238,9 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last Name</FormLabel>
+                    <FormLabel>{t('createUser.lastName')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter last name" {...field} />
+                      <Input placeholder={t('createUser.enterLastName')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -253,12 +255,12 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <Mail className="h-4 w-4" />
-                    <span>Email</span>
+                    <span>{t('createUser.email')}</span>
                   </FormLabel>
                   <FormControl>
                     <Input 
                       type="email" 
-                      placeholder="Enter email address" 
+                      placeholder={t('createUser.enterEmailAddress')} 
                       {...field} 
                       disabled={isEditing} // Don't allow email changes for existing users
                     />
@@ -266,7 +268,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                   <FormMessage />
                   {isEditing && (
                     <p className="text-xs text-gray-500">
-                      Email cannot be changed for existing users
+                      {t('createUser.emailCannotBeChanged')}
                     </p>
                   )}
                 </FormItem>
@@ -280,10 +282,10 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <Phone className="h-4 w-4" />
-                    <span>Phone</span>
+                    <span>{t('createUser.phone')}</span>
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter phone number" {...field} />
+                    <Input placeholder={t('createUser.enterPhoneNumber')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -295,43 +297,43 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel>{t('createUser.role')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder={t('createUser.selectRole')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="user">
                         <div className="flex flex-col">
-                          <span>User</span>
+                          <span>{t('createUser.user')}</span>
                           <span className="text-xs text-gray-500">
-                            Can view lands and create notifications
+                            {t('createUser.userDescription')}
                           </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="contributor">
                         <div className="flex flex-col">
-                          <span>Contributor</span>
+                          <span>{t('createUser.contributor')}</span>
                           <span className="text-xs text-gray-500">
-                            Can create and manage lands
+                            {t('createUser.contributorDescription')}
                           </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="team_lead">
                         <div className="flex flex-col">
-                          <span>Team Lead</span>
+                          <span>{t('createUser.teamLead')}</span>
                           <span className="text-xs text-gray-500">
-                            Can manage teams and assign work
+                            {t('createUser.teamLeadDescription')}
                           </span>
                         </div>
                       </SelectItem>
                       <SelectItem value="admin">
                         <div className="flex flex-col">
-                          <span>Admin</span>
+                          <span>{t('createUser.admin')}</span>
                           <span className="text-xs text-gray-500">
-                            Full system access
+                            {t('createUser.adminDescription')}
                           </span>
                         </div>
                       </SelectItem>
@@ -352,16 +354,16 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
-                Cancel
+                {t('createUser.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isEditing ? 'Updating...' : 'Creating...'}
+                    {isEditing ? t('createUser.updating') : t('createUser.creating')}
                   </>
                 ) : (
-                  isEditing ? 'Update User' : 'Create User'
+                  isEditing ? t('createUser.updateUser') : t('createUser.createUser')
                 )}
               </Button>
             </DialogFooter>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import NavigationMenu from '@/components/core/NavigationMenu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useTranslation } from 'react-i18next';
 import { 
   MapPin, 
   Bell, 
@@ -77,6 +78,7 @@ interface Land {
 const Dashboard: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuthStore();
   const { centerMapOnLand } = useMapStore();
+  const { t } = useTranslation();
   // const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,7 +166,7 @@ const Dashboard: React.FC = () => {
       console.log('Auth tokens:', useAuthStore.getState().tokens);
       
       if (!user) {
-        setError('User not authenticated');
+        setError(t('dashboard.errors.userNotAuthenticated'));
         setIsLoading(false);
         return;
       }
@@ -178,7 +180,7 @@ const Dashboard: React.FC = () => {
     } catch (error: any) {
       console.error('Dashboard data loading error:', error);
       console.error('Error response:', error.response);
-      setError(error.response?.data?.message || 'Failed to load dashboard data');
+      setError(error.response?.data?.message || t('dashboard.errors.failedToLoad'));
     } finally {
       setIsLoading(false);
     }
@@ -366,11 +368,11 @@ const Dashboard: React.FC = () => {
   const getHarvestStatusBadge = (status: string) => {
     switch (status) {
       case 'overdue':
-        return <Badge variant="destructive">Overdue</Badge>;
+        return <Badge variant="destructive">{t('badges.overdue')}</Badge>;
       case 'due_soon':
-        return <Badge variant="secondary">Due Soon</Badge>;
+        return <Badge variant="secondary">{t('badges.dueSoon')}</Badge>;
       default:
-        return <Badge variant="outline">Normal</Badge>;
+        return <Badge variant="outline">{t('badges.normal')}</Badge>;
     }
   };
 
@@ -391,7 +393,7 @@ const Dashboard: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">{t('dashboard.loading.dashboard')}</p>
         </div>
       </div>
     );
@@ -407,7 +409,7 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center min-w-0 flex-1">
               <img 
                 src="/logolong.PNG" 
-                alt="Chokdee Logo" 
+                alt={t('dashboard.header.logoAlt')} 
                 className="h-8 sm:h-10 lg:h-12 w-auto object-contain"
               />
             </div>
@@ -418,7 +420,7 @@ const Dashboard: React.FC = () => {
               <div 
                 className="flex items-center space-x-1 sm:space-x-2 cursor-pointer hover:bg-purple-50 p-1 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md"
                 onClick={handleNotificationClick}
-                title="Click to view notifications"
+                title={t('dashboard.header.notificationsTooltip')}
               >
                 <div className="relative">
                   <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 hover:text-purple-600 transition-colors" />
@@ -444,7 +446,7 @@ const Dashboard: React.FC = () => {
                   {user?.first_name} {user?.last_name}
                 </span>
                 <Badge variant="outline" className="text-xs">
-                  {user?.role}
+                  {t(`userManagement.${user?.role}`)}
                 </Badge>
               </div>
               
@@ -454,10 +456,10 @@ const Dashboard: React.FC = () => {
                 size="sm"
                 onClick={handleLogout}
                 className="text-gray-600 hover:text-gray-900 p-2"
-                title="Logout"
+                title={t('dashboard.header.logoutTooltip')}
               >
                 <LogOut className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Logout</span>
+                <span className="hidden sm:inline">{t('dashboard.header.logout')}</span>
               </Button>
             </div>
           </div>
@@ -486,43 +488,43 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
               <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-blue-700">Total Lands</CardTitle>
+                  <CardTitle className="text-sm font-medium text-blue-700">{t('dashboard.stats.totalLands.title')}</CardTitle>
                   <MapPin className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-900">{lands?.length || 0}</div>
                   <p className="text-xs text-blue-600">
-                    Active land parcels
+                    {t('dashboard.stats.totalLands.description')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-orange-50 to-orange-100/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-orange-700">Harvest Due</CardTitle>
+                  <CardTitle className='text-sm font-medium text-orange-700'>{t('dashboard.stats.harvestDue.title')}</CardTitle>
                   <Clock className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-900">
                     {lands?.filter(l => l.harvest_status === 'due_soon').length || 0}
                   </div>
-                  <p className="text-xs text-orange-600">
-                    Within 7 days
+                  <p className='text-xs text-orange-600'>
+                    {t('dashboard.stats.harvestDue.description')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-red-50 to-red-100/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-red-700">Overdue</CardTitle>
+                  <CardTitle className='text-sm font-medium text-red-700'>{t('dashboard.stats.overdue.title')}</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-red-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-900">
                     {lands?.filter(l => l.harvest_status === 'overdue').length || 0}
                   </div>
-                  <p className="text-xs text-red-600">
-                    Past harvest date
+                  <p className='text-xs text-red-600'>
+                    {t('dashboard.stats.overdue.description')}
                   </p>
                 </CardContent>
               </Card>
@@ -530,16 +532,16 @@ const Dashboard: React.FC = () => {
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 to-purple-100/50"
                 onClick={handleNotificationClick}
-                title="Click to view notifications"
+                title={t('dashboard.stats.unreadNotifications.tooltip')}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-purple-700">Unread Notifications</CardTitle>
+                  <CardTitle className='text-sm font-medium text-purple-700'>{t('dashboard.stats.unreadNotifications.title')}</CardTitle>
                   <Bell className="h-4 w-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-purple-900">{unreadCount}</div>
-                  <p className="text-xs text-purple-600">
-                    New notifications
+                  <p className='text-xs text-purple-600'>
+                    {t('dashboard.stats.unreadNotifications.description')}
                   </p>
                 </CardContent>
               </Card>
@@ -547,16 +549,16 @@ const Dashboard: React.FC = () => {
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-red-50 to-red-100/50"
                 onClick={() => setActiveSection('map')}
-                title="Click to view map with notification markers"
+                title={t('dashboard.stats.highPriority.tooltip')}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-red-700">High Priority</CardTitle>
+                  <CardTitle className='text-sm font-medium text-red-700'>{t('dashboard.stats.highPriority.title')}</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-red-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-900">{highPriorityCount}</div>
-                  <p className="text-xs text-red-600">
-                    Urgent notifications
+                  <p className='text-xs text-red-600'>
+                    {t('dashboard.stats.highPriority.description')}
                   </p>
                 </CardContent>
               </Card>
@@ -565,9 +567,9 @@ const Dashboard: React.FC = () => {
             {/* Recent Lands */}
             <Card className="flex flex-col min-h-0">
               <CardHeader className="flex-shrink-0">
-                <CardTitle>Recent Lands</CardTitle>
+                <CardTitle>{t('dashboard.recentLands.title')}</CardTitle>
                 <CardDescription>
-                  Latest land registrations and updates
+                  {t('dashboard.recentLands.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1 min-h-0">
@@ -578,7 +580,7 @@ const Dashboard: React.FC = () => {
                         key={land.id} 
                         className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleViewLandDetails(land.id)}
-                        title="Click to view land details on map"
+                        title={t('dashboard.recentLands.viewTooltip')}
                       >
                         <div className="flex items-center space-x-4">
                           <div 
@@ -589,11 +591,11 @@ const Dashboard: React.FC = () => {
                             <h4 className="font-medium">{land.land_name}</h4>
                             <p className="text-sm text-gray-500">{land.land_code}</p>
                             <div className="mt-1 space-y-1">
-                              <p className="text-xs text-gray-400">
+                              <p className='text-xs text-gray-400'>
                                 📍 {land.location}, {land.city}, {land.district}, {land.province}
                               </p>
-                              <p className="text-xs text-gray-400">
-                                📅 Created: {new Date(land.created_at).toLocaleDateString()} by {userNames[land.created_by] || `User #${land.created_by}` || 'Unknown'}
+                              <p className='text-xs text-gray-400'>
+                                📅 {t('dashboard.recentLands.created')}: {new Date(land.created_at).toLocaleDateString()} {t('dashboard.recentLands.by')} {userNames[land.created_by] || t('dashboard.recentLands.user', { id: land.created_by }) || t('dashboard.recentLands.unknown')}
                                 {/* Debug: {JSON.stringify({userId: land.created_by, userName: userNames[land.created_by], allNames: userNames})} */}
                               </p>
                             </div>
@@ -611,8 +613,8 @@ const Dashboard: React.FC = () => {
                             }}
                             className="ml-2"
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
+                            <Eye className='h-4 w-4 mr-1' />
+                            {t('dashboard.recentLands.view')}
                           </Button>
                         </div>
                       </div>
@@ -627,11 +629,11 @@ const Dashboard: React.FC = () => {
           {activeSection === 'lands' && (
             <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <h2 className="text-xl sm:text-2xl font-bold">All Lands</h2>
+              <h2 className='text-xl sm:text-2xl font-bold'>{t('dashboard.lands.title')}</h2>
               {canManageLands() && (
                 <Button onClick={handleAddLand} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Land
+                  {t('dashboard.lands.addLand')}
                 </Button>
               )}
             </div>
@@ -640,7 +642,7 @@ const Dashboard: React.FC = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search lands..."
+                placeholder={t('dashboard.lands.searchPlaceholder')}
                 value={landSearchTerm}
                 onChange={(e) => setLandSearchTerm(e.target.value)}
                 className="pl-10"
@@ -650,7 +652,7 @@ const Dashboard: React.FC = () => {
             {/* Loading State */}
             {landsLoading && (
               <div className="text-center py-8">
-                <div className="text-gray-500">Loading lands...</div>
+                <div className='text-gray-500'>{t('dashboard.lands.loading')}</div>
               </div>
             )}
 
@@ -659,7 +661,7 @@ const Dashboard: React.FC = () => {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Error loading lands: {landsError.message}
+                  {t('dashboard.lands.errorLoading', { message: landsError.message })}
                 </AlertDescription>
               </Alert>
             )}
@@ -667,10 +669,10 @@ const Dashboard: React.FC = () => {
             {/* Results Count */}
             {!landsLoading && !landsError && (
               <div className="text-sm text-gray-600">
-                Showing {filteredLands.length} of {lands?.length || 0} lands
+                {t('dashboard.lands.showing', { count: filteredLands.length, total: lands?.length || 0 })}
                 {landSearchTerm && (
                   <span className="ml-2">
-                    for "{landSearchTerm}"
+                    {t('dashboard.lands.for', { term: landSearchTerm })}
                   </span>
                 )}
               </div>
@@ -685,7 +687,7 @@ const Dashboard: React.FC = () => {
                         key={land.id} 
                         className="hover:shadow-lg transition-shadow cursor-pointer"
                         onClick={() => handleViewLandDetails(land.id)}
-                        title="Click to view land details"
+                        title={t('dashboard.lands.viewDetailsTooltip')}
                       >
                         <CardHeader>
                           <div className="flex items-center justify-between">
@@ -761,11 +763,11 @@ const Dashboard: React.FC = () => {
                   <div className="text-center py-12">
                     <div className="text-gray-500 mb-4">
                       <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium mb-2">No lands found</h3>
+                      <h3 className="text-lg font-medium mb-2">{t('dashboard.lands.noLands')}</h3>
                       <p className="text-sm">
                         {landSearchTerm 
-                          ? `No lands match your search for "${landSearchTerm}"`
-                          : "No lands have been registered yet"
+                          ? t('dashboard.lands.for', { term: landSearchTerm })
+                          : t('dashboard.lands.noLands')
                         }
                       </p>
                     </div>
@@ -789,12 +791,12 @@ const Dashboard: React.FC = () => {
           )}
 
           {activeSection === 'map' && (
-            <div className="space-y-6 p-6">
+            <div className="space-y-4 p-4">
               <Card className="h-[min(70vh,600px)] flex flex-col">
               <CardHeader>
-                <CardTitle>Interactive Map</CardTitle>
+                <CardTitle>{t('dashboard.interactiveMap.title')}</CardTitle>
                 <CardDescription>
-                  View and manage land boundaries on the map
+                  {t('dashboard.interactiveMap.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0 h-full">

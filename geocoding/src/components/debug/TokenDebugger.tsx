@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { getTokenTimeRemaining, decodeJWT } from '@/utils/jwt';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, User, Shield } from 'lucide-react';
 
 export const TokenDebugger: React.FC = () => {
+  const { t } = useTranslation();
   const { tokens, user, isAuthenticated, isTokenExpired } = useAuthStore();
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [tokenPayload, setTokenPayload] = useState<any>(null);
@@ -50,7 +52,7 @@ export const TokenDebugger: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Badge variant="destructive">Not Authenticated</Badge>
+          <Badge variant="destructive">{t('badges.notAuthenticated')}</Badge>
         </CardContent>
       </Card>
     );
@@ -69,7 +71,7 @@ export const TokenDebugger: React.FC = () => {
         <div className="flex items-center gap-2">
           <User className="h-4 w-4" />
           <span className="text-sm font-medium">{user?.first_name} {user?.last_name}</span>
-          <Badge variant="outline">{user?.role}</Badge>
+          <Badge variant="outline">{t(`userManagement.${user?.role}`)}</Badge>
         </div>
 
         {/* Token Expiration */}

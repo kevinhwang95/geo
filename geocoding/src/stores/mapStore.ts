@@ -21,6 +21,7 @@ interface Land {
   coordinations: string;
   geometry: string;
   size: number;
+  palm_area?: number;
   owner_name: string;
   notes: string;
   is_active: boolean;

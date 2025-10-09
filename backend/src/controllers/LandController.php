@@ -50,6 +50,9 @@ class LandController
             'plant_date', 'harvest_cycle', 'coordinations', 'size'
         ];
 
+        // Optional fields that can be provided
+        $optionalFields = ['palm_area', 'tree_count', 'notes'];
+
         // Check if tree_count is required for Palm Oil
         $plantTypeId = $input['planttypeid'] ?? null;
         if ($plantTypeId === 3 || (isset($input['plant_type_name']) && strtolower($input['plant_type_name']) === 'palm oil')) {
@@ -61,6 +64,15 @@ class LandController
             if (!is_numeric($input['tree_count']) || intval($input['tree_count']) < 0) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Tree count must be a positive integer']);
+                return;
+            }
+        }
+
+        // Validate palm_area if provided
+        if (isset($input['palm_area']) && $input['palm_area'] !== null && $input['palm_area'] !== '') {
+            if (!is_numeric($input['palm_area']) || floatval($input['palm_area']) < 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Palm area must be a positive number']);
                 return;
             }
         }
@@ -111,6 +123,15 @@ class LandController
             if (!is_numeric($treeCount) || intval($treeCount) < 0) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Tree count must be a positive integer']);
+                return;
+            }
+        }
+
+        // Validate palm_area if provided
+        if (isset($input['palm_area']) && $input['palm_area'] !== null && $input['palm_area'] !== '') {
+            if (!is_numeric($input['palm_area']) || floatval($input['palm_area']) < 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Palm area must be a positive number']);
                 return;
             }
         }

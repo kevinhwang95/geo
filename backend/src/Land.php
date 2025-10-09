@@ -16,12 +16,12 @@ class Land
         $sql = "INSERT INTO lands (
                     land_name, land_code, deed_number, location, 
                     province, district, city, plant_type_id, category_id, 
-                    plant_date, harvest_cycle_days, tree_count, geometry, size, 
+                    plant_date, harvest_cycle_days, tree_count, geometry, size, palm_area,
                     owner_name, notes, created_by, created_at, updated_at
                 ) VALUES (
                     :land_name, :land_code, :deed_number, :location,
                     :province, :district, :city, :plant_type_id, :category_id,
-                    :plant_date, :harvest_cycle_days, :tree_count, :geometry, :size,
+                    :plant_date, :harvest_cycle_days, :tree_count, :geometry, :size, :palm_area,
                     :owner_name, :notes, :created_by, NOW(), NOW()
                 )";
 
@@ -49,6 +49,7 @@ class Land
             'tree_count' => isset($data['tree_count']) ? (int) $data['tree_count'] : null,
             'geometry' => $data['coordinations'],
             'size' => (float) $data['size'],
+            'palm_area' => isset($data['palm_area']) && $data['palm_area'] !== '' ? (float) $data['palm_area'] : null,
             'owner_name' => $data['owner'] ?? null,
             'notes' => $data['notes'] ?? null,
             'created_by' => $data['created_by'] ?? 1,
@@ -62,7 +63,9 @@ class Land
     {
         $sql = "SELECT l.*, u.first_name, u.last_name,
                        pt.name as plant_type_name, 
+                       pt.translation_key as plant_type_translation_key,
                        c.name as category_name, 
+                       c.translation_key as category_translation_key,
                        c.color as category_color
                 FROM lands l 
                 LEFT JOIN users u ON l.created_by = u.id 
@@ -77,7 +80,9 @@ class Land
     {
         $sql = "SELECT l.*, u.first_name, u.last_name, 
                        pt.name as plant_type_name, 
+                       pt.translation_key as plant_type_translation_key,
                        c.name as category_name, 
+                       c.translation_key as category_translation_key,
                        c.color as category_color
                 FROM lands l 
                 LEFT JOIN users u ON l.created_by = u.id 
@@ -142,6 +147,9 @@ class Land
             } elseif ($key === 'size') {
                 $fields[] = 'size = :size';
                 $params['size'] = (float) $value;
+            } elseif ($key === 'palm_area') {
+                $fields[] = 'palm_area = :palm_area';
+                $params['palm_area'] = isset($value) && $value !== '' ? (float) $value : null;
             } elseif ($key === 'tree_count') {
                 $fields[] = 'tree_count = :tree_count';
                 $params['tree_count'] = isset($value) && $value !== '' ? (int) $value : null;
@@ -188,7 +196,9 @@ class Land
             'category_id' => (int) $land['category_id'],
             'categoryid' => (int) $land['category_id'], // Also map to categoryid for frontend compatibility
             'plant_type_name' => $land['plant_type_name'] ?? null,
+            'plant_type_translation_key' => $land['plant_type_translation_key'] ?? null,
             'category_name' => $land['category_name'] ?? null,
+            'category_translation_key' => $land['category_translation_key'] ?? null,
             'category_color' => $land['category_color'] ?? '#4285F4',
             'plant_date' => $land['plant_date'],
             'harvest_cycle_days' => (int) $land['harvest_cycle_days'],
@@ -197,6 +207,7 @@ class Land
             'coordinations' => $land['geometry'], // Map geometry to coordinations for frontend
             'geometry' => $land['geometry'], // Keep original geometry field too
             'size' => (float) $land['size'],
+            'palm_area' => isset($land['palm_area']) ? (float) $land['palm_area'] : null, // Add palm_area field
             'tree_count' => isset($land['tree_count']) ? (int) $land['tree_count'] : null, // Add tree_count field
             'owner_name' => $land['owner_name'],
             'owner' => $land['owner_name'], // Also map to owner for frontend compatibility

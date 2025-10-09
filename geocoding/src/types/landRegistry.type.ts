@@ -6,6 +6,7 @@ export default interface LandRegistry {
   land_code: string,
   land_number: string,
   size: number,
+  palm_area?: number,
   location: string,
   province: string,
   district: string,
@@ -40,6 +41,9 @@ export const landRegistrySchema = z.object({
   size: z.number().min(0, {
     message: "Size must be at least 0.",
   }),
+  palm_area: z.number().min(0, {
+    message: "Palm area must be at least 0.",
+  }).optional(),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
   }),

@@ -24,7 +24,7 @@ const GlobalLanguageSwitcher: React.FC = () => {
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 
   return (
-    <div className="fixed top-4 right-4 z-50 max-w-[calc(100vw-2rem)]">
+    <div className="fixed top-28 right-8 z-30 max-w-[calc(100vw-2rem)]">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
@@ -37,7 +37,7 @@ const GlobalLanguageSwitcher: React.FC = () => {
             <span className="hidden sm:inline font-medium truncate">{currentLanguage.name}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48 shadow-xl max-w-[calc(100vw-2rem)]">
+        <DropdownMenuContent align="end" className="w-48 shadow-xl max-w-[calc(100vw-2rem)] !z-30">
           {languages.map((language) => (
             <DropdownMenuItem
               key={language.code}

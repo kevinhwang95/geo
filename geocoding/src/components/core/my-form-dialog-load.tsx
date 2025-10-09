@@ -30,6 +30,8 @@ import type LandRegistry from '@/types/landRegistry.type';
 import { Textarea } from "@/components/ui/textarea";
 import { MapPin, User, Calendar, Hash, Building, Map, Leaf, Save, X, Globe, Crop, Clock, FileText as NotesIcon } from "lucide-react";
 import axiosClient from '@/api/axiosClient';
+import { useTranslation } from 'react-i18next';
+import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
 
 export interface MyFormDialogProps {
   //polygonPaths: google.maps.LatLngLiteral[][];
@@ -40,13 +42,13 @@ export interface MyFormDialogProps {
 }
 
 export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => {} }: MyFormDialogProps) {
-
+  const { t } = useTranslation();
   const { createItem, updateItem } = useGenericCrud<LandRegistry>('lands');
   const coordination = land.coordinations;
 
   // State for plant types and categories
-  const [plantTypes, setPlantTypes] = React.useState<Array<{id: number, name: string, description?: string, harvest_cycle_days?: number, requires_tree_count?: boolean}>>([]);
-  const [categories, setCategories] = React.useState<Array<{id: number, name: string, description?: string, color: string}>>([]);
+  const [plantTypes, setPlantTypes] = React.useState<Array<{id: number, name: string, description?: string, harvest_cycle_days?: number, requires_tree_count?: boolean, translation_key?: string}>>([]);
+  const [categories, setCategories] = React.useState<Array<{id: number, name: string, description?: string, color: string, translation_key?: string}>>([]);
   const [loadingOptions, setLoadingOptions] = React.useState(true);
   const [optionsError, setOptionsError] = React.useState<string | null>(null);
 
@@ -111,6 +113,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
       land_code: land.land_code || '',
       land_number: land.land_number || '',
       size: land.size || 0,
+      palm_area: land.palm_area || undefined,
       coordinations: coordination || '',
       location: land.location || '',
       province: land.province || '',
@@ -140,6 +143,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
         land_code: land.land_code || '',
         land_number: land.land_number || '',
         size: land.size || 0,
+        palm_area: land.palm_area || undefined,
         coordinations: land.coordinations || '',
         location: land.location || '',
         province: land.province || '',
@@ -247,7 +251,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Map className="h-4 w-4 text-green-600" />
-                            Land Name
+                            {t('labels.landName')}
                           </FormLabel>
                           <FormControl>
                             <Input 
@@ -267,7 +271,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Hash className="h-4 w-4 text-blue-600" />
-                            Land Code
+                            {t('labels.landCode')}
                           </FormLabel>
                           <FormControl>
                             <Input 
@@ -320,6 +324,32 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                                 field.onChange(value === '' ? undefined : parseFloat(value));
                               }}
                               className="h-10 border-gray-200 focus:border-orange-500 focus:ring-orange-500 transition-colors" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="palm_area"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Leaf className="h-4 w-4 text-green-600" />
+                            {t('labels.palmArea')}
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step={0.01} 
+                              placeholder={t('landRegistration.placeholders.palmArea')} 
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === '' ? undefined : parseFloat(value));
+                              }}
+                              className="h-10 border-gray-200 focus:border-green-500 focus:ring-green-500 transition-colors" 
                             />
                           </FormControl>
                           <FormMessage />
@@ -457,7 +487,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Leaf className="h-4 w-4 text-green-600" />
-                            Plant Type
+                            {t('labels.plantType')}
                             {optionsError && (
                               <span className="text-red-500 text-xs ml-2">⚠️ {optionsError}</span>
                             )}
@@ -493,7 +523,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                                   <SelectItem key={plantType.id} value={plantType.id.toString()}>
                                     <div className="flex items-center gap-2">
                                       <Leaf className="h-3 w-3 text-green-600" />
-                                      {plantType.name}
+                                      {getTranslatedPlantType(t, plantType.name, plantType.translation_key)}
                                     </div>
                                   </SelectItem>
                                 ))
@@ -511,7 +541,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Building className="h-4 w-4 text-blue-600" />
-                            Category
+                            {t('labels.category')}
                             {optionsError && (
                               <span className="text-red-500 text-xs ml-2">⚠️ {optionsError}</span>
                             )}
@@ -550,7 +580,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                                         className="w-3 h-3 rounded-full border border-gray-300" 
                                         style={{ backgroundColor: category.color }}
                                       />
-                                      {category.name}
+                                      {getTranslatedCategory(t, category.name, category.translation_key)}
                                     </div>
                                   </SelectItem>
                                 ))
@@ -668,14 +698,14 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                       className="px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <X className="h-4 w-4 mr-2" />
-                      Cancel
+                      {t('buttons.cancel')}
                     </Button>
                     <Button 
                       type="submit"
                       className="flex-1 h-11 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-medium shadow-md transition-all duration-200"
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      {land.id ? 'Update Land' : 'Create Land'}
+                      {land.id ? t('buttons.updateLand') : t('buttons.registerLand')}
                     </Button>
                   </div>
                 </DialogFooter>

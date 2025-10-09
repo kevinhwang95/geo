@@ -619,19 +619,42 @@
   },
   "plant_types": {
     "palm_oil": "ปาล์มน้ำมัน",
+    "rubber": "ยางพารา",
+    "coconut": "มะพร้าว",
+    "coffee": "กาแฟ",
+    "tea": "ชา",
     "sugarcane": "อ้อย",
-    "coconut": "มะพร้าว", 
+    "rice": "ข้าว",
+    "corn": "ข้าวโพด",
     "banana": "กล้วย",
     "mango": "มะม่วง",
-    "corn": "ข้าว",
-    "rice": "ข้าว"
+    "vegetables": "ผัก",
+    "fruits": "ผลไม้",
+    "timber": "ไม้",
+    "bamboo": "ไม้ไผ่",
+    "herbs": "สมุนไพร",
+    "flowers": "ดอกไม้",
+    "other": "อื่นๆ"
   },
   "categories": {
     "premium": "พรีเมียม",
     "standard": "มาตรฐาน",
     "basic": "พื้นฐาน",
     "organic": "ออร์แกนิก",
-    "commercial": "เชิงพาณิชย์"
+    "lease": "เช่า",
+    "owned": "เป็นเจ้าของ",
+    "conventional": "ทั่วไป",
+    "high_yield": "ผลผลิตสูง",
+    "medium_yield": "ผลผลิตปานกลาง",
+    "low_yield": "ผลผลิตต่ำ",
+    "certified": "ได้รับการรับรอง",
+    "non_certified": "ไม่ได้รับการรับรอง",
+    "export_quality": "คุณภาพส่งออก",
+    "domestic": "ในประเทศ",
+    "commercial": "เชิงพาณิชย์",
+    "subsistence": "เพื่อยังชีพ",
+    "research": "วิจัย",
+    "other": "อื่นๆ"
   },
   "harvest_status": {
     "overdue": "เกินกำหนด",
@@ -700,5 +723,38 @@
       "failedToLoadBoth": "โหลดทั้งประเภทพืชและหมวดหมู่ไม่สำเร็จ",
       "networkError": "เกิดข้อผิดพลาดเครือข่ายในการโหลดตัวเลือก"
     }
+  },
+  "labels": {
+    "size": "ขนาด:",
+    "plantType": "ประเภทพืช:",
+    "category": "หมวดหมู่:",
+    "nextHarvest": "การเก็บเกี่ยวครั้งถัดไป:",
+    "landName": "ชื่อที่ดิน:",
+    "landCode": "รหัสที่ดิน:",
+    "landNumber": "หมายเลขที่ดิน:",
+    "palmArea": "พื้นที่ปลูกปาล์ม:",
+    "coordinates": "พิกัด:",
+    "location": "ที่ตั้ง:",
+    "province": "จังหวัด:",
+    "district": "อำเภอ:",
+    "city": "ตำบล:",
+    "owner": "เจ้าของ:",
+    "plantDate": "วันที่ปลูก:",
+    "harvestCycle": "รอบการเก็บเกี่ยว:",
+    "treeCount": "จำนวนต้น:",
+    "notes": "หมายเหตุ:",
+    "harvestStatus": "สถานะการเก็บเกี่ยว:"
+  },
+  "buttons": {
+    "edit": "แก้ไข",
+    "createNotification": "สร้างการแจ้งเตือน",
+    "notify": "แจ้งเตือน",
+    "view": "ดู",
+    "addLand": "เพิ่มที่ดิน",
+    "addFirstLand": "เพิ่มที่ดินแปลงแรกของคุณ",
+    "cancel": "ยกเลิก",
+    "registerLand": "ลงทะเบียนที่ดิน",
+    "updateLand": "อัปเดตที่ดิน",
+    "save": "บันทึก"
   }
 }

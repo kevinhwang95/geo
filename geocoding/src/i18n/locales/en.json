@@ -619,19 +619,42 @@
   },
   "plant_types": {
     "palm_oil": "Palm Oil",
+    "rubber": "Rubber",
+    "coconut": "Coconut",
+    "coffee": "Coffee",
+    "tea": "Tea",
     "sugarcane": "Sugarcane",
-    "coconut": "Coconut", 
+    "rice": "Rice",
+    "corn": "Corn",
     "banana": "Banana",
     "mango": "Mango",
-    "corn": "Corn",
-    "rice": "Rice"
+    "vegetables": "Vegetables",
+    "fruits": "Fruits",
+    "timber": "Timber",
+    "bamboo": "Bamboo",
+    "herbs": "Herbs",
+    "flowers": "Flowers",
+    "other": "Other"
   },
   "categories": {
     "premium": "Premium",
     "standard": "Standard",
     "basic": "Basic",
     "organic": "Organic",
-    "commercial": "Commercial"
+    "lease": "Lease",
+    "owned": "Owned",
+    "conventional": "Conventional",
+    "high_yield": "High Yield",
+    "medium_yield": "Medium Yield",
+    "low_yield": "Low Yield",
+    "certified": "Certified",
+    "non_certified": "Non-Certified",
+    "export_quality": "Export Quality",
+    "domestic": "Domestic",
+    "commercial": "Commercial",
+    "subsistence": "Subsistence",
+    "research": "Research",
+    "other": "Other"
   },
   "harvest_status": {
     "overdue": "Overdue",
@@ -700,5 +723,38 @@
       "failedToLoadBoth": "Failed to load both plant types and categories",
       "networkError": "Network error loading options"
     }
+  },
+  "labels": {
+    "size": "Size:",
+    "plantType": "Plant Type:",
+    "category": "Category:",
+    "nextHarvest": "Next Harvest:",
+    "landName": "Land Name:",
+    "landCode": "Land Code:",
+    "landNumber": "Land Number:",
+    "palmArea": "Palm Area:",
+    "coordinates": "Coordinates:",
+    "location": "Location:",
+    "province": "Province:",
+    "district": "District:",
+    "city": "City:",
+    "owner": "Owner:",
+    "plantDate": "Plant Date:",
+    "harvestCycle": "Harvest Cycle:",
+    "treeCount": "Tree Count:",
+    "notes": "Notes:",
+    "harvestStatus": "Harvest Status:"
+  },
+  "buttons": {
+    "edit": "Edit",
+    "createNotification": "Create Notification",
+    "notify": "Notify",
+    "view": "View",
+    "addLand": "Add Land",
+    "addFirstLand": "Add Your First Land",
+    "cancel": "Cancel",
+    "registerLand": "Register Land",
+    "updateLand": "Update Land",
+    "save": "Save"
   }
 }

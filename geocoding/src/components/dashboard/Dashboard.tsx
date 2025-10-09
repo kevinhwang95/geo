@@ -7,6 +7,8 @@ import NavigationMenu from '@/components/core/NavigationMenu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslation } from 'react-i18next';
+import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
+import { formatLandSizeToThaiUnits } from '@/utils/areaCalculator';
 import { 
   MapPin, 
   Bell, 
@@ -59,12 +61,15 @@ interface Land {
   plant_type_name: string;
   category_name: string;
   category_color: string;
+  plant_type_translation_key?: string;
+  category_translation_key?: string;
   plant_date: string;
   harvest_cycle_days: number;
   next_harvest_date: string;
   coordinations: string;
   geometry: string;
   size: number;
+  palm_area?: number;
   owner_name: string;
   tree_count?: number;
   notes: string;
@@ -110,9 +115,7 @@ const Dashboard: React.FC = () => {
   // Fetch user names when lands data is loaded
   useEffect(() => {
     if (lands && lands.length > 0) {
-      console.log('Lands data:', lands);
       const userIds = lands.map(land => land.created_by).filter(id => id);
-      console.log('Extracted user IDs:', userIds);
       if (userIds.length > 0) {
         fetchUserNames(userIds);
       }
@@ -262,6 +265,7 @@ const Dashboard: React.FC = () => {
       land_code: land.land_code,
       land_number: land.land_number,
       size: land.size,
+      palm_area: land.palm_area,
       location: land.location,
       province: land.province,
       district: land.district,
@@ -344,7 +348,9 @@ const Dashboard: React.FC = () => {
     land.land_code.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
     land.location.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
     land.plant_type_name.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    land.category_name.toLowerCase().includes(landSearchTerm.toLowerCase())
+    land.category_name.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
+    getTranslatedPlantType(t, land.plant_type_name, land.plant_type_translation_key).toLowerCase().includes(landSearchTerm.toLowerCase()) ||
+    getTranslatedCategory(t, land.category_name, land.category_translation_key).toLowerCase().includes(landSearchTerm.toLowerCase())
   );
 
   // Debug logging
@@ -614,7 +620,7 @@ const Dashboard: React.FC = () => {
                             className="ml-2"
                           >
                             <Eye className='h-4 w-4 mr-1' />
-                            {t('dashboard.recentLands.view')}
+                            {t('buttons.view')}
                           </Button>
                         </div>
                       </div>
@@ -633,7 +639,7 @@ const Dashboard: React.FC = () => {
               {canManageLands() && (
                 <Button onClick={handleAddLand} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  {t('dashboard.lands.addLand')}
+                  {t('buttons.addLand')}
                 </Button>
               )}
             </div>
@@ -699,25 +705,31 @@ const Dashboard: React.FC = () => {
                         <CardContent>
                           <div className="space-y-2">
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">Size:</span>
-                              <span className="text-sm font-medium">{land.size} m²</span>
+                              <span className="text-sm text-gray-500">{t('labels.size')}</span>
+                              <span className="text-sm font-medium">{formatLandSizeToThaiUnits(land.size, t)}</span>
+                            </div>
+                            {land.palm_area && (
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-500">{t('labels.palmArea')}</span>
+                                <span className="text-sm font-medium">{formatLandSizeToThaiUnits(land.palm_area, t)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-500">{t('labels.plantType')}</span>
+                              <span className="text-sm font-medium">{getTranslatedPlantType(t, land.plant_type_name, land.plant_type_translation_key)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">Plant Type:</span>
-                              <span className="text-sm font-medium">{land.plant_type_name}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">Category:</span>
+                              <span className="text-sm text-gray-500">{t('labels.category')}</span>
                               <div className="flex items-center space-x-2">
                                 <div 
                                   className="w-3 h-3 rounded-full"
                                   style={{ backgroundColor: land.category_color }}
                                 />
-                                <span className="text-sm font-medium">{land.category_name}</span>
+                                <span className="text-sm font-medium">{getTranslatedCategory(t, land.category_name, land.category_translation_key)}</span>
                               </div>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">Next Harvest:</span>
+                              <span className="text-sm text-gray-500">{t('labels.nextHarvest')}</span>
                               <span className="text-sm font-medium">
                                 {new Date(land.next_harvest_date).toLocaleDateString()}
                               </span>
@@ -737,7 +749,7 @@ const Dashboard: React.FC = () => {
                                   className="flex-1 sm:flex-none"
                                 >
                                   <Edit className="h-4 w-4 mr-1" />
-                                  Edit
+                                  {t('buttons.edit')}
                                 </Button>
                               )}
                               <Button 
@@ -750,8 +762,8 @@ const Dashboard: React.FC = () => {
                                 className="flex-1 sm:flex-none"
                               >
                                 <Bell className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">Create Notification</span>
-                                <span className="sm:hidden">Notify</span>
+                                <span className="hidden sm:inline">{t('buttons.createNotification')}</span>
+                                <span className="sm:hidden">{t('buttons.notify')}</span>
                               </Button>
                             </div>
                           </div>
@@ -774,7 +786,7 @@ const Dashboard: React.FC = () => {
                     {canManageLands() && (
                       <Button onClick={handleAddLand}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Your First Land
+                        {t('buttons.addFirstLand')}
                       </Button>
                     )}
                   </div>

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from 'react-i18next';
+import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
+import { formatLandSizeToThaiUnits } from '@/utils/areaCalculator';
 import {MyFormDialog} from "@/components/core/my-form-dialog";
 import CreateNotificationDialog from "@/components/core/CreateNotificationDialog";
 import { Loader } from "@googlemaps/js-api-loader";
@@ -511,32 +513,39 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
           if (marker && infoWindowReady) {
             // Show InfoWindow for the selected land
             // Handle both LandRegistry and extended Land types
-            const plantTypeName = (selectedLand as any).plant_type_name || 'Unknown';
-            const categoryName = (selectedLand as any).category_name || 'Unknown';
+            const plantTypeName = getTranslatedPlantType(t, (selectedLand as any).plant_type_name || 'Unknown', (selectedLand as any).plant_type_translation_key);
+            const categoryName = getTranslatedCategory(t, (selectedLand as any).category_name || 'Unknown', (selectedLand as any).category_translation_key);
             const harvestStatus = (selectedLand as any).harvest_status || 'normal';
             const nextHarvestDate = (selectedLand as any).next_harvest_date || new Date().toISOString();
+            const formattedSize = formatLandSizeToThaiUnits(selectedLand.size, t);
             
             const infoContent = `
               <div style="font-family: Arial, sans-serif; max-width: 300px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                   <div style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #495057; font-size: 12px;">LAND NAME</strong>
+                    <strong style="color: #495057; font-size: 12px;">${t('labels.landName').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.land_name}</div>
                   </div>
                   <div style="background: #e3f2fd; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #1976d2; font-size: 12px;">LAND CODE</strong>
+                    <strong style="color: #1976d2; font-size: 12px;">${t('labels.landCode').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.land_code}</div>
                   </div>
                   <div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #7b1fa2; font-size: 12px;">SIZE</strong>
-                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.size} rais</div>
+                    <strong style="color: #7b1fa2; font-size: 12px;">${t('labels.size').toUpperCase()}</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${formattedSize}</div>
                   </div>
+                  ${selectedLand.palm_area ? `
+                  <div style="background: #e1f5fe; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #0277bd; font-size: 12px;">${t('labels.palmArea').toUpperCase()}</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${formatLandSizeToThaiUnits(selectedLand.palm_area, t)}</div>
+                  </div>
+                  ` : ''}
                   <div style="background: #e8f5e8; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #388e3c; font-size: 12px;">PLANT TYPE</strong>
+                    <strong style="color: #388e3c; font-size: 12px;">${t('labels.plantType').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${plantTypeName}</div>
                   </div>
                   <div style="background: #fff3e0; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #f57c00; font-size: 12px;">CATEGORY</strong>
+                    <strong style="color: #f57c00; font-size: 12px;">${t('labels.category').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${categoryName}</div>
                   </div>
                   <div style="background: #fce4ec; padding: 8px; border-radius: 4px;">
@@ -545,11 +554,11 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
                   </div>
                 </div>
                 <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 8px;">
-                  <strong style="color: #495057; font-size: 12px;">LOCATION</strong>
+                  <strong style="color: #495057; font-size: 12px;">${t('labels.location').toUpperCase()}</strong>
                   <div style="color: #212529; margin-top: 2px;">${selectedLand.location}, ${selectedLand.city}, ${selectedLand.district}, ${selectedLand.province}</div>
                 </div>
                 <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">
-                  <strong style="color: #1976d2; font-size: 12px;">NEXT HARVEST</strong>
+                  <strong style="color: #1976d2; font-size: 12px;">${t('labels.nextHarvest').toUpperCase()}</strong>
                   <div style="color: #212529; margin-top: 2px;">${new Date(nextHarvestDate).toLocaleDateString()}</div>
                 </div>
               </div>
@@ -669,6 +678,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             // Fallback: Create InfoWindow at the center point if no marker found
             const infoWindowReady = ensureInfoWindow();
             if (infoWindowReady) {
+              const formattedSize = formatLandSizeToThaiUnits(selectedLand.size, t);
               const infoContent = `
                 <div style="font-family: Arial, sans-serif; max-width: 300px;">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
@@ -682,8 +692,14 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
                     </div>
                     <div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">
                       <strong style="color: #7b1fa2; font-size: 12px;">SIZE</strong>
-                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.size} rais</div>
+                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${formattedSize}</div>
                     </div>
+                    ${selectedLand.palm_area ? `
+                    <div style="background: #e1f5fe; padding: 8px; border-radius: 4px;">
+                      <strong style="color: #0277bd; font-size: 12px;">PALM AREA</strong>
+                      <div style="color: #212529; font-weight: 600; margin-top: 2px;">${formatLandSizeToThaiUnits(selectedLand.palm_area, t)}</div>
+                    </div>
+                    ` : ''}
                     <div style="background: #e8f5e8; padding: 8px; border-radius: 4px;">
                       <strong style="color: #388e3c; font-size: 12px;">LOCATION</strong>
                       <div style="color: #212529; font-weight: 600; margin-top: 2px;">${selectedLand.location}</div>
@@ -891,33 +907,40 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             // Add click event to marker
             marker.addListener('click', () => {
               // Get extended land data
-              const plantTypeName = (land as any).plant_type_name || 'Unknown';
-              const categoryName = (land as any).category_name || 'Unknown';
+              const plantTypeName = getTranslatedPlantType(t, (land as any).plant_type_name || 'Unknown', (land as any).plant_type_translation_key);
+              const categoryName = getTranslatedCategory(t, (land as any).category_name || 'Unknown', (land as any).category_translation_key);
               const harvestStatus = (land as any).harvest_status || 'normal';
               const nextHarvestDate = (land as any).next_harvest_date || new Date().toISOString();
+              const formattedSize = formatLandSizeToThaiUnits(land.size, t);
               
               // Create InfoWindow content with two-column layout
               const infoContent = `
                 <div style="font-family: Arial, sans-serif; max-width: 300px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                   <div style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #495057; font-size: 12px;">LAND NAME</strong>
+                    <strong style="color: #495057; font-size: 12px;">${t('labels.landName').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${land.land_name}</div>
                   </div>
                   <div style="background: #e3f2fd; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #1976d2; font-size: 12px;">LAND CODE</strong>
+                    <strong style="color: #1976d2; font-size: 12px;">${t('labels.landCode').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${land.land_code}</div>
                   </div>
                   <div style="background: #f3e5f5; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #7b1fa2; font-size: 12px;">SIZE</strong>
-                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${land.size} rais</div>
+                    <strong style="color: #7b1fa2; font-size: 12px;">${t('labels.size').toUpperCase()}</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${formattedSize}</div>
                   </div>
+                  ${land.palm_area ? `
+                  <div style="background: #e1f5fe; padding: 8px; border-radius: 4px;">
+                    <strong style="color: #0277bd; font-size: 12px;">${t('labels.palmArea').toUpperCase()}</strong>
+                    <div style="color: #212529; font-weight: 600; margin-top: 2px;">${formatLandSizeToThaiUnits(land.palm_area, t)}</div>
+                  </div>
+                  ` : ''}
                   <div style="background: #e8f5e8; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #388e3c; font-size: 12px;">PLANT TYPE</strong>
+                    <strong style="color: #388e3c; font-size: 12px;">${t('labels.plantType').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${plantTypeName}</div>
                   </div>
                   <div style="background: #fff3e0; padding: 8px; border-radius: 4px;">
-                    <strong style="color: #f57c00; font-size: 12px;">CATEGORY</strong>
+                    <strong style="color: #f57c00; font-size: 12px;">${t('labels.category').toUpperCase()}</strong>
                     <div style="color: #212529; font-weight: 600; margin-top: 2px;">${categoryName}</div>
                   </div>
                   <div style="background: #fce4ec; padding: 8px; border-radius: 4px;">
@@ -926,11 +949,11 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
                   </div>
                 </div>
                 <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 8px;">
-                  <strong style="color: #495057; font-size: 12px;">LOCATION</strong>
+                  <strong style="color: #495057; font-size: 12px;">${t('labels.location').toUpperCase()}</strong>
                   <div style="color: #212529; margin-top: 2px;">${land.location}, ${land.city}, ${land.district}, ${land.province}</div>
                 </div>
                 <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">
-                  <strong style="color: #1976d2; font-size: 12px;">NEXT HARVEST</strong>
+                  <strong style="color: #1976d2; font-size: 12px;">${t('labels.nextHarvest').toUpperCase()}</strong>
                   <div style="color: #212529; margin-top: 2px;">${new Date(nextHarvestDate).toLocaleDateString()}</div>
                 </div>
               </div>
@@ -1880,7 +1903,9 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
                       border: "1px solid #ccc"
                     }} 
                   />
-                  <span style={{ color: "#374151", fontSize: "10px" }}>{categoryName || 'Unknown'}</span>
+                  <span style={{ color: "#374151", fontSize: "10px" }}>
+                    {getTranslatedCategory(t, categoryName || 'Unknown', (sampleLand as any)?.category_translation_key)}
+                  </span>
                 </div>
               );
             })}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -18,8 +18,13 @@ import PasswordResetPage from '@/pages/PasswordResetPage';
 import GlobalLanguageSwitcher from '@/components/core/GlobalLanguageSwitcher';
 
 function App() {
-  const { isAuthenticated, setLoading, setError } = useAuthStore();
+  const { isAuthenticated, setLoading, tokens, user } = useAuthStore();
   const { t } = useTranslation();
+  
+  // Memoize authentication status to prevent unnecessary re-renders
+  const authStatus = useMemo(() => {
+    return isAuthenticated && tokens?.access_token && user;
+  }, [isAuthenticated, tokens?.access_token, user]);
   
   // Initialize automatic token refresh for active users
   useTokenRefresh();
@@ -49,7 +54,7 @@ function App() {
     };
 
     checkStoredAuth();
-  }, [setLoading, setError]);
+  }, []); // Empty dependency array - this effect should only run once on mount
 
   return (
     <Router>
@@ -60,7 +65,7 @@ function App() {
           <Route 
             path="/login" 
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+              authStatus ? <Navigate to="/dashboard" replace /> : <LoginPage />
             } 
           />
           <Route 

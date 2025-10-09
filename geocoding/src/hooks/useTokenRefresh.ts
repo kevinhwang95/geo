@@ -120,14 +120,7 @@ export const useTokenRefresh = () => {
           console.log('[useTokenRefresh] User is active, proceeding with token refresh');
           const success = await refreshToken();
           if (success) {
-            // Only reschedule if we're still authenticated and have tokens
-            const { tokens: currentTokens, isAuthenticated: stillAuthenticated } = useAuthStore.getState();
-            if (stillAuthenticated && currentTokens?.access_token && !trackerRef.current.refreshTimer) {
-              // Use a longer delay to prevent immediate rescheduling
-              setTimeout(() => {
-                scheduleTokenRefresh().catch(console.error);
-              }, 5000);
-            }
+            console.log('[useTokenRefresh] Token refresh successful, will reschedule on next effect');
           }
         } else {
           console.log('[useTokenRefresh] User inactive or refresh in progress, skipping token refresh - user will be logged out when token expires');
@@ -140,14 +133,7 @@ export const useTokenRefresh = () => {
         console.log('[useTokenRefresh] Token close to expiry and user is active, refreshing immediately');
         const success = await refreshToken();
         if (success) {
-          // Only reschedule if we're still authenticated and have tokens
-          const { tokens: currentTokens, isAuthenticated: stillAuthenticated } = useAuthStore.getState();
-          if (stillAuthenticated && currentTokens?.access_token && !trackerRef.current.refreshTimer) {
-            // Use a longer delay to prevent immediate rescheduling
-            setTimeout(() => {
-              scheduleTokenRefresh().catch(console.error);
-            }, 5000);
-          }
+          console.log('[useTokenRefresh] Token refresh successful, will reschedule on next effect');
         }
       } else {
         console.log('[useTokenRefresh] Token close to expiry but user is inactive, will be logged out when token expires');
@@ -215,14 +201,12 @@ export const useTokenRefresh = () => {
               console.log('[useTokenRefresh] Token close to expiry on page visibility, refreshing');
               const success = await refreshToken();
               if (success) {
-                // Use a longer delay to prevent immediate rescheduling
-                setTimeout(() => {
-                  scheduleTokenRefresh().catch(console.error);
-                }, 5000);
+                console.log('[useTokenRefresh] Token refresh successful on visibility change');
               }
             } else {
               // Only schedule if no timer exists
               if (!trackerRef.current.refreshTimer) {
+                console.log('[useTokenRefresh] Scheduling token refresh on visibility change');
                 scheduleTokenRefresh().catch(console.error);
               }
             }

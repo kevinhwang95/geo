@@ -18,11 +18,7 @@
 .env.production.local
 .env
 .env.production
-
-.env
-.env.local
 .env.development
-.env.production
 
 # Logs
 logs

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Lock } from 'lucide-rea
 import axiosClient from '@/api/axiosClient';
 
 const PasswordResetPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -34,13 +36,13 @@ const PasswordResetPage: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      setError('No reset token provided');
+      setError(t('passwordReset.errors.noToken'));
       setLoading(false);
       return;
     }
 
     validateToken();
-  }, [token]);
+  }, [token, t]);
 
   const validateToken = async () => {
     try {
@@ -52,10 +54,10 @@ const PasswordResetPage: React.FC = () => {
         setUser(response.data.user);
         setError(null);
       } else {
-        setError(response.data.error || 'Invalid or expired reset token');
+        setError(response.data.error || t('passwordReset.errors.invalidToken'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to validate reset token');
+      setError(err.response?.data?.error || t('passwordReset.errors.validationFailed'));
     } finally {
       setLoading(false);
     }
@@ -65,12 +67,12 @@ const PasswordResetPage: React.FC = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwordReset.errors.passwordsDontMatch'));
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError(t('passwordReset.errors.passwordTooShort'));
       return;
     }
 
@@ -89,10 +91,10 @@ const PasswordResetPage: React.FC = () => {
           navigate('/login');
         }, 3000);
       } else {
-        setError(response.data.error || 'Failed to reset password');
+        setError(response.data.error || t('passwordReset.errors.resetFailed'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to reset password');
+      setError(err.response?.data?.error || t('passwordReset.errors.resetFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +115,7 @@ const PasswordResetPage: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-center space-x-2">
               <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Validating reset token...</span>
+              <span>{t('passwordReset.validatingToken')}</span>
             </div>
           </CardContent>
         </Card>
@@ -129,9 +131,9 @@ const PasswordResetPage: React.FC = () => {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle className="text-2xl text-green-600">Password Reset Successfully!</CardTitle>
+            <CardTitle className="text-2xl text-green-600">{t('passwordReset.success.title')}</CardTitle>
             <CardDescription>
-              Your password has been reset successfully. You will be redirected to the login page shortly.
+              {t('passwordReset.success.message')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -147,14 +149,14 @@ const PasswordResetPage: React.FC = () => {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
               <AlertCircle className="h-6 w-6 text-red-600" />
             </div>
-            <CardTitle className="text-2xl text-red-600">Invalid Reset Link</CardTitle>
+            <CardTitle className="text-2xl text-red-600">{t('passwordReset.invalidLink.title')}</CardTitle>
             <CardDescription>
               {error}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={() => navigate('/login')} variant="outline">
-              Back to Login
+              {t('passwordReset.invalidLink.backToLogin')}
             </Button>
           </CardContent>
         </Card>
@@ -169,9 +171,9 @@ const PasswordResetPage: React.FC = () => {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
             <Lock className="h-6 w-6 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl font-bold">Reset Your Password</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('passwordReset.title')}</CardTitle>
           <CardDescription>
-            Hello {user?.first_name}! Please enter your new password below.
+            {t('passwordReset.subtitle', { name: user?.first_name })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -184,7 +186,7 @@ const PasswordResetPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('passwordReset.emailLabel')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -195,7 +197,7 @@ const PasswordResetPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
+              <Label htmlFor="password">{t('passwordReset.newPasswordLabel')}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -203,7 +205,7 @@ const PasswordResetPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder="Enter your new password"
+                  placeholder={t('passwordReset.newPasswordPlaceholder')}
                   required
                   minLength={8}
                 />
@@ -224,7 +226,7 @@ const PasswordResetPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">{t('passwordReset.confirmPasswordLabel')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -232,7 +234,7 @@ const PasswordResetPage: React.FC = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  placeholder="Confirm your new password"
+                  placeholder={t('passwordReset.confirmPasswordPlaceholder')}
                   required
                   minLength={8}
                 />
@@ -253,10 +255,10 @@ const PasswordResetPage: React.FC = () => {
             </div>
 
             <div className="text-sm text-gray-600">
-              <p>Password requirements:</p>
+              <p>{t('passwordReset.passwordRequirements')}</p>
               <ul className="list-disc list-inside mt-1 space-y-1">
-                <li>At least 8 characters long</li>
-                <li>Use a combination of letters, numbers, and symbols</li>
+                <li>{t('passwordReset.requirement1')}</li>
+                <li>{t('passwordReset.requirement2')}</li>
               </ul>
             </div>
 
@@ -268,16 +270,16 @@ const PasswordResetPage: React.FC = () => {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Resetting password...
+                  {t('passwordReset.resetting')}
                 </>
               ) : (
-                'Reset Password'
+                t('passwordReset.resetButton')
               )}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm text-gray-600">
-            <p>This reset link will expire in 24 hours for security reasons.</p>
+            <p>{t('passwordReset.expiryNotice')}</p>
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import axiosClient from '@/api/axiosClient';
 
 const PasswordSetupPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -166,9 +168,9 @@ const PasswordSetupPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Set Up Your Password</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('passwordSetup.title')}</CardTitle>
           <CardDescription>
-            Welcome {user?.first_name}! Please set up your password to complete your account setup.
+            {t('passwordSetup.subtitle', { name: user?.first_name })}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -69,7 +69,8 @@
     "admin": {
       "title": "ผู้ดูแลระบบ",
       "userManagement": "จัดการผู้ใช้",
-      "menuManagement": "จัดการเมนู"
+      "menuManagement": "จัดการเมนู",
+      "emailTemplates": "เทมเพลตอีเมล"
     }
   },
   "pages": {
@@ -154,6 +155,70 @@
       "sendFailed": "ส่งอีเมลรีเซ็ตไม่สำเร็จ"
     }
   },
+  "passwordReset": {
+    "title": "รีเซ็ตรหัสผ่านของคุณ",
+    "subtitle": "สวัสดี {{name}}! กรุณากรอกรหัสผ่านใหม่ของคุณด้านล่าง",
+    "validatingToken": "กำลังตรวจสอบโทเค็นรีเซ็ต...",
+    "emailLabel": "อีเมล",
+    "newPasswordLabel": "รหัสผ่านใหม่",
+    "confirmPasswordLabel": "ยืนยันรหัสผ่านใหม่",
+    "newPasswordPlaceholder": "กรอกรหัสผ่านใหม่ของคุณ",
+    "confirmPasswordPlaceholder": "ยืนยันรหัสผ่านใหม่ของคุณ",
+    "passwordRequirements": "ข้อกำหนดรหัสผ่าน:",
+    "requirement1": "อย่างน้อย 8 ตัวอักษร",
+    "requirement2": "ใช้การผสมผสานของตัวอักษร ตัวเลข และสัญลักษณ์",
+    "resetButton": "รีเซ็ตรหัสผ่าน",
+    "resetting": "กำลังรีเซ็ตรหัสผ่าน...",
+    "success": {
+      "title": "รีเซ็ตรหัสผ่านสำเร็จ!",
+      "message": "รหัสผ่านของคุณได้รับการรีเซ็ตเรียบร้อยแล้ว คุณจะถูกนำไปยังหน้าล็อกอินในไม่ช้า"
+    },
+    "invalidLink": {
+      "title": "ลิงก์รีเซ็ตไม่ถูกต้อง",
+      "backToLogin": "กลับไปล็อกอิน"
+    },
+    "expiryNotice": "ลิงก์รีเซ็ตนี้จะหมดอายุใน 24 ชั่วโมงเพื่อความปลอดภัย",
+    "errors": {
+      "noToken": "ไม่พบโทเค็นรีเซ็ต",
+      "invalidToken": "โทเค็นรีเซ็ตไม่ถูกต้องหรือหมดอายุ",
+      "validationFailed": "ไม่สามารถตรวจสอบโทเค็นรีเซ็ตได้",
+      "passwordsDontMatch": "รหัสผ่านไม่ตรงกัน",
+      "passwordTooShort": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+      "resetFailed": "ไม่สามารถรีเซ็ตรหัสผ่านได้"
+    }
+  },
+  "passwordSetup": {
+    "title": "ตั้งรหัสผ่านของคุณ",
+    "subtitle": "สวัสดี {{name}}! กรุณาตั้งรหัสผ่านของคุณเพื่อทำการลงทะเบียนให้เสร็จสมบูรณ์",
+    "validatingToken": "กำลังตรวจสอบโทเค็นตั้งค่า...",
+    "emailLabel": "อีเมล",
+    "newPasswordLabel": "รหัสผ่านใหม่",
+    "confirmPasswordLabel": "ยืนยันรหัสผ่านใหม่",
+    "newPasswordPlaceholder": "กรอกรหัสผ่านใหม่ของคุณ",
+    "confirmPasswordPlaceholder": "ยืนยันรหัสผ่านใหม่ของคุณ",
+    "passwordRequirements": "ข้อกำหนดรหัสผ่าน:",
+    "requirement1": "อย่างน้อย 8 ตัวอักษร",
+    "requirement2": "ใช้การผสมผสานของตัวอักษร ตัวเลข และสัญลักษณ์",
+    "setupButton": "ตั้งรหัสผ่าน",
+    "settingUp": "กำลังตั้งรหัสผ่าน...",
+    "success": {
+      "title": "ตั้งรหัสผ่านสำเร็จ!",
+      "message": "รหัสผ่านของคุณได้รับการตั้งเรียบร้อยแล้ว คุณจะถูกนำไปยังหน้าล็อกอินในไม่ช้า"
+    },
+    "invalidLink": {
+      "title": "ลิงก์ตั้งค่าไม่ถูกต้อง",
+      "backToLogin": "กลับไปล็อกอิน"
+    },
+    "expiryNotice": "ลิงก์ตั้งค่านี้จะหมดอายุใน 24 ชั่วโมงเพื่อความปลอดภัย",
+    "errors": {
+      "noToken": "ไม่พบโทเค็นตั้งค่า",
+      "invalidToken": "โทเค็นตั้งค่าไม่ถูกต้องหรือหมดอายุ",
+      "validationFailed": "ไม่สามารถตรวจสอบโทเค็นตั้งค่าได้",
+      "passwordsDontMatch": "รหัสผ่านไม่ตรงกัน",
+      "passwordTooShort": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+      "setupFailed": "ไม่สามารถตั้งรหัสผ่านได้"
+    }
+  },
   "dashboard": {
     "header": {
       "logoAlt": "โลโก้ช็อกดี",
@@ -220,7 +285,7 @@
       "edit": "แก้ไข",
       "createNotification": "สร้างการแจ้งเตือน",
       "notify": "แจ้งเตือน",
-      "wa": "ไร่",
+      "rai": "ไร่",
       "ngan": "งาน",
       "tarangWa": "ตารางวา"
     },

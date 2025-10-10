@@ -15,7 +15,7 @@ class EmailService
 
     public function __construct()
     {
-        $this->db = \App\Database::getInstance()->getConnection();
+        $this->db = \App\Database::getInstance();
         
         // Load email configuration from environment with fallbacks
         $this->apiKey = $this->getEnvVar('RESEND_API_KEY', '');
@@ -47,14 +47,32 @@ class EmailService
     /**
      * Send password setup email to new user using Resend API
      */
-    public function sendPasswordSetupEmail($userEmail, $userName, $token)
+    public function sendPasswordSetupEmail($userEmail, $userName, $token, $languageCode = 'en')
     {
         $setupUrl = $this->appUrl . '/setup-password?token=' . $token;
         
-        $subject = 'Welcome to Chokdee App - Set Up Your Password';
+        // Get template from database with language preference
+        $template = $this->getEmailTemplate('password_setup', $languageCode);
+        if (!$template) {
+            error_log("EmailService: Password setup template not found for language '$languageCode', using fallback");
+            return $this->sendPasswordSetupEmailFallback($userEmail, $userName, $token);
+        }
         
-        $htmlBody = $this->getPasswordSetupEmailTemplate($userName, $setupUrl);
-        $textBody = $this->getPasswordSetupEmailTextTemplate($userName, $setupUrl);
+        // Replace template variables
+        $subject = $this->replaceTemplateVariables($template['subject'], [
+            'user_name' => $userName,
+            'setup_url' => $setupUrl
+        ]);
+        
+        $htmlBody = $this->replaceTemplateVariables($template['html_content'], [
+            'user_name' => $userName,
+            'setup_url' => $setupUrl
+        ]);
+        
+        $textBody = $this->replaceTemplateVariables($template['text_content'], [
+            'user_name' => $userName,
+            'setup_url' => $setupUrl
+        ]);
         
         return $this->sendEmailViaResend($userEmail, $userName, $subject, $htmlBody, $textBody);
     }
@@ -62,14 +80,32 @@ class EmailService
     /**
      * Send password reset email using Resend API
      */
-    public function sendPasswordResetEmail($userEmail, $userName, $token)
+    public function sendPasswordResetEmail($userEmail, $userName, $token, $languageCode = 'en')
     {
         $resetUrl = $this->appUrl . '/reset-password?token=' . $token;
         
-        $subject = 'Reset Your Password - Chokdee App';
+        // Get template from database with language preference
+        $template = $this->getEmailTemplate('password_reset', $languageCode);
+        if (!$template) {
+            error_log("EmailService: Password reset template not found for language '$languageCode', using fallback");
+            return $this->sendPasswordResetEmailFallback($userEmail, $userName, $token);
+        }
         
-        $htmlBody = $this->getPasswordResetEmailTemplate($userName, $resetUrl);
-        $textBody = $this->getPasswordResetEmailTextTemplate($userName, $resetUrl);
+        // Replace template variables
+        $subject = $this->replaceTemplateVariables($template['subject'], [
+            'user_name' => $userName,
+            'reset_url' => $resetUrl
+        ]);
+        
+        $htmlBody = $this->replaceTemplateVariables($template['html_content'], [
+            'user_name' => $userName,
+            'reset_url' => $resetUrl
+        ]);
+        
+        $textBody = $this->replaceTemplateVariables($template['text_content'], [
+            'user_name' => $userName,
+            'reset_url' => $resetUrl
+        ]);
         
         return $this->sendEmailViaResend($userEmail, $userName, $subject, $htmlBody, $textBody);
     }
@@ -101,7 +137,16 @@ class EmailService
 
             error_log("EmailService: Sending to: " . $toEmail);
             error_log("EmailService: From: " . $this->fromName . ' <' . $this->fromEmail . '>');
-            error_log("EmailService: API Key: " . substr($this->apiKey, 0, 10) . "...");
+            
+            // Encode data to JSON with proper UTF-8 support
+            $jsonPayload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($jsonPayload === false) {
+                error_log("EmailService: JSON encoding failed: " . json_last_error_msg());
+                return [
+                    'success' => false,
+                    'message' => 'Email content encoding error'
+                ];
+            }
 
             $ch = curl_init();
             if (!$ch) {
@@ -113,7 +158,7 @@ class EmailService
             }
             curl_setopt($ch, CURLOPT_URL, 'https://api.resend.com/emails');
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $this->apiKey,
                 'Content-Type: application/json'
@@ -235,6 +280,285 @@ class EmailService
     }
 
     /**
+     * Get email template from database
+     */
+    private function getEmailTemplate($templateKey, $languageCode = 'en')
+    {
+        try {
+            $sql = "
+                SELECT subject, html_content, text_content, variables
+                FROM email_templates 
+                WHERE template_key = :template_key AND language_code = :language_code AND is_active = 1
+                ORDER BY is_base_template DESC, created_at DESC
+                LIMIT 1
+            ";
+            
+            $template = $this->db->fetchOne($sql, [
+                'template_key' => $templateKey,
+                'language_code' => $languageCode
+            ]);
+            
+            if ($template && $template['variables']) {
+                $template['variables'] = json_decode($template['variables'], true);
+            }
+            
+            return $template;
+        } catch (Exception $e) {
+            error_log("EmailService::getEmailTemplate error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Replace template variables with actual values
+     */
+    private function replaceTemplateVariables($content, $variables)
+    {
+        foreach ($variables as $key => $value) {
+            $placeholder = '{{' . $key . '}}';
+            $content = str_replace($placeholder, $value, $content);
+        }
+        return $content;
+    }
+
+    /**
+     * Fallback password setup email (original hardcoded version)
+     */
+    private function sendPasswordSetupEmailFallback($userEmail, $userName, $token)
+    {
+        $setupUrl = $this->appUrl . '/setup-password?token=' . $token;
+        $subject = 'Welcome to Chokdee App - Set Up Your Password';
+        
+        $htmlBody = $this->getPasswordSetupEmailTemplate($userName, $setupUrl);
+        $textBody = $this->getPasswordSetupEmailTextTemplate($userName, $setupUrl);
+        
+        return $this->sendEmailViaResend($userEmail, $userName, $subject, $htmlBody, $textBody);
+    }
+
+    /**
+     * Clean HTML content to ensure it's valid for JSON encoding
+     */
+    private function cleanHtmlForJson($html)
+    {
+        // Ensure the content is properly UTF-8 encoded
+        if (!mb_check_encoding($html, 'UTF-8')) {
+            $html = mb_convert_encoding($html, 'UTF-8', 'auto');
+        }
+        
+        // Remove any null bytes or control characters that could break JSON
+        $html = str_replace(["\0", "\x00"], '', $html);
+        
+        // Remove control characters except newlines and tabs
+        $html = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $html);
+        
+        return $html;
+    }
+
+    /**
+     * Format release notes with proper HTML line breaks and styling
+     */
+    public function formatReleaseNotes($releaseNotes)
+    {
+        // Ensure input is properly UTF-8 encoded
+        if (!mb_check_encoding($releaseNotes, 'UTF-8')) {
+            $releaseNotes = mb_convert_encoding($releaseNotes, 'UTF-8', 'auto');
+        }
+        
+        // If it's already HTML, return as is
+        if (strip_tags($releaseNotes) !== $releaseNotes) {
+            return $releaseNotes;
+        }
+        
+        // Convert plain text to HTML with proper formatting
+        // Manually escape HTML characters to preserve UTF-8
+        $formatted = str_replace(['&', '<', '>', '"', "'"], ['&amp;', '&lt;', '&gt;', '&quot;', '&#39;'], $releaseNotes);
+        
+        // Convert line breaks to HTML
+        $formatted = nl2br($formatted);
+        
+        // Convert bullet points (•) to proper HTML lists
+        $lines = explode('<br />', $formatted);
+        $formattedLines = [];
+        $inList = false;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Check if line starts with bullet point
+            if (preg_match('/^•\s*(.+)$/u', $line, $matches)) {
+                if (!$inList) {
+                    $formattedLines[] = '<ul style="margin: 10px 0; padding-left: 20px;">';
+                    $inList = true;
+                }
+                $formattedLines[] = '<li style="margin: 5px 0;">' . $matches[1] . '</li>';
+            } else {
+                if ($inList) {
+                    $formattedLines[] = '</ul>';
+                    $inList = false;
+                }
+                
+                // Handle section headers (🎉, ✨, 🔧, 🌍, 🏞️)
+                if (preg_match('/^([🎉✨🔧🌍🏞️])\s*(.+)$/u', $line, $matches)) {
+                    $formattedLines[] = '<h4 style="margin: 20px 0 10px 0; color: #059669; font-size: 16px;">' . $matches[1] . ' ' . $matches[2] . '</h4>';
+                } else {
+                    $formattedLines[] = '<p style="margin: 10px 0;">' . $line . '</p>';
+                }
+            }
+        }
+        
+        if ($inList) {
+            $formattedLines[] = '</ul>';
+        }
+        
+        return implode("\n", $formattedLines);
+    }
+
+    /**
+     * Get hardcoded release notification email template (fallback)
+     */
+    private function getReleaseNotificationEmailTemplate($userName, $variables)
+    {
+        $version = $variables['version'] ?? 'Unknown';
+        $releaseNotes = $variables['release_notes'] ?? 'No release notes provided.';
+        $releaseDate = $variables['release_date'] ?? date('Y-m-d');
+        $releaseType = $variables['release_type'] ?? 'Update';
+
+        // Format the release notes properly
+        $formattedReleaseNotes = $this->formatReleaseNotes($releaseNotes);
+        // Clean the formatted HTML to ensure it's valid for JSON encoding
+        $formattedReleaseNotes = $this->cleanHtmlForJson($formattedReleaseNotes);
+
+        return '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>New Release - Chokdee App</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+                .version-badge { display: inline-block; background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-bottom: 20px; }
+                .release-notes { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669; }
+                .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>New Release Available!</h1>
+                    <div class="version-badge">Version ' . htmlspecialchars($version) . '</div>
+                </div>
+                <div class="content">
+                    <h2>Hello ' . htmlspecialchars($userName) . ',</h2>
+                    <p>We are excited to announce the release of <strong>Chokdee App ' . htmlspecialchars($version) . '</strong>! This update brings several improvements and new features to enhance your experience.</p>
+                    
+                    <div class="release-notes">
+                        <h3 style="margin-top: 0; color: #059669;">What\'s New in ' . htmlspecialchars($version) . ':</h3>
+                        ' . $formattedReleaseNotes . '
+                    </div>
+                    
+                    <p><strong>Release Date:</strong> ' . htmlspecialchars($releaseDate) . '</p>
+                    <p><strong>Release Type:</strong> ' . htmlspecialchars($releaseType) . '</p>
+                    
+                    <p>We encourage all administrators to review the changes and update your systems accordingly.</p>
+                </div>
+                <div class="footer">
+                    <p>This notification was sent to all system administrators.</p>
+                    <p>© 2025 Chokdee App. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>';
+    }
+
+    /**
+     * Get hardcoded release notification email text template (fallback)
+     */
+    private function getReleaseNotificationEmailTextTemplate($userName, $variables)
+    {
+        $version = $variables['version'] ?? 'Unknown';
+        $releaseNotes = strip_tags($variables['release_notes'] ?? 'No release notes provided.');
+        $releaseDate = $variables['release_date'] ?? date('Y-m-d');
+        $releaseType = $variables['release_type'] ?? 'Update';
+
+        return "New Release Available - Chokdee App $version
+
+Hello $userName,
+
+We are excited to announce the release of Chokdee App $version!
+
+What's New:
+$releaseNotes
+
+Release Date: $releaseDate
+Release Type: $releaseType
+
+Please review the changes and update your systems accordingly.
+
+This notification was sent to all system administrators.
+
+© 2025 Chokdee App. All rights reserved.";
+    }
+
+    /**
+     * Fallback password reset email (original hardcoded version)
+     */
+    private function sendPasswordResetEmailFallback($userEmail, $userName, $token)
+    {
+        $resetUrl = $this->appUrl . '/reset-password?token=' . $token;
+        $subject = 'Reset Your Password - Chokdee App';
+        
+        $htmlBody = $this->getPasswordResetEmailTemplate($userName, $resetUrl);
+        $textBody = $this->getPasswordResetEmailTextTemplate($userName, $resetUrl);
+        
+        return $this->sendEmailViaResend($userEmail, $userName, $subject, $htmlBody, $textBody);
+    }
+
+    /**
+     * Send release notification email to admin users
+     */
+    public function sendReleaseNotificationEmail($userEmail, $userName, $variables, $languageCode = 'en')
+    {
+        // Get template from database with language preference
+        $template = $this->getEmailTemplate('release_notification', $languageCode);
+        if (!$template) {
+            error_log("EmailService: Release notification template not found for language '$languageCode', using fallback");
+            return $this->sendReleaseNotificationEmailFallback($userEmail, $userName, $variables);
+        }
+        
+        // Format the release notes before replacing template variables
+        $formattedVariables = $variables;
+        if (isset($formattedVariables['release_notes'])) {
+            $formattedReleaseNotes = $this->formatReleaseNotes($formattedVariables['release_notes']);
+            // Clean the formatted HTML to ensure it's valid for JSON encoding
+            $formattedVariables['release_notes'] = $this->cleanHtmlForJson($formattedReleaseNotes);
+        }
+        
+        // Replace template variables
+        $subject = $this->replaceTemplateVariables($template['subject'], $formattedVariables);
+        $htmlBody = $this->replaceTemplateVariables($template['html_content'], $formattedVariables);
+        $textBody = $this->replaceTemplateVariables($template['text_content'], $formattedVariables);
+        
+        return $this->sendEmailViaResend($userEmail, $userName, $subject, $htmlBody, $textBody);
+    }
+
+    /**
+     * Fallback release notification email (if template not found)
+     */
+    private function sendReleaseNotificationEmailFallback($userEmail, $userName, $variables)
+    {
+        $subject = 'New Release Available - Chokdee App v' . ($variables['version'] ?? 'Unknown');
+        
+        $htmlBody = $this->getReleaseNotificationEmailTemplate($userName, $variables);
+        $textBody = $this->getReleaseNotificationEmailTextTemplate($userName, $variables);
+        
+        return $this->sendEmailViaResend($userEmail, $userName, $subject, $htmlBody, $textBody);
+    }
+
+    /**
      * Generate secure token for password setup/reset
      */
     public function generateSecureToken($userId, $type = 'password_setup')
@@ -244,9 +568,13 @@ class EmailService
         
         try {
             // Store token in database
-            $query = "INSERT INTO password_tokens (user_id, token, type, expires_at, created_at) VALUES (?, ?, ?, ?, NOW())";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([$userId, $token, $type, $expiresAt]);
+            $sql = "INSERT INTO password_tokens (user_id, token, type, expires_at, created_at) VALUES (:user_id, :token, :type, :expires_at, NOW())";
+            $this->db->query($sql, [
+                'user_id' => $userId,
+                'token' => $token,
+                'type' => $type,
+                'expires_at' => $expiresAt
+            ]);
             
             return $token;
         } catch (Exception $e) {
@@ -261,16 +589,14 @@ class EmailService
     public function validateToken($token)
     {
         try {
-            $query = "
+            $sql = "
                 SELECT pt.*, u.email, u.first_name, u.last_name 
                 FROM password_tokens pt
                 JOIN users u ON pt.user_id = u.id
-                WHERE pt.token = ? AND pt.expires_at > NOW() AND pt.used = 0
+                WHERE pt.token = :token AND pt.expires_at > NOW() AND pt.used = 0
             ";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([$token]);
             
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            return $this->db->fetchOne($sql, ['token' => $token]);
         } catch (Exception $e) {
             error_log("Token validation error: " . $e->getMessage());
             return false;
@@ -283,9 +609,8 @@ class EmailService
     public function markTokenAsUsed($token)
     {
         try {
-            $query = "UPDATE password_tokens SET used = 1, used_at = NOW() WHERE token = ?";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([$token]);
+            $sql = "UPDATE password_tokens SET used = 1, used_at = NOW() WHERE token = :token";
+            $this->db->query($sql, ['token' => $token]);
             
             return true;
         } catch (Exception $e) {

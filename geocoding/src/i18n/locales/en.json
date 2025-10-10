@@ -69,7 +69,8 @@
     "admin": {
       "title": "Admin",
       "userManagement": "User Management",
-      "menuManagement": "Menu Management"
+      "menuManagement": "Menu Management",
+      "emailTemplates": "Email Templates"
     }
   },
   "pages": {
@@ -154,6 +155,70 @@
       "sendFailed": "Failed to send reset email"
     }
   },
+  "passwordReset": {
+    "title": "Reset Your Password",
+    "subtitle": "Hello {{name}}! Please enter your new password below.",
+    "validatingToken": "Validating reset token...",
+    "emailLabel": "Email",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "newPasswordPlaceholder": "Enter your new password",
+    "confirmPasswordPlaceholder": "Confirm your new password",
+    "passwordRequirements": "Password requirements:",
+    "requirement1": "At least 8 characters long",
+    "requirement2": "Use a combination of letters, numbers, and symbols",
+    "resetButton": "Reset Password",
+    "resetting": "Resetting password...",
+    "success": {
+      "title": "Password Reset Successfully!",
+      "message": "Your password has been reset successfully. You will be redirected to the login page shortly."
+    },
+    "invalidLink": {
+      "title": "Invalid Reset Link",
+      "backToLogin": "Back to Login"
+    },
+    "expiryNotice": "This reset link will expire in 24 hours for security reasons.",
+    "errors": {
+      "noToken": "No reset token provided",
+      "invalidToken": "Invalid or expired reset token",
+      "validationFailed": "Failed to validate reset token",
+      "passwordsDontMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters long",
+      "resetFailed": "Failed to reset password"
+    }
+  },
+  "passwordSetup": {
+    "title": "Set Up Your Password",
+    "subtitle": "Hello {{name}}! Please set up your password to complete your registration.",
+    "validatingToken": "Validating setup token...",
+    "emailLabel": "Email",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "newPasswordPlaceholder": "Enter your new password",
+    "confirmPasswordPlaceholder": "Confirm your new password",
+    "passwordRequirements": "Password requirements:",
+    "requirement1": "At least 8 characters long",
+    "requirement2": "Use a combination of letters, numbers, and symbols",
+    "setupButton": "Set Up Password",
+    "settingUp": "Setting up password...",
+    "success": {
+      "title": "Password Set Up Successfully!",
+      "message": "Your password has been set up successfully. You will be redirected to the login page shortly."
+    },
+    "invalidLink": {
+      "title": "Invalid Setup Link",
+      "backToLogin": "Back to Login"
+    },
+    "expiryNotice": "This setup link will expire in 24 hours for security reasons.",
+    "errors": {
+      "noToken": "No setup token provided",
+      "invalidToken": "Invalid or expired setup token",
+      "validationFailed": "Failed to validate setup token",
+      "passwordsDontMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters long",
+      "setupFailed": "Failed to set up password"
+    }
+  },
   "dashboard": {
     "header": {
       "logoAlt": "Chokdee Logo",
@@ -220,7 +285,7 @@
       "edit": "Edit",
       "createNotification": "Create Notification",
       "notify": "Notify",
-      "wa": "wa",
+      "rai": "rai",
       "ngan": "ngan",
       "tarangWa": "tarangWa"
     },

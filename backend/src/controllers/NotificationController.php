@@ -2,419 +2,636 @@
 
 namespace App\Controllers;
 
-use App\Auth;
 use App\Database;
-use Exception;
+use App\Auth;
 
 class NotificationController
 {
     private $db;
+    private $emailService;
 
     public function __construct()
     {
         $this->db = Database::getInstance();
+        $this->emailService = new \App\Services\EmailService();
     }
 
+    /**
+     * Get notifications (index method for API)
+     */
     public function index()
     {
-        $user = Auth::requireAuth();
-        
-        $page = max(1, intval($_GET['page'] ?? 1));
-        $limit = min(50, max(10, intval($_GET['limit'] ?? 20)));
-        $offset = ($page - 1) * $limit;
-        
-        // Get filter parameters
-        $type = $_GET['type'] ?? 'all';
-        $priority = $_GET['priority'] ?? 'all';
-        
-        // Build WHERE conditions
-        $whereConditions = ["n.is_dismissed = 0"];
-        $params = [];
-        
-        // Add type filter
-        if ($type !== 'all') {
-            $whereConditions[] = "n.type = ?";
-            $params[] = $type;
-        }
-        
-        // Add priority filter
-        if ($priority !== 'all') {
-            $whereConditions[] = "n.priority = ?";
-            $params[] = $priority;
-        }
-        
-        $whereClause = implode(' AND ', $whereConditions);
-        
-        // Add pagination parameters
-        $params[] = $limit;
-        $params[] = $offset;
-        
-        $stmt = $this->db->query("
-            SELECT 
-                n.*,
-                l.land_name,
-                l.land_code,
-                l.next_harvest_date,
-                u.first_name as creator_first_name,
-                u.last_name as creator_last_name,
-                CASE 
-                    WHEN l.next_harvest_date <= CURDATE() THEN 'overdue'
-                    WHEN l.next_harvest_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'due_soon'
-                    ELSE 'normal'
-                END as harvest_status
-            FROM notifications n
-            JOIN lands l ON n.land_id = l.id
-            LEFT JOIN users u ON n.user_id = u.id
-            WHERE {$whereClause}
-            ORDER BY n.created_at DESC
-            LIMIT ? OFFSET ?
-        ", $params);
-        $notifications = $stmt->fetchAll();
-        
-        // Get photos for each notification
-        $notificationsWithPhotos = [];
-        foreach ($notifications as $notification) {
-            $photoStmt = $this->db->query("
-                SELECT id, file_path, file_name, file_size, mime_type, uploaded_at
-                FROM photos
-                WHERE notification_id = ?
-                ORDER BY uploaded_at ASC
-            ", [$notification['id']]);
+        try {
+            Auth::requireAuth();
             
-            $photos = $photoStmt->fetchAll();
-            $notification['photos'] = $photos;
-            $notificationsWithPhotos[] = $notification;
-        }
-        
-        // Get total count with same filters
-        $countParams = [];
-        $countWhereConditions = ["is_dismissed = 0"];
-        
-        if ($type !== 'all') {
-            $countWhereConditions[] = "type = ?";
-            $countParams[] = $type;
-        }
-        
-        if ($priority !== 'all') {
-            $countWhereConditions[] = "priority = ?";
-            $countParams[] = $priority;
-        }
-        
-        $countWhereClause = implode(' AND ', $countWhereConditions);
-        
-        $stmt = $this->db->query("
-            SELECT COUNT(*) FROM notifications 
-            WHERE {$countWhereClause}
-        ", $countParams);
-        $total = $stmt->fetchColumn();
-        
-        echo json_encode([
-            'success' => true,
-            'data' => $notificationsWithPhotos,
-            'pagination' => [
-                'page' => $page,
-                'limit' => $limit,
-                'total' => $total,
-                'pages' => ceil($total / $limit)
-            ]
-        ]);
-    }
-
-    public function markAsRead($id)
-    {
-        $user = Auth::requireAuth();
-        
-        $stmt = $this->db->query("
-            UPDATE notifications 
-            SET is_read = 1 
-            WHERE id = ? AND user_id = ?
-        ", [$id, $user['user_id']]);
-        
-        if ($stmt->rowCount() === 0) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Notification not found']);
-            return;
-        }
-        
-        echo json_encode(['success' => true, 'message' => 'Notification marked as read']);
-    }
-
-    public function dismiss($id)
-    {
-        $user = Auth::requireAuth();
-        
-        $stmt = $this->db->query("
-            UPDATE notifications 
-            SET is_dismissed = 1, dismissed_by = ?, dismissed_at = NOW()
-            WHERE id = ?
-        ", [$user['user_id'], $id]);
-        
-        if ($stmt->rowCount() === 0) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Notification not found']);
-            return;
-        }
-        
-        echo json_encode(['success' => true, 'message' => 'Notification dismissed']);
-    }
-
-    public function dismissAll()
-    {
-        $user = Auth::requireAuth();
-        
-        $stmt = $this->db->query("
-            UPDATE notifications 
-            SET is_dismissed = 1, dismissed_by = ?, dismissed_at = NOW()
-            WHERE is_dismissed = 0
-        ", [$user['user_id']]);
-        
-        echo json_encode([
-            'success' => true, 
-            'message' => 'All notifications dismissed',
-            'count' => $stmt->rowCount()
-        ]);
-    }
-
-    public function getUnreadCount()
-    {
-        $user = Auth::requireAuth();
-        
-        $stmt = $this->db->query("
-            SELECT COUNT(*) FROM notifications 
-            WHERE user_id = ? AND is_read = 0 AND is_dismissed = 0
-        ", [$user['user_id']]);
-        $count = $stmt->fetchColumn();
-        
-        echo json_encode(['success' => true, 'unread_count' => $count]);
-    }
-
-    public function createHarvestNotifications()
-    {
-        $user = Auth::requireAuth();
-        
-        // Only admins and contributors can create harvest notifications
-        if (!in_array($user['role'], ['admin', 'contributor'])) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Insufficient permissions']);
-            return;
-        }
-        
-        $landId = $_GET['land_id'] ?? null;
-        
-        $sql = "
-            SELECT l.id, l.land_name, l.land_code, l.next_harvest_date, l.created_by
-            FROM lands l
-            WHERE l.is_active = 1
-        ";
-        
-        $params = [];
-        if ($landId) {
-            $sql .= " AND l.id = ?";
-            $params[] = $landId;
-        }
-        
-        $stmt = $this->db->query($sql, $params);
-        $lands = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
-        $notificationsCreated = 0;
-        
-        foreach ($lands as $land) {
-            // Skip lands without harvest dates
-            if (empty($land['next_harvest_date'])) {
-                error_log("Skipping land {$land['id']} ({$land['land_name']}) - no harvest date set");
-                continue;
+            // Get query parameters
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+            $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+            $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : null;
+            
+            // Build base query
+            $sql = "
+                SELECT 
+                    n.id,
+                    n.land_id,
+                    n.user_id,
+                    n.type,
+                    n.priority,
+                    n.title,
+                    n.message,
+                    n.is_read,
+                    n.is_dismissed,
+                    n.created_at,
+                    n.updated_at,
+                    l.land_name,
+                    l.land_code,
+                    CONCAT(u.first_name, ' ', u.last_name) as user_name
+                FROM notifications n
+                LEFT JOIN lands l ON n.land_id = l.id
+                LEFT JOIN users u ON n.user_id = u.id
+                WHERE 1=1
+            ";
+            
+            $params = [];
+            
+            // Filter by user if specified
+            if ($user_id) {
+                $sql .= " AND n.user_id = ?";
+                $params[] = $user_id;
             }
             
-            try {
-                $harvestDate = new \DateTime($land['next_harvest_date']);
-                $today = new \DateTime();
-                $daysUntilHarvest = $today->diff($harvestDate)->days;
-            } catch (\Exception $e) {
-                error_log("Invalid harvest date for land {$land['id']} ({$land['land_name']}): {$land['next_harvest_date']} - {$e->getMessage()}");
-                continue;
+            // Add ordering and pagination
+            $sql .= " ORDER BY n.created_at DESC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
+            
+            $notifications = $this->db->fetchAll($sql, $params);
+            
+            // Get total count for pagination
+            $countSql = "
+                SELECT COUNT(*) as total 
+                FROM notifications n 
+                WHERE 1=1
+            ";
+            $countParams = [];
+            
+            if ($user_id) {
+                $countSql .= " AND n.user_id = ?";
+                $countParams[] = $user_id;
             }
             
-            // Create notification if harvest is due soon or overdue
-            if ($daysUntilHarvest <= 7) {
-                $type = $daysUntilHarvest <= 0 ? 'harvest_overdue' : 'harvest_due';
-                $title = $daysUntilHarvest <= 0 ? 'Harvest Overdue' : 'Harvest Due Soon';
-                $message = $daysUntilHarvest <= 0 
-                    ? "Harvest for {$land['land_name']} is overdue by " . abs($daysUntilHarvest) . " days"
-                    : "Harvest for {$land['land_name']} is due in {$daysUntilHarvest} days";
-                
-                // Check if notification already exists
-                $stmt = $this->db->query("
-                    SELECT COUNT(*) FROM notifications 
-                    WHERE land_id = ? AND type = ? AND is_dismissed = 0
-                ", [$land['id'], $type]);
-                
-                if ($stmt->fetchColumn() == 0) {
-                    $stmt = $this->db->query("
-                        INSERT INTO notifications (land_id, user_id, type, title, message)
-                        VALUES (?, ?, ?, ?, ?)
-                    ", [$land['id'], $land['created_by'], $type, $title, $message]);
-                    $notificationsCreated++;
-                }
-            }
+            $totalResult = $this->db->fetchOne($countSql, $countParams);
+            $total = $totalResult['total'];
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $notifications,
+                'pagination' => [
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => ($offset + $limit) < $total
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::index error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to fetch notifications']);
         }
-        
-        echo json_encode([
-            'success' => true,
-            'message' => "Created {$notificationsCreated} harvest notifications",
-            'count' => $notificationsCreated,
-            'total_lands_checked' => count($lands)
-        ]);
     }
 
+    /**
+     * Create a new notification (store method for API)
+     */
     public function store()
     {
-        $user = Auth::requireAuth();
-        
-        // Get input data
-        $landId = $_POST['land_id'] ?? null;
-        $title = $_POST['title'] ?? null;
-        $message = $_POST['message'] ?? null;
-        $type = $_POST['type'] ?? null;
-        $priority = $_POST['priority'] ?? 'medium';
-        
-        // Validate required fields
-        if (!$landId || !$title || !$message || !$type) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields: land_id, title, message, type']);
-            return;
-        }
-        
-        // Validate land exists and user has access
-        $landStmt = $this->db->query("SELECT id FROM lands WHERE id = ?", [$landId]);
-        if (!$landStmt->fetch()) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Land not found']);
-            return;
-        }
-        
-        // Validate notification type
-        $validTypes = ['harvest_due', 'harvest_overdue', 'maintenance_due', 'comment_added', 'photo_added'];
-        if (!in_array($type, $validTypes)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid notification type']);
-            return;
-        }
-        
-        // Validate priority
-        $validPriorities = ['low', 'medium', 'high'];
-        if (!in_array($priority, $validPriorities)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid priority level']);
-            return;
-        }
-        
         try {
-            // Insert notification with priority
-            $stmt = $this->db->query("
-                INSERT INTO notifications (land_id, user_id, type, priority, title, message, is_read, is_dismissed, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 0, 0, NOW())
-            ", [$landId, $user['user_id'], $type, $priority, $title, $message]);
+            Auth::requireAnyRole(['system', 'admin', 'contributor']);
+            
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid input']);
+                return;
+            }
+            
+            // Validate required fields
+            $requiredFields = ['land_id', 'user_id', 'type', 'title', 'message'];
+            foreach ($requiredFields as $field) {
+                if (!isset($input[$field]) || empty($input[$field])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => "Field '$field' is required"]);
+                    return;
+                }
+            }
+            
+            // Insert notification
+            $sql = "
+                INSERT INTO notifications 
+                (land_id, user_id, type, priority, title, message, is_read, is_dismissed, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, 0, 0, NOW(), NOW())
+            ";
+            
+            $priority = $input['priority'] ?? 'medium';
+            
+            $this->db->query($sql, [
+                $input['land_id'],
+                $input['user_id'],
+                $input['type'],
+                $priority,
+                $input['title'],
+                $input['message']
+            ]);
             
             $notificationId = $this->db->lastInsertId();
             
-            // Handle photo uploads if any
-            $photoIds = [];
-            if (isset($_FILES['photos']) && is_array($_FILES['photos']['name'])) {
-                // Use absolute path for upload directory (ignore env var to fix path issue)
-                $uploadDir = __DIR__ . '/../../uploads/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Notification created successfully',
+                'data' => [
+                    'id' => $notificationId,
+                    'land_id' => $input['land_id'],
+                    'user_id' => $input['user_id'],
+                    'type' => $input['type'],
+                    'priority' => $priority,
+                    'title' => $input['title'],
+                    'message' => $input['message']
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::store error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to create notification']);
+        }
+    }
+
+    /**
+     * Get admin users for sending notifications
+     */
+    public function getAdminUsers()
+    {
+        try {
+            Auth::requireAnyRole(['system', 'admin']);
+            
+            $sql = "SELECT id, first_name, last_name, email FROM users WHERE role IN ('admin', 'system') AND email IS NOT NULL ORDER BY first_name, last_name";
+            $adminUsers = $this->db->fetchAll($sql);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $adminUsers,
+                'count' => count($adminUsers)
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::getAdminUsers error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to fetch admin users']);
+        }
+    }
+
+    /**
+     * Send release notification to all admin users
+     */
+    public function sendReleaseNotification()
+    {
+        try {
+            Auth::requireAnyRole(['system', 'admin']);
+            $user = Auth::requireAuth();
+
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid input']);
+                return;
+            }
+
+            // Validate required fields
+            $requiredFields = ['version', 'release_notes', 'release_date', 'release_type'];
+            foreach ($requiredFields as $field) {
+                if (!isset($input[$field]) || empty($input[$field])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => "Field '$field' is required"]);
+                    return;
                 }
-                
-                for ($i = 0; $i < count($_FILES['photos']['name']); $i++) {
-                    if ($_FILES['photos']['error'][$i] === UPLOAD_ERR_OK) {
-                        $fileName = uniqid() . '_' . $_FILES['photos']['name'][$i];
-                        $filePath = $uploadDir . $fileName;
-                        
-                        if (move_uploaded_file($_FILES['photos']['tmp_name'][$i], $filePath)) {
-                            // Store relative path for web access
-                            $relativePath = 'uploads/' . $fileName;
-                            
-                            // Insert photo record
-                            $photoStmt = $this->db->query("
-                                INSERT INTO photos (notification_id, file_path, file_name, file_size, mime_type, uploaded_at)
-                                VALUES (?, ?, ?, ?, ?, NOW())
-                            ", [
-                                $notificationId, 
-                                $relativePath, 
-                                $_FILES['photos']['name'][$i],
-                                $_FILES['photos']['size'][$i],
-                                $_FILES['photos']['type'][$i]
-                            ]);
-                            
-                            $photoIds[] = $this->db->lastInsertId();
-                        }
+            }
+
+            // Get language preference from request (default to English)
+            $languageCode = $input['language'] ?? 'en';
+            
+            // Validate language code
+            if (!in_array($languageCode, ['en', 'th'])) {
+                $languageCode = 'en'; // Fallback to English
+            }
+
+            // Get admin users
+            $sql = "SELECT id, first_name, last_name, email FROM users WHERE role IN ('admin', 'system') AND email IS NOT NULL";
+            $adminUsers = $this->db->fetchAll($sql);
+
+            if (empty($adminUsers)) {
+                http_response_code(404);
+                echo json_encode(['error' => 'No admin users found']);
+                return;
+            }
+
+            $results = [];
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($adminUsers as $adminUser) {
+                try {
+                    // Prepare variables for template
+                    $variables = [
+                        'user_name' => trim($adminUser['first_name'] . ' ' . $adminUser['last_name']),
+                        'version' => $input['version'],
+                        'release_notes' => $input['release_notes'],
+                        'release_date' => $input['release_date'],
+                        'release_type' => $input['release_type']
+                    ];
+
+                    // Send email using the release notification template with language preference
+                    $result = $this->emailService->sendReleaseNotificationEmail(
+                        $adminUser['email'],
+                        $variables['user_name'],
+                        $variables,
+                        $languageCode
+                    );
+
+                    if ($result['success']) {
+                        $successCount++;
+                        $results[] = [
+                            'email' => $adminUser['email'],
+                            'name' => $variables['user_name'],
+                            'status' => 'success',
+                            'message' => $result['message']
+                        ];
+                    } else {
+                        $failureCount++;
+                        $results[] = [
+                            'email' => $adminUser['email'],
+                            'name' => $variables['user_name'],
+                            'status' => 'failed',
+                            'message' => $result['message']
+                        ];
                     }
+
+                } catch (Exception $e) {
+                    $failureCount++;
+                    $results[] = [
+                        'email' => $adminUser['email'],
+                        'name' => trim($adminUser['first_name'] . ' ' . $adminUser['last_name']),
+                        'status' => 'failed',
+                        'message' => 'Error: ' . $e->getMessage()
+                    ];
+                    error_log("Failed to send release notification to {$adminUser['email']}: " . $e->getMessage());
+                }
+            }
+
+            // Log the notification sending activity
+            $this->logNotificationActivity($user['user_id'], $input['version'], $successCount, $failureCount);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Release notification sent to $successCount admin users",
+                'summary' => [
+                    'total_recipients' => count($adminUsers),
+                    'successful_sends' => $successCount,
+                    'failed_sends' => $failureCount,
+                    'language_used' => $languageCode
+                ],
+                'results' => $results
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::sendReleaseNotification error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to send release notifications']);
+        }
+    }
+
+    /**
+     * Log notification activity for audit purposes
+     */
+    private function logNotificationActivity($userId, $version, $successCount, $failureCount)
+    {
+        try {
+            $sql = "INSERT INTO notification_logs (user_id, notification_type, details, success_count, failure_count, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
+            $this->db->query($sql, [
+                $userId,
+                'release_notification',
+                json_encode(['version' => $version]),
+                $successCount,
+                $failureCount
+            ]);
+        } catch (Exception $e) {
+            error_log("Failed to log notification activity: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get unread notification count for the authenticated user
+     */
+    public function getUnreadCount()
+    {
+        try {
+            $user = Auth::requireAuth();
+            
+            $sql = "SELECT COUNT(*) as unread_count FROM notifications WHERE user_id = ? AND is_read = 0";
+            $result = $this->db->fetchOne($sql, [$user['user_id']]);
+            
+            echo json_encode([
+                'success' => true,
+                'unread_count' => (int)$result['unread_count']
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::getUnreadCount error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to get unread count']);
+        }
+    }
+
+    /**
+     * Mark a specific notification as read
+     */
+    public function markAsRead($notificationId)
+    {
+        try {
+            $user = Auth::requireAuth();
+            
+            // Verify the notification belongs to the user
+            $sql = "SELECT id FROM notifications WHERE id = ?";
+            $notification = $this->db->fetchOne($sql, [$notificationId]);
+            
+            if (!$notification) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Notification not found']);
+                return;
+            }
+            
+            // Mark as read
+            $updateSql = "UPDATE notifications SET is_read = 1, updated_at = NOW() WHERE id = ?";
+            $this->db->query($updateSql, [$notificationId]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Notification marked as read'
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::markAsRead error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to mark notification as read']);
+        }
+    }
+
+    /**
+     * Dismiss a specific notification
+     */
+    public function dismiss($notificationId)
+    {
+        try {
+            $user = Auth::requireAuth();
+            
+            // Verify the notification belongs to the user
+            $sql = "SELECT id FROM notifications WHERE id = ?";
+            $notification = $this->db->fetchOne($sql, [$notificationId]);
+            
+            if (!$notification) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Notification not found']);
+                return;
+            }
+            
+            // Mark as dismissed
+            $updateSql = "UPDATE notifications SET is_dismissed = 1, updated_at = NOW() WHERE id = ?";
+            $this->db->query($updateSql, [$notificationId]);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Notification dismissed'
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::dismiss error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to dismiss notification']);
+        }
+    }
+
+    /**
+     * Dismiss all notifications for the authenticated user
+     */
+    public function dismissAll()
+    {
+        try {
+            $user = Auth::requireAuth();
+            
+            // Mark all user's notifications as dismissed
+            $sql = "UPDATE notifications SET is_dismissed = 1, updated_at = NOW() WHERE is_dismissed = 0";
+            $result = $this->db->query($sql, []);
+            
+            $affectedRows = $result->rowCount();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => "Dismissed $affectedRows notifications",
+                'dismissed_count' => $affectedRows
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::dismissAll error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to dismiss all notifications']);
+        }
+    }
+
+    /**
+     * Show a specific notification
+     */
+    public function show($notificationId)
+    {
+        try {
+            $user = Auth::requireAuth();
+            
+            $sql = "
+                SELECT 
+                    n.id,
+                    n.land_id,
+                    n.user_id,
+                    n.type,
+                    n.priority,
+                    n.title,
+                    n.message,
+                    n.is_read,
+                    n.is_dismissed,
+                    n.created_at,
+                    n.updated_at,
+                    l.land_name,
+                    l.land_code,
+                    CONCAT(u.first_name, ' ', u.last_name) as user_name
+                FROM notifications n
+                LEFT JOIN lands l ON n.land_id = l.id
+                LEFT JOIN users u ON n.user_id = u.id
+                WHERE n.id = ?
+            ";
+            
+            $notification = $this->db->fetchOne($sql, [$notificationId]);
+            
+            if (!$notification) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Notification not found']);
+                return;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $notification
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::show error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to fetch notification']);
+        }
+    }
+
+    /**
+     * Create harvest notifications for lands with upcoming harvest dates
+     */
+    public function createHarvestNotifications()
+    {
+        try {
+            Auth::requireAnyRole(['system', 'admin']);
+            $user = Auth::requireAuth();
+            
+            // Find lands with harvest dates within the next 7 days
+            $sql = "
+                SELECT l.id, l.land_name, l.land_code, l.harvest_date, l.user_id,
+                       CONCAT(u.first_name, ' ', u.last_name) as user_name
+                FROM lands l
+                JOIN users u ON l.user_id = u.id
+                WHERE l.harvest_date IS NOT NULL 
+                AND l.harvest_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+                AND NOT EXISTS (
+                    SELECT 1 FROM notifications n 
+                    WHERE n.land_id = l.id 
+                    AND n.type = 'harvest_reminder' 
+                    AND n.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                )
+            ";
+            
+            $upcomingHarvests = $this->db->fetchAll($sql);
+            
+            $notificationsCreated = 0;
+            $results = [];
+            
+            foreach ($upcomingHarvests as $harvest) {
+                try {
+                    $daysUntilHarvest = ceil((strtotime($harvest['harvest_date']) - time()) / (60 * 60 * 24));
+                    
+                    $title = "Harvest Reminder";
+                    $message = "Your land '{$harvest['land_name']}' ({$harvest['land_code']}) has a harvest scheduled in $daysUntilHarvest day(s) on {$harvest['harvest_date']}.";
+                    
+                    // Create notification
+                    $insertSql = "
+                        INSERT INTO notifications 
+                        (land_id, user_id, type, priority, title, message, is_read, is_dismissed, created_at, updated_at)
+                        VALUES (?, ?, 'harvest_reminder', 'medium', ?, ?, 0, 0, NOW(), NOW())
+                    ";
+                    
+                    $this->db->query($insertSql, [
+                        $harvest['id'],
+                        $harvest['user_id'],
+                        $title,
+                        $message
+                    ]);
+                    
+                    $notificationsCreated++;
+                    $results[] = [
+                        'land_id' => $harvest['id'],
+                        'land_name' => $harvest['land_name'],
+                        'land_code' => $harvest['land_code'],
+                        'harvest_date' => $harvest['harvest_date'],
+                        'days_until_harvest' => $daysUntilHarvest,
+                        'status' => 'created'
+                    ];
+                    
+                } catch (Exception $e) {
+                    error_log("Failed to create harvest notification for land {$harvest['id']}: " . $e->getMessage());
+                    $results[] = [
+                        'land_id' => $harvest['id'],
+                        'land_name' => $harvest['land_name'],
+                        'land_code' => $harvest['land_code'],
+                        'harvest_date' => $harvest['harvest_date'],
+                        'status' => 'failed',
+                        'error' => $e->getMessage()
+                    ];
                 }
             }
             
             echo json_encode([
                 'success' => true,
-                'message' => 'Notification created successfully',
-                'notification_id' => $notificationId,
-                'photo_ids' => $photoIds
+                'message' => "Created $notificationsCreated harvest reminder notifications",
+                'notifications_created' => $notificationsCreated,
+                'total_lands_checked' => count($upcomingHarvests),
+                'results' => $results
             ]);
-            
+
         } catch (Exception $e) {
+            error_log("NotificationController::createHarvestNotifications error: " . $e->getMessage());
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to create notification: ' . $e->getMessage()]);
+            echo json_encode(['error' => 'Failed to create harvest notifications']);
         }
     }
 
-    public function show($id)
+    /**
+     * Get notification history
+     */
+    public function getNotificationHistory()
     {
-        $user = Auth::requireAuth();
-        
-        // Get notification details with photos
-        $stmt = $this->db->query("
-            SELECT 
-                n.*,
-                l.land_name,
-                l.land_code,
-                l.location,
-                l.city,
-                l.district,
-                l.province,
-                l.next_harvest_date,
-                CASE 
-                    WHEN l.next_harvest_date <= CURDATE() THEN 'overdue'
-                    WHEN l.next_harvest_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'due_soon'
-                    ELSE 'normal'
-                END as harvest_status
-            FROM notifications n
-            LEFT JOIN lands l ON n.land_id = l.id
-            WHERE n.id = ?
-        ", [$id]);
-        
-        $notification = $stmt->fetch();
-        
-        if (!$notification) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Notification not found']);
-            return;
+        try {
+            Auth::requireAnyRole(['system', 'admin']);
+            
+            $sql = "
+                SELECT 
+                    nl.id,
+                    nl.notification_type,
+                    nl.details,
+                    nl.success_count,
+                    nl.failure_count,
+                    nl.created_at,
+                    u.first_name,
+                    u.last_name,
+                    u.email
+                FROM notification_logs nl
+                LEFT JOIN users u ON nl.user_id = u.id
+                ORDER BY nl.created_at DESC
+                LIMIT 50
+            ";
+            
+            $history = $this->db->fetchAll($sql);
+
+            // Parse details JSON
+            foreach ($history as &$record) {
+                if ($record['details']) {
+                    $record['details'] = json_decode($record['details'], true);
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'data' => $history
+            ]);
+
+        } catch (Exception $e) {
+            error_log("NotificationController::getNotificationHistory error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to fetch notification history']);
         }
-        
-        // Get photos for this notification
-        $photoStmt = $this->db->query("
-            SELECT id, file_path, file_name, file_size, mime_type, uploaded_at
-            FROM photos
-            WHERE notification_id = ?
-            ORDER BY uploaded_at ASC
-        ", [$id]);
-        
-        $photos = $photoStmt->fetchAll();
-        
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'notification' => $notification,
-                'photos' => $photos
-            ]
-        ]);
     }
 }
+?>

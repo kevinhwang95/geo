@@ -36,6 +36,7 @@ import UserManagement from '@/components/admin/UserManagement';
 import TeamManagement from '@/components/admin/TeamManagement';
 import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
 import MenuManagement from '@/components/admin/MenuManagement';
+import EmailTemplateManagement from '@/components/admin/EmailTemplateManagement';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
@@ -844,6 +845,12 @@ const Dashboard: React.FC = () => {
           {canManageUsers() && activeSection === 'menu-management' && (
             <div className="space-y-6 p-6">
               <MenuManagement />
+            </div>
+          )}
+
+          {canManageUsers() && activeSection === 'email-templates' && (
+            <div className="space-y-6 p-6">
+              <EmailTemplateManagement />
             </div>
           )}
         </div>

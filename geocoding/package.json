@@ -45,6 +45,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-google-maps/api": "^2.20.7",
     "@tailwindcss/vite": "^4.1.13",
+    "@tanstack/react-table": "^8.21.3",
     "@vis.gl/react-google-maps": "^1.5.5",
     "@watergis/maplibre-gl-terradraw": "^1.7.6",
     "axios": "^1.12.2",

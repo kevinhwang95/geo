@@ -245,6 +245,7 @@ class PasswordController
             }
 
             $email = $input['email'];
+            $language = $input['language'] ?? 'en'; // Default to English if not provided
 
             // Get user details
             $query = "SELECT id, email, first_name, last_name FROM users WHERE email = ?";
@@ -277,7 +278,7 @@ class PasswordController
             //$result = ['success' => true, 'message' => 'Password reset token generated successfully'];
             
             // TODO: Uncomment this line once Resend API is properly configured
-            $result = $this->emailService->sendPasswordResetEmail($email, $userName, $token);
+            $result = $this->emailService->sendPasswordResetEmail($email, $userName, $token, $language);
 
             if ($result['success']) {
                 echo json_encode([

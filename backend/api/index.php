@@ -19,6 +19,7 @@ use App\Controllers\EnhancedNotificationController;
 use App\Controllers\NavigationMenuController;
 use App\Controllers\PasswordController;
 use App\Controllers\EndpointPermissionController;
+use App\Controllers\EmailTemplateController;
 
 // Load environment variables
 try {
@@ -432,6 +433,30 @@ try {
                         echo json_encode(['error' => 'Method not allowed']);
                     }
                     break;
+                case 'admin-users':
+                    if ($method === 'GET') {
+                        $notificationController->getAdminUsers();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'history':
+                    if ($method === 'GET') {
+                        $notificationController->getNotificationHistory();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'release':
+                    if ($method === 'POST') {
+                        $notificationController->sendReleaseNotification();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
                 default:
                     if ($method === 'GET') {
                         $notificationController->index();
@@ -805,6 +830,45 @@ try {
                     } else {
                         // Update single permission
                         $endpointPermissionController->updatePermission();
+                    }
+                    break;
+                default:
+                    http_response_code(405);
+                    echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+        case 'email-templates':
+            $emailTemplateController = new EmailTemplateController();
+            switch ($method) {
+                case 'GET':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $emailTemplateController->show($pathParts[1]);
+                    } else {
+                        $emailTemplateController->index();
+                    }
+                    break;
+                case 'POST':
+                    if (isset($pathParts[1]) && $pathParts[1] === 'preview') {
+                        $emailTemplateController->preview($pathParts[2] ?? null);
+                    } else {
+                        $emailTemplateController->store();
+                    }
+                    break;
+                case 'PUT':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $emailTemplateController->update($pathParts[1]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Email template ID required']);
+                    }
+                    break;
+                case 'DELETE':
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        $emailTemplateController->delete($pathParts[1]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Email template ID required']);
                     }
                     break;
                 default:

@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => ({
     'import.meta.env.DEV': mode === 'development',
     'import.meta.env.PROD': mode === 'production',
   },
+  // Environment variable configuration
+  envPrefix: 'VITE_', // Only expose variables prefixed with VITE_
+  envDir: './', // Look for .env files in the root directory
   build: {
     // Remove console.log in production
     minify: 'terser',

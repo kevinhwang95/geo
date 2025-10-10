@@ -9,6 +9,7 @@ import {
 import { 
   Users, 
   Settings, 
+  Mail,
   ChevronDown
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +27,7 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
   isMobile = false
 }) => {
   const { t } = useTranslation();
-  const isAdminActive = activeSection === 'admin' || activeSection === 'menu-management';
+  const isAdminActive = activeSection === 'admin' || activeSection === 'menu-management' || activeSection === 'email-templates';
   
   // Admin submenu items
   const adminItems = [
@@ -40,6 +41,12 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
       id: 'menu-management',
       label: t('navigation.admin.menuManagement'),
       icon: Settings,
+      visible: canManageUsers()
+    },
+    {
+      id: 'email-templates',
+      label: t('navigation.admin.emailTemplates'),
+      icon: Mail,
       visible: canManageUsers()
     }
   ];

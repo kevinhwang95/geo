@@ -35,7 +35,7 @@ export function formatLandSizeToThaiUnits(raiValue: number, t: (key: string) => 
   
   const parts = [];
   if (breakdown.rai > 0) {
-    parts.push(`${breakdown.rai} ${t('dashboard.lands.wa')}`);
+    parts.push(`${breakdown.rai} ${t('dashboard.lands.rai')}`);
   }
   if (breakdown.ngan > 0) {
     parts.push(`${breakdown.ngan} ${t('dashboard.lands.ngan')}`);

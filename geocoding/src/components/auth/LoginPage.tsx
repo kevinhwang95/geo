@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -30,7 +31,6 @@ const LoginPage: React.FC = () => {
   
   const { login } = useAuthStore();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +112,8 @@ const LoginPage: React.FC = () => {
     
     try {
       const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/password/reset-email`, {
-        email: forgotPasswordEmail
+        email: forgotPasswordEmail,
+        language: i18n.language
       });
       
       if (response.data.success) {

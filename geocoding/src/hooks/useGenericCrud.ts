@@ -8,7 +8,11 @@ type CrudState<T> = {
   error: AxiosError | null;
 };
 
-export const useGenericCrud = <T>(resource: string) => {
+// API Response types
+type ApiResponse<T> = T | { data: T };
+type ApiListResponse<T> = T[] | { data: T[] };
+
+export const useGenericCrud = <T extends Record<string, any>>(resource: string) => {
   const [state, setState] = useState<CrudState<T>>({
     data: null,
     loading: true,
@@ -18,8 +22,11 @@ export const useGenericCrud = <T>(resource: string) => {
   const fetchData = useCallback(async () => {
     setState((prevState) => ({ ...prevState, loading: true, error: null }));
     try {
-      const response = await axiosClient.get<T[]>(`/${resource}`);
-      setState({ data: response.data, loading: false, error: null });
+      const response = await axiosClient.get<ApiListResponse<T>>(`/${resource}`);
+      // Handle both direct array responses and wrapped responses
+      const responseData = response.data as ApiListResponse<T>;
+      const data = Array.isArray(responseData) ? responseData : responseData.data || [];
+      setState({ data, loading: false, error: null });
     } catch (err) {
       setState({ data: null, loading: false, error: err as AxiosError });
     }
@@ -32,10 +39,13 @@ export const useGenericCrud = <T>(resource: string) => {
   const createItem = async (newItem: Omit<T, 'id'>) => {
     setState((prevState) => ({ ...prevState, loading: true, error: null }));
     try {
-      const response = await axiosClient.post<T>(`/${resource}`, newItem);
+      const response = await axiosClient.post<ApiResponse<T>>(`/${resource}`, newItem);
+      // Handle both direct object responses and wrapped responses
+      const responseData = response.data as ApiResponse<T>;
+      const createdItem = 'data' in responseData ? responseData.data : responseData;
       setState((prevState) => ({
         ...prevState,
-        data: [...(prevState.data ?? []), response.data],
+        data: [...(prevState.data ?? []), createdItem],
         loading: false,
       }));
     } catch (err) {
@@ -46,11 +56,14 @@ export const useGenericCrud = <T>(resource: string) => {
   const updateItem = async (id: number | string, updatedItem: Partial<T>) => {
     setState((prevState) => ({ ...prevState, loading: true, error: null }));
     try {
-      const response = await axiosClient.put<T>(`/${resource}/${id}`, updatedItem);
+      const response = await axiosClient.put<ApiResponse<T>>(`/${resource}/${id}`, updatedItem);
+      // Handle both direct object responses and wrapped responses
+      const responseData = response.data as ApiResponse<T>;
+      const updatedData = 'data' in responseData ? responseData.data : responseData;
       setState((prevState) => ({
         ...prevState,
         data: prevState.data ? prevState.data.map((item) =>
-            (item as any).id === id ? response.data : item
+            (item as any).id === id ? updatedData : item
         ) : null,
         loading: false,
       }));

@@ -40,17 +40,57 @@ class NotificationService
      */
     public function createHarvestNotifications()
     {
+        // Updated query to include previous_harvest_date and harvest_cycle_days from plant_types
         $sql = "
-            SELECT l.id, l.land_name, l.land_code, l.next_harvest_date, l.created_by
+            SELECT 
+                l.id, 
+                l.land_name, 
+                l.land_code, 
+                l.next_harvest_date,
+                l.previous_harvest_date,
+                l.plant_date,
+                l.created_by,
+                pt.harvest_cycle_days,
+                pt.name as plant_type_name
             FROM lands l
-            WHERE l.is_active = 1 AND l.next_harvest_date IS NOT NULL
+            JOIN plant_types pt ON l.plant_type_id = pt.id
+            WHERE l.is_active = 1 
+            AND (
+                l.next_harvest_date IS NOT NULL 
+                OR (l.previous_harvest_date IS NOT NULL AND pt.harvest_cycle_days IS NOT NULL)
+            )
         ";
         $lands = $this->db->fetchAll($sql);
         
         $notificationsCreated = 0;
         
         foreach ($lands as $land) {
-            $harvestDate = new \DateTime($land['next_harvest_date']);
+            $harvestDate = null;
+            
+            // Calculate harvest date based on priority:
+            // 1. Use next_harvest_date if manually set
+            // 2. Calculate from previous_harvest_date + harvest_cycle_days
+            // 3. Calculate from plant_date + harvest_cycle_days (for initial harvest)
+            
+            if ($land['next_harvest_date']) {
+                $harvestDate = new \DateTime($land['next_harvest_date']);
+            } elseif ($land['previous_harvest_date'] && $land['harvest_cycle_days']) {
+                // Calculate next harvest from previous harvest + cycle days
+                $previousHarvest = new \DateTime($land['previous_harvest_date']);
+                $harvestDate = clone $previousHarvest;
+                $harvestDate->add(new \DateInterval('P' . $land['harvest_cycle_days'] . 'D'));
+            } elseif ($land['plant_date'] && $land['harvest_cycle_days']) {
+                // For initial harvest calculation, use plant_date + cycle days
+                // This is for the first harvest after planting
+                $plantDate = new \DateTime($land['plant_date']);
+                $harvestDate = clone $plantDate;
+                $harvestDate->add(new \DateInterval('P' . $land['harvest_cycle_days'] . 'D'));
+            }
+            
+            if (!$harvestDate) {
+                continue; // Skip if we can't determine harvest date
+            }
+            
             $today = new \DateTime();
             $daysUntilHarvest = $today->diff($harvestDate)->days;
             
@@ -68,6 +108,7 @@ class NotificationService
                 $existingSql = "
                     SELECT COUNT(*) FROM notifications 
                     WHERE land_id = :land_id AND type = :type AND is_dismissed = 0
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
                 ";
                 $existing = $this->db->fetchOne($existingSql, [
                     'land_id' => $land['id'],

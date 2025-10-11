@@ -19,6 +19,8 @@ export default interface LandRegistry {
   category_color?: string,
   plant_date: Date | string,
   harvest_cycle?: string,
+  previous_harvest_date?: Date | string,
+  next_harvest_date?: Date | string,
   tree_count?: number,
   notes?: string,
   created: Date | string,
@@ -70,6 +72,8 @@ export const landRegistrySchema = z.object({
   }),
   plant_date: z.date().or(z.string()),
   harvest_cycle: z.string().optional(),
+  previous_harvest_date: z.date().or(z.string()).optional(),
+  next_harvest_date: z.date().or(z.string()).optional(),
   tree_count: z.number().int().min(0, {
     message: "Tree count must be a positive integer.",
   }).optional(),

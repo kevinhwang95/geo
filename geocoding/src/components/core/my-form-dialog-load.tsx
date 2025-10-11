@@ -123,7 +123,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
       planttypeid: land.planttypeid || 1,
       categoryid: land.categoryid || 1,
       plant_date: land.plant_date || currentdate,
-      harvest_cycle: land.harvest_cycle || '',
+      previous_harvest_date: land.previous_harvest_date,
       tree_count: land.tree_count,
       notes: land.notes || '',
       created: land.created || formattedDate,
@@ -153,7 +153,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
         planttypeid: land.planttypeid || 1,
         categoryid: land.categoryid || 1,
         plant_date: land.plant_date || currentdate,
-        harvest_cycle: land.harvest_cycle || '',
+        previous_harvest_date: land.previous_harvest_date,
         tree_count: land.tree_count,
         notes: land.notes || '',
         created: land.created || formattedDate,
@@ -172,11 +172,8 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
 
   async function onSubmit(values: z.infer<typeof landRegistrySchema>) {
     try {
-      // Ensure harvest_cycle is always a string
-      const safeValues = {
-        ...values,
-        harvest_cycle: values.harvest_cycle ?? "",
-      };
+      // Remove harvest_cycle from submission since it's now derived from plant type
+      const { harvest_cycle, ...safeValues } = values;
 
       console.log(safeValues);
       
@@ -607,23 +604,44 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                         </FormItem>
                       )}
                     />
+                    {/* Harvest Cycle Display - derived from plant type */}
+                    <div className="space-y-2">
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <Clock className="h-4 w-4 text-amber-600" />
+                        Harvest Cycle
+                      </FormLabel>
+                      <div className="h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 flex items-center">
+                        {(() => {
+                          const selectedPlantType = plantTypes.find(pt => pt.id === form.watch('planttypeid'));
+                          return selectedPlantType?.harvest_cycle_days 
+                            ? `${selectedPlantType.harvest_cycle_days} days`
+                            : 'Select a plant type to see harvest cycle';
+                        })()}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Harvest cycle is determined by the selected plant type
+                      </p>
+                    </div>
                     <FormField
                       control={form.control}
-                      name="harvest_cycle"
+                      name="previous_harvest_date"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                            <Clock className="h-4 w-4 text-amber-600" />
-                            Harvest Cycle
+                            <Calendar className="h-4 w-4 text-orange-600" />
+                            Previous Harvest Date
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Enter harvest cycle" 
-                              {...field} 
-                              className="h-10 border-gray-200 focus:border-amber-500 focus:ring-amber-500 transition-colors" 
+                            <DatePicker 
+                              date={field.value ? new Date(field.value) : undefined} 
+                              setDate={field.onChange} 
+                              placeholder="Select previous harvest date (optional)"
                             />
                           </FormControl>
                           <FormMessage />
+                          <p className="text-xs text-gray-500">
+                            Date of the last harvest - used to calculate next harvest date
+                          </p>
                         </FormItem>
                       )}
                     />

@@ -23,7 +23,7 @@ import {
   Edit
 } from 'lucide-react';
 // Import logo image
-import { useAuthStore, canManageLands, canManageUsers, canManageTeams, canManageWorkAssignments } from '@/stores/authStore';
+import { useAuthStore, canManageLands, canManageUsers, canManageTeams, hasAnyRole } from '@/stores/authStore';
 import { useMapStore } from '@/stores/mapStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { notificationPollingService } from '@/services/NotificationPollingService';
@@ -34,9 +34,13 @@ import CreateNotificationDialog from '@/components/core/CreateNotificationDialog
 import { MyFormDialogLoad } from '@/components/core/my-form-dialog-load';
 import UserManagement from '@/components/admin/UserManagement';
 import TeamManagement from '@/components/admin/TeamManagement';
-import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
 import MenuManagement from '@/components/admin/MenuManagement';
 import EmailTemplateManagement from '@/components/admin/EmailTemplateManagement';
+import WorkAssignmentManagement from '@/components/admin/WorkAssignmentManagement';
+import WorkCategoryManagement from '@/components/admin/WorkCategoryManagement';
+import WorkTypeManagement from '@/components/admin/WorkTypeManagement';
+import WorkStatusManagement from '@/components/admin/WorkStatusManagement';
+import LandsDataTable from '@/components/admin/LandsDataTable';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
@@ -94,7 +98,6 @@ const Dashboard: React.FC = () => {
     highPriorityCount
   } = useNotificationStore();
   const [activeSection, setActiveSection] = useState<string>('overview');
-  const [landSearchTerm, setLandSearchTerm] = useState('');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [selectedLandForNotification, setSelectedLandForNotification] = useState<Land | null>(null);
@@ -343,22 +346,10 @@ const Dashboard: React.FC = () => {
   //   }, 1000);
   // };
 
-  // Filter lands based on search term
-  const filteredLands = (lands || []).filter(land => 
-    land.land_name.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    land.land_code.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    land.location.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    land.plant_type_name.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    land.category_name.toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    getTranslatedPlantType(t, land.plant_type_name, land.plant_type_translation_key).toLowerCase().includes(landSearchTerm.toLowerCase()) ||
-    getTranslatedCategory(t, land.category_name, land.category_translation_key).toLowerCase().includes(landSearchTerm.toLowerCase())
-  );
 
   // Debug logging
   console.log('Dashboard - Authentication state:', { isAuthenticated, user: user?.first_name });
   console.log('Total lands from hook:', lands?.length || 0);
-  console.log('Filtered lands:', filteredLands.length);
-  console.log('Search term:', landSearchTerm);
   console.log('Lands loading:', landsLoading);
 
   const getHarvestStatusIcon = (status: string) => {
@@ -635,165 +626,62 @@ const Dashboard: React.FC = () => {
 
           {activeSection === 'lands' && (
             <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <h2 className='text-xl sm:text-2xl font-bold'>{t('dashboard.lands.title')}</h2>
-              {canManageLands() && (
-                <Button onClick={handleAddLand} className="w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('buttons.addLand')}
-                </Button>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <h2 className='text-xl sm:text-2xl font-bold'>{t('dashboard.lands.title')}</h2>
+                {canManageLands() && (
+                  <Button onClick={handleAddLand} className="w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('buttons.addLand')}
+                  </Button>
+                )}
+              </div>
+
+              {/* Loading State */}
+              {landsLoading && (
+                <div className="text-center py-8">
+                  <div className='text-gray-500'>{t('dashboard.lands.loading')}</div>
+                </div>
               )}
-            </div>
 
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder={t('dashboard.lands.searchPlaceholder')}
-                value={landSearchTerm}
-                onChange={(e) => setLandSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+              {/* Error State */}
+              {landsError && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    {t('dashboard.lands.errorLoading', { message: landsError.message })}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-            {/* Loading State */}
-            {landsLoading && (
-              <div className="text-center py-8">
-                <div className='text-gray-500'>{t('dashboard.lands.loading')}</div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {landsError && (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {t('dashboard.lands.errorLoading', { message: landsError.message })}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Results Count */}
-            {!landsLoading && !landsError && (
-              <div className="text-sm text-gray-600">
-                {t('dashboard.lands.showing', { count: filteredLands.length, total: lands?.length || 0 })}
-                {landSearchTerm && (
-                  <span className="ml-2">
-                    {t('dashboard.lands.for', { term: landSearchTerm })}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            {!landsLoading && !landsError && (
-              <div className="flex-1 min-h-0 flex flex-col">
-                {filteredLands.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 flex-1">
-                    {filteredLands.map((land) => (
-                      <Card 
-                        key={land.id} 
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => handleViewLandDetails(land.id)}
-                        title={t('dashboard.lands.viewDetailsTooltip')}
-                      >
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{land.land_name}</CardTitle>
-                            {getHarvestStatusIcon(land.harvest_status)}
-                          </div>
-                          <CardDescription>{land.land_code}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">{t('labels.size')}</span>
-                              <span className="text-sm font-medium">{formatLandSizeToThaiUnits(land.size, t)}</span>
-                            </div>
-                            {land.palm_area && (
-                              <div className="flex justify-between">
-                                <span className="text-sm text-gray-500">{t('labels.palmArea')}</span>
-                                <span className="text-sm font-medium">{formatLandSizeToThaiUnits(land.palm_area, t)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">{t('labels.plantType')}</span>
-                              <span className="text-sm font-medium">{getTranslatedPlantType(t, land.plant_type_name, land.plant_type_translation_key)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">{t('labels.category')}</span>
-                              <div className="flex items-center space-x-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: land.category_color }}
-                                />
-                                <span className="text-sm font-medium">{getTranslatedCategory(t, land.category_name, land.category_translation_key)}</span>
-                              </div>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-500">{t('labels.nextHarvest')}</span>
-                              <span className="text-sm font-medium">
-                                {new Date(land.next_harvest_date).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                            {getHarvestStatusBadge(land.harvest_status)}
-                            <div className="flex flex-wrap gap-2">
-                              {canManageLands() && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditLand(land);
-                                  }}
-                                  className="flex-1 sm:flex-none"
-                                >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  {t('buttons.edit')}
-                                </Button>
-                              )}
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCreateNotification(land.id);
-                                }}
-                                className="flex-1 sm:flex-none"
-                              >
-                                <Bell className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">{t('buttons.createNotification')}</span>
-                                <span className="sm:hidden">{t('buttons.notify')}</span>
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-gray-500 mb-4">
-                      <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium mb-2">{t('dashboard.lands.noLands')}</h3>
-                      <p className="text-sm">
-                        {landSearchTerm 
-                          ? t('dashboard.lands.for', { term: landSearchTerm })
-                          : t('dashboard.lands.noLands')
-                        }
-                      </p>
+              {/* Data Table */}
+              {!landsLoading && !landsError && (
+                <>
+                  {lands && lands.length > 0 ? (
+                    <LandsDataTable
+                      data={lands}
+                      userNames={userNames}
+                      onViewLand={handleViewLandDetails}
+                      onEditLand={handleEditLand}
+                      onCreateNotification={handleCreateNotification}
+                      canManageLands={canManageLands()}
+                    />
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-500 mb-4">
+                        <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-lg font-medium mb-2">{t('dashboard.lands.noLands')}</h3>
+                        <p className="text-sm">{t('dashboard.lands.noLandsDescription')}</p>
+                      </div>
+                      {canManageLands() && (
+                        <Button onClick={handleAddLand}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t('buttons.addFirstLand')}
+                        </Button>
+                      )}
                     </div>
-                    {canManageLands() && (
-                      <Button onClick={handleAddLand}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t('buttons.addFirstLand')}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -830,7 +718,7 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {canManageWorkAssignments() && activeSection === 'work-assignments' && (
+          {hasAnyRole(['admin', 'contributor']) && activeSection === 'farm-works' && (
             <div className="space-y-6 p-6">
               <WorkAssignmentManagement />
             </div>
@@ -851,6 +739,24 @@ const Dashboard: React.FC = () => {
           {canManageUsers() && activeSection === 'email-templates' && (
             <div className="space-y-6 p-6">
               <EmailTemplateManagement />
+            </div>
+          )}
+
+          {hasAnyRole(['admin', 'contributor']) && activeSection === 'work-categories' && (
+            <div className="space-y-6 p-6">
+              <WorkCategoryManagement />
+            </div>
+          )}
+
+          {hasAnyRole(['admin', 'contributor']) && activeSection === 'work-types' && (
+            <div className="space-y-6 p-6">
+              <WorkTypeManagement />
+            </div>
+          )}
+
+          {hasAnyRole(['admin', 'contributor']) && activeSection === 'work-statuses' && (
+            <div className="space-y-6 p-6">
+              <WorkStatusManagement />
             </div>
           )}
         </div>

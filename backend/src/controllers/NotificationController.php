@@ -508,65 +508,121 @@ class NotificationController
             Auth::requireAnyRole(['system', 'admin']);
             $user = Auth::requireAuth();
             
-            // Find lands with harvest dates within the next 7 days
+            // Find lands that need harvest notifications
+            // We'll check lands with next_harvest_date set, previous_harvest_date + cycle, or plant_date + cycle
             $sql = "
-                SELECT l.id, l.land_name, l.land_code, l.harvest_date, l.user_id,
-                       CONCAT(u.first_name, ' ', u.last_name) as user_name
+                SELECT 
+                    l.id, 
+                    l.land_name, 
+                    l.land_code, 
+                    l.plant_date,
+                    l.next_harvest_date,
+                    l.previous_harvest_date,
+                    l.created_by,
+                    pt.harvest_cycle_days,
+                    pt.name as plant_type_name,
+                    CONCAT(u.first_name, ' ', u.last_name) as user_name
                 FROM lands l
-                JOIN users u ON l.user_id = u.id
-                WHERE l.harvest_date IS NOT NULL 
-                AND l.harvest_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+                JOIN users u ON l.created_by = u.id
+                JOIN plant_types pt ON l.plant_type_id = pt.id
+                WHERE l.is_active = 1
+                AND (
+                    l.next_harvest_date IS NOT NULL 
+                    OR (l.previous_harvest_date IS NOT NULL AND pt.harvest_cycle_days IS NOT NULL)
+                    OR (l.plant_date IS NOT NULL AND pt.harvest_cycle_days IS NOT NULL)
+                )
                 AND NOT EXISTS (
                     SELECT 1 FROM notifications n 
                     WHERE n.land_id = l.id 
-                    AND n.type = 'harvest_reminder' 
+                    AND n.type IN ('harvest_due', 'harvest_overdue') 
                     AND n.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
                 )
             ";
             
-            $upcomingHarvests = $this->db->fetchAll($sql);
+            $lands = $this->db->fetchAll($sql);
             
             $notificationsCreated = 0;
             $results = [];
             
-            foreach ($upcomingHarvests as $harvest) {
+            foreach ($lands as $land) {
                 try {
-                    $daysUntilHarvest = ceil((strtotime($harvest['harvest_date']) - time()) / (60 * 60 * 24));
+                    // Calculate harvest date based on priority:
+                    // 1. Use next_harvest_date if manually set
+                    // 2. Calculate from previous_harvest_date + harvest_cycle_days
+                    // 3. Calculate from plant_date + harvest_cycle_days (for initial harvest)
+                    $harvestDate = null;
                     
-                    $title = "Harvest Reminder";
-                    $message = "Your land '{$harvest['land_name']}' ({$harvest['land_code']}) has a harvest scheduled in $daysUntilHarvest day(s) on {$harvest['harvest_date']}.";
+                    if ($land['next_harvest_date']) {
+                        $harvestDate = $land['next_harvest_date'];
+                    } elseif ($land['previous_harvest_date'] && $land['harvest_cycle_days']) {
+                        // Calculate next harvest from previous harvest + cycle days
+                        $previousHarvest = new \DateTime($land['previous_harvest_date']);
+                        $harvestDate = $previousHarvest->add(new \DateInterval('P' . $land['harvest_cycle_days'] . 'D'))->format('Y-m-d');
+                    } elseif ($land['plant_date'] && $land['harvest_cycle_days']) {
+                        // For initial harvest calculation, use plant_date + cycle days
+                        $plantDate = new \DateTime($land['plant_date']);
+                        $harvestDate = $plantDate->add(new \DateInterval('P' . $land['harvest_cycle_days'] . 'D'))->format('Y-m-d');
+                    }
+                    
+                    if (!$harvestDate) {
+                        continue; // Skip if we can't determine harvest date
+                    }
+                    
+                    $harvestDateTime = new \DateTime($harvestDate);
+                    $today = new \DateTime();
+                    $daysUntilHarvest = $today->diff($harvestDateTime)->days;
+                    
+                    // Determine if harvest is due (within 7 days) or overdue (past due date)
+                    $isOverdue = $harvestDateTime < $today;
+                    $isDueSoon = $daysUntilHarvest <= 7 && !$isOverdue;
+                    
+                    if (!$isOverdue && !$isDueSoon) {
+                        continue; // Skip if harvest is not due soon
+                    }
+                    
+                    $notificationType = $isOverdue ? 'harvest_overdue' : 'harvest_due';
+                    $priority = $isOverdue ? 'high' : 'medium';
+                    
+                    $title = $isOverdue ? "Harvest Overdue" : "Harvest Due Soon";
+                    $message = $isOverdue 
+                        ? "Your land '{$land['land_name']}' ({$land['land_code']}) harvest was due {$daysUntilHarvest} day(s) ago on {$harvestDate}. Please harvest as soon as possible."
+                        : "Your land '{$land['land_name']}' ({$land['land_code']}) harvest is due in {$daysUntilHarvest} day(s) on {$harvestDate}.";
                     
                     // Create notification
                     $insertSql = "
                         INSERT INTO notifications 
                         (land_id, user_id, type, priority, title, message, is_read, is_dismissed, created_at, updated_at)
-                        VALUES (?, ?, 'harvest_reminder', 'medium', ?, ?, 0, 0, NOW(), NOW())
+                        VALUES (?, ?, ?, ?, ?, ?, 0, 0, NOW(), NOW())
                     ";
                     
                     $this->db->query($insertSql, [
-                        $harvest['id'],
-                        $harvest['user_id'],
+                        $land['id'],
+                        $land['created_by'],
+                        $notificationType,
+                        $priority,
                         $title,
                         $message
                     ]);
                     
                     $notificationsCreated++;
                     $results[] = [
-                        'land_id' => $harvest['id'],
-                        'land_name' => $harvest['land_name'],
-                        'land_code' => $harvest['land_code'],
-                        'harvest_date' => $harvest['harvest_date'],
+                        'land_id' => $land['id'],
+                        'land_name' => $land['land_name'],
+                        'land_code' => $land['land_code'],
+                        'plant_type_name' => $land['plant_type_name'],
+                        'harvest_date' => $harvestDate,
                         'days_until_harvest' => $daysUntilHarvest,
+                        'notification_type' => $notificationType,
+                        'priority' => $priority,
                         'status' => 'created'
                     ];
                     
                 } catch (Exception $e) {
-                    error_log("Failed to create harvest notification for land {$harvest['id']}: " . $e->getMessage());
+                    error_log("Failed to create harvest notification for land {$land['id']}: " . $e->getMessage());
                     $results[] = [
-                        'land_id' => $harvest['id'],
-                        'land_name' => $harvest['land_name'],
-                        'land_code' => $harvest['land_code'],
-                        'harvest_date' => $harvest['harvest_date'],
+                        'land_id' => $land['id'],
+                        'land_name' => $land['land_name'],
+                        'land_code' => $land['land_code'],
                         'status' => 'failed',
                         'error' => $e->getMessage()
                     ];
@@ -575,9 +631,9 @@ class NotificationController
             
             echo json_encode([
                 'success' => true,
-                'message' => "Created $notificationsCreated harvest reminder notifications",
-                'notifications_created' => $notificationsCreated,
-                'total_lands_checked' => count($upcomingHarvests),
+                'message' => "Created $notificationsCreated harvest notifications",
+                'count' => $notificationsCreated,
+                'total_lands_checked' => count($lands),
                 'results' => $results
             ]);
 

@@ -180,6 +180,3 @@ export const canManageTeams = (): boolean => {
   return hasAnyRole(['admin', 'contributor']);
 };
 
-export const canManageWorkAssignments = (): boolean => {
-  return hasAnyRole(['admin', 'contributor']);
-};

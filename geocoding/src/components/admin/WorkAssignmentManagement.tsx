@@ -1,54 +1,28 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, type WorkAssignment } from '@/components/columnDef/workAssignmentColumns';
 import { 
   ClipboardList, 
   Plus, 
-  Edit, 
-  Trash2, 
-  Search,
-  Calendar,
-  Users,
-  User,
-  MapPin,
   RefreshCw,
   AlertTriangle,
-  Clock
+  Search
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
-import { canManageWorkAssignments } from '@/stores/authStore';
+import { hasAnyRole } from '@/stores/authStore';
 import WorkAssignmentFormDialog from './WorkAssignmentFormDialog';
 
-interface WorkAssignmentData {
-  id: number;
-  title: string;
-  description: string;
-  landId: number | null;
-  landName: string | null;
-  landCode: string | null;
-  teamId: number | null;
-  teamName: string | null;
-  assignedToUserId: number | null;
-  assignedToUserName: string | null;
-  assignedByUserId: number;
-  assignedByUserName: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  dueDate: string | null;
-  completedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 const WorkAssignmentManagement: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedAssignment, setSelectedAssignment] = useState<WorkAssignmentData | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<WorkAssignment | null>(null);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -58,10 +32,89 @@ const WorkAssignmentManagement: React.FC = () => {
     error: assignmentsError, 
     fetchData: refreshAssignments,
     deleteItem: deleteAssignment 
-  } = useGenericCrud<WorkAssignmentData>('work-assignments');
+  } = useGenericCrud<WorkAssignment>('farm-works');
+
+  // Handler functions - defined before useMemo to avoid hoisting issues
+  const handleCreateAssignment = useCallback(() => {
+    setSelectedAssignment(null);
+    setIsEditing(false);
+    setIsAssignmentFormOpen(true);
+  }, []);
+
+  const handleEditAssignment = useCallback((assignment: WorkAssignment) => {
+    setSelectedAssignment(assignment);
+    setIsEditing(true);
+    setIsAssignmentFormOpen(true);
+  }, []);
+
+  const handleViewAssignment = useCallback((assignment: WorkAssignment) => {
+    // For now, view and edit are the same
+    handleEditAssignment(assignment);
+  }, [handleEditAssignment]);
+
+  const handleDeleteAssignment = useCallback(async (assignment: WorkAssignment) => {
+    if (window.confirm(t('workAssignments.confirmDelete', { title: assignment.title }))) {
+      try {
+        await deleteAssignment(assignment.id);
+      } catch (error) {
+        console.error('Failed to delete assignment:', error);
+      }
+    }
+  }, [t, deleteAssignment]);
+
+  // Create columns for the data table
+  const columns = useMemo(() => createColumns({
+    onView: handleViewAssignment,
+    onEdit: handleEditAssignment,
+    onDelete: handleDeleteAssignment,
+    t,
+  }), [handleViewAssignment, handleEditAssignment, handleDeleteAssignment, t]);
+
+  // Filter assignments based on search term and status
+  const filteredAssignments = useMemo(() => {
+    if (!assignments) return [];
+    
+    return assignments.filter(assignment => {
+      const matchesSearch = 
+        assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assignment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (assignment.landName && assignment.landName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (assignment.assignedTeamName && assignment.assignedTeamName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (assignment.assignedToUserName && assignment.assignedToUserName.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [assignments, searchTerm, statusFilter]);
+
+  const handleAssignmentFormClose = () => {
+    setIsAssignmentFormOpen(false);
+    setSelectedAssignment(null);
+    setIsEditing(false);
+    refreshAssignments();
+  };
+
+  // Convert WorkAssignment to the format expected by WorkAssignmentFormDialog
+  const convertToFormAssignment = (assignment: WorkAssignment | null) => {
+    if (!assignment) return null;
+    
+    return {
+      id: assignment.id,
+      title: assignment.title,
+      description: assignment.description,
+      landId: assignment.landId,
+      teamId: assignment.assignedTeamId,
+      assignedToUserId: assignment.assignedToUserId,
+      workTypeId: assignment.workTypeId,
+      priority: assignment.priorityLevel as 'low' | 'medium' | 'high' | 'urgent',
+      status: assignment.status as 'pending' | 'in_progress' | 'completed' | 'cancelled',
+      dueDate: assignment.dueDate,
+    };
+  };
 
   // Check if user has work assignment permissions
-  if (!canManageWorkAssignments()) {
+  if (!hasAnyRole(['admin', 'contributor'])) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -73,88 +126,7 @@ const WorkAssignmentManagement: React.FC = () => {
     );
   }
 
-  const handleCreateAssignment = () => {
-    setSelectedAssignment(null);
-    setIsEditing(false);
-    setIsAssignmentFormOpen(true);
-  };
 
-  const handleEditAssignment = (assignment: WorkAssignmentData) => {
-    setSelectedAssignment(assignment);
-    setIsEditing(true);
-    setIsAssignmentFormOpen(true);
-  };
-
-  const handleDeleteAssignment = async (assignmentId: number) => {
-    if (window.confirm(t('workAssignments.deleteConfirm'))) {
-      try {
-        await deleteAssignment(assignmentId);
-        await refreshAssignments();
-      } catch (error) {
-        console.error('Failed to delete work assignment:', error);
-      }
-    }
-  };
-
-  const handleAssignmentFormClose = () => {
-    setIsAssignmentFormOpen(false);
-    setSelectedAssignment(null);
-    setIsEditing(false);
-    refreshAssignments();
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'high':
-        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-      case 'medium':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return <Badge variant="destructive">{t('workAssignments.urgent')}</Badge>;
-      case 'high':
-        return <Badge variant="destructive">{t('workAssignments.high')}</Badge>;
-      case 'medium':
-        return <Badge variant="secondary">{t('workAssignments.medium')}</Badge>;
-      default:
-        return <Badge variant="outline">{t('workAssignments.low')}</Badge>;
-    }
-  };
-
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="default" className="bg-green-500">{t('workAssignments.completed')}</Badge>;
-      case 'in_progress':
-        return <Badge variant="default" className="bg-blue-500">{t('workAssignments.inProgress')}</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive">{t('workAssignments.cancelled')}</Badge>;
-      default:
-        return <Badge variant="outline">{t('workAssignments.pending')}</Badge>;
-    }
-  };
-
-  const filteredAssignments = (assignments || []).filter(assignment => {
-    const matchesSearch = 
-      assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (assignment.landName && assignment.landName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (assignment.teamName && assignment.teamName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (assignment.assignedToUserName && assignment.assignedToUserName.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
 
   return (
     <div className="space-y-6">
@@ -183,10 +155,13 @@ const WorkAssignmentManagement: React.FC = () => {
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">{t('workAssignments.allStatus')}</option>
-          <option value="pending">{t('workAssignments.pending')}</option>
+          <option value="created">{t('workAssignments.created')}</option>
+          <option value="assigned">{t('workAssignments.assigned')}</option>
           <option value="in_progress">{t('workAssignments.inProgress')}</option>
           <option value="completed">{t('workAssignments.completed')}</option>
-          <option value="cancelled">{t('workAssignments.cancelled')}</option>
+          <option value="canceled">{t('workAssignments.canceled')}</option>
+          <option value="pending">{t('workAssignments.pending')}</option>
+          <option value="postponed">{t('workAssignments.postponed')}</option>
         </select>
       </div>
 
@@ -208,137 +183,55 @@ const WorkAssignmentManagement: React.FC = () => {
         </Alert>
       )}
 
-      {/* Results Count */}
+      {/* Data Table */}
       {!assignmentsLoading && !assignmentsError && (
-        <div className="text-sm text-gray-600">
-{t('workAssignments.showing')} {filteredAssignments.length} {t('workAssignments.of')} {assignments?.length || 0} {t('workAssignments.assignments')}
-          {searchTerm && (
-            <span className="ml-2">
-              {t('workAssignments.for')} "{searchTerm}"
-            </span>
-          )}
-          {statusFilter !== 'all' && (
-            <span className="ml-2">
-              with status "{statusFilter}"
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Assignments Grid */}
-      {!assignmentsLoading && !assignmentsError && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAssignments.map((assignment) => (
-            <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                  {getPriorityIcon(assignment.priority)}
-                </div>
-                <CardDescription className="line-clamp-2">
-                  {assignment.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {assignment.landName && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">{t('workAssignments.land')}:</span>
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="h-3 w-3 text-green-500" />
-                        <span className="text-sm font-medium">{assignment.landName}</span>
-                      </div>
-                    </div>
+        <div className="space-y-4">
+          {filteredAssignments.length > 0 ? (
+            <>
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  {t('workAssignments.showing')} {filteredAssignments.length} {t('workAssignments.of')} {assignments?.length || 0} {t('workAssignments.assignments')}
+                  {searchTerm && (
+                    <span className="ml-2">
+                      {t('workAssignments.for')} "{searchTerm}"
+                    </span>
                   )}
-                  
-                  {assignment.teamName ? (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">{t('workAssignments.team')}:</span>
-                      <div className="flex items-center space-x-1">
-                        <Users className="h-3 w-3 text-blue-500" />
-                        <span className="text-sm font-medium">{assignment.teamName}</span>
-                      </div>
-                    </div>
-                  ) : assignment.assignedToUserName && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">{t('workAssignments.assignedTo')}:</span>
-                      <div className="flex items-center space-x-1">
-                        <User className="h-3 w-3 text-purple-500" />
-                        <span className="text-sm font-medium">{assignment.assignedToUserName}</span>
-                      </div>
-                    </div>
+                  {statusFilter !== 'all' && (
+                    <span className="ml-2">
+                      with status "{statusFilter}"
+                    </span>
                   )}
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">{t('workAssignments.priority')}:</span>
-                    {getPriorityBadge(assignment.priority)}
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">{t('workAssignments.status')}:</span>
-                    {getStatusBadge(assignment.status)}
-                  </div>
-
-                  {assignment.dueDate && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">{t('workAssignments.dueDate')}:</span>
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-3 w-3 text-gray-500" />
-                        <span className="text-sm font-medium">
-                          {new Date(assignment.dueDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">{t('workAssignments.assignedBy')}:</span>
-                    <span className="text-sm font-medium">{assignment.assignedByUserName}</span>
-                  </div>
                 </div>
-                <div className="mt-4 flex justify-between items-center">
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleEditAssignment(assignment)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      {t('workAssignments.edit')}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleDeleteAssignment(assignment.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      {t('workAssignments.delete')}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!assignmentsLoading && !assignmentsError && filteredAssignments.length === 0 && (
-        <div className="text-center py-12">
-          <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-medium mb-2">{t('workAssignments.noAssignmentsFound')}</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            {searchTerm || statusFilter !== 'all'
-              ? `${t('workAssignments.noAssignmentsMatchSearch')} "${searchTerm || statusFilter}"`
-              : t('workAssignments.noAssignmentsCreatedYet')
-            }
-          </p>
-          {!searchTerm && statusFilter === 'all' && (
-            <Button onClick={handleCreateAssignment}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('workAssignments.createFirstAssignment')}
-            </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshAssignments}
+                  className="flex items-center space-x-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>{t('workAssignments.refresh')}</span>
+                </Button>
+              </div>
+              <DataTable columns={columns} data={filteredAssignments} />
+            </>
+          ) : (
+            /* Empty State */
+            <div className="text-center py-12">
+              <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-lg font-medium mb-2">{t('workAssignments.noAssignmentsFound')}</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {searchTerm || statusFilter !== 'all'
+                  ? `${t('workAssignments.noAssignmentsMatchSearch')} "${searchTerm || statusFilter}"`
+                  : t('workAssignments.noAssignmentsCreatedYet')
+                }
+              </p>
+              {!searchTerm && statusFilter === 'all' && (
+                <Button onClick={handleCreateAssignment}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('workAssignments.createFirstAssignment')}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -347,7 +240,7 @@ const WorkAssignmentManagement: React.FC = () => {
       <WorkAssignmentFormDialog
         open={isAssignmentFormOpen}
         onOpenChange={setIsAssignmentFormOpen}
-        assignment={selectedAssignment}
+        assignment={convertToFormAssignment(selectedAssignment)}
         isEditing={isEditing}
         onAssignmentSaved={handleAssignmentFormClose}
       />

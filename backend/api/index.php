@@ -9,9 +9,9 @@ use App\Controllers\AuthController;
 use App\Controllers\LandController;
 use App\Controllers\UserController;
 use App\Controllers\TeamController;
-use App\Controllers\WorkAssignmentController;
 use App\Controllers\PlantTypeController;
 use App\Controllers\CategoryController;
+use App\Controllers\WorkCategoryController;
 use App\Controllers\CommentController;
 use App\Controllers\PhotoController;
 use App\Controllers\NotificationController;
@@ -551,6 +551,381 @@ try {
             }
             break;
 
+        case 'farm-works':
+            $farmWorkController = new \App\Controllers\FarmWorkController();
+            switch ($pathParts[1] ?? '') {
+                case 'categories':
+                    if ($method === 'GET') {
+                        $farmWorkController->getCategories();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'work-types':
+                    if ($method === 'GET') {
+                        $farmWorkController->getWorkTypes();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'test':
+                    if ($method === 'GET') {
+                        $farmWorkController->test();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'team-workload':
+                    if ($method === 'GET') {
+                        $farmWorkController->getTeamWorkloadStatus();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'assign-to-team':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $farmWorkController->assignToTeam($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Work ID required']);
+                    }
+                    break;
+                case 'complete':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $farmWorkController->completeWork($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Work ID required']);
+                    }
+                    break;
+                case 'create-from-notifications':
+                    if ($method === 'POST') {
+                        $notificationService = new \App\FarmWorkNotificationService();
+                        $result = $notificationService->createFarmWorkFromHarvestNotifications();
+                        echo json_encode([
+                            'success' => true,
+                            'message' => "Created {$result['works_created']} farm works from {$result['total_notifications']} harvest notifications",
+                            'data' => $result
+                        ]);
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    // Handle standard CRUD operations
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        // /farm-works/{id}
+                        switch ($method) {
+                            case 'GET':
+                                $farmWorkController->show($pathParts[1]);
+                                break;
+                            case 'PUT':
+                                $farmWorkController->update($pathParts[1]);
+                                break;
+                            case 'DELETE':
+                                $farmWorkController->destroy($pathParts[1]);
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    } else {
+                        // /farm-works
+                        switch ($method) {
+                            case 'GET':
+                                $farmWorkController->index();
+                                break;
+                            case 'POST':
+                                $farmWorkController->store();
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    }
+            }
+            break;
+
+        case 'work-statuses':
+            $workStatusController = new \App\Controllers\WorkStatusController();
+            switch ($pathParts[1] ?? '') {
+                case 'final':
+                    if ($method === 'GET') {
+                        $workStatusController->getFinalStatuses();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'non-final':
+                    if ($method === 'GET') {
+                        $workStatusController->getNonFinalStatuses();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'statistics':
+                    if ($method === 'GET') {
+                        $workStatusController->getStatistics();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    // Handle standard CRUD operations
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        // /work-statuses/{id}
+                        switch ($method) {
+                            case 'GET':
+                                $workStatusController->show($pathParts[1]);
+                                break;
+                            case 'PUT':
+                                $workStatusController->update($pathParts[1]);
+                                break;
+                            case 'DELETE':
+                                $workStatusController->delete($pathParts[1]);
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    } else {
+                        // /work-statuses
+                        switch ($method) {
+                            case 'GET':
+                                $workStatusController->index();
+                                break;
+                            case 'POST':
+                                $workStatusController->store();
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    }
+            }
+            break;
+
+        case 'work-types':
+            $workTypeController = new \App\Controllers\WorkTypeController();
+            switch ($pathParts[1] ?? '') {
+                case 'by-category':
+                    if ($method === 'GET' && isset($pathParts[2])) {
+                        $workTypeController->getByCategory($pathParts[2]);
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    // Handle standard CRUD operations
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        // /work-types/{id}
+                        switch ($method) {
+                            case 'GET':
+                                $workTypeController->show($pathParts[1]);
+                                break;
+                            case 'PUT':
+                                $workTypeController->update($pathParts[1]);
+                                break;
+                            case 'DELETE':
+                                $workTypeController->destroy($pathParts[1]);
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    } else {
+                        // /work-types
+                        switch ($method) {
+                            case 'GET':
+                                $workTypeController->index();
+                                break;
+                            case 'POST':
+                                $workTypeController->store();
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    }
+            }
+            break;
+
+        case 'work-categories':
+            $workCategoryController = new \App\Controllers\WorkCategoryController();
+            switch ($pathParts[1] ?? '') {
+                default:
+                    // Handle standard CRUD operations
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        // /work-categories/{id}
+                        switch ($method) {
+                            case 'GET':
+                                $workCategoryController->show($pathParts[1]);
+                                break;
+                            case 'PUT':
+                                $workCategoryController->update($pathParts[1]);
+                                break;
+                            case 'DELETE':
+                                $workCategoryController->destroy($pathParts[1]);
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    } else {
+                        // /work-categories
+                        switch ($method) {
+                            case 'GET':
+                                $workCategoryController->index();
+                                break;
+                            case 'POST':
+                                $workCategoryController->store();
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    }
+            }
+            break;
+
+        case 'photos':
+            $unifiedPhotoController = new \App\Controllers\UnifiedPhotoController();
+            switch ($pathParts[1] ?? '') {
+                case 'upload':
+                    if ($method === 'POST') {
+                        $unifiedPhotoController->upload();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'context':
+                    if ($method === 'GET') {
+                        $unifiedPhotoController->getByContext();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    // Handle standard CRUD operations
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        // /photos/{id}
+                        switch ($method) {
+                            case 'GET':
+                                $unifiedPhotoController->show($pathParts[1]);
+                                break;
+                            case 'DELETE':
+                                $unifiedPhotoController->destroy($pathParts[1]);
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Photo ID required']);
+                    }
+            }
+            break;
+
+        case 'work-notes':
+            $workNoteController = new \App\Controllers\WorkNoteController();
+            switch ($pathParts[1] ?? '') {
+                case 'add-photo':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNoteController->addPhoto($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Note ID required']);
+                    }
+                    break;
+                case 'remove-photo':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNoteController->removePhoto($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Note ID required']);
+                    }
+                    break;
+                case 'photos':
+                    if ($method === 'GET' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNoteController->getPhotos($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Note ID required']);
+                    }
+                    break;
+                case 'mark-read':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNoteController->markAsRead($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Note ID required']);
+                    }
+                    break;
+                case 'dismiss':
+                    if ($method === 'POST' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNoteController->dismiss($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Note ID required']);
+                    }
+                    break;
+                case 'readers':
+                    if ($method === 'GET' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNoteController->getReaders($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Note ID required']);
+                    }
+                    break;
+                default:
+                    // Handle standard CRUD operations
+                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
+                        // /work-notes/{id}
+                        switch ($method) {
+                            case 'PUT':
+                                $workNoteController->update($pathParts[1]);
+                                break;
+                            case 'DELETE':
+                                $workNoteController->destroy($pathParts[1]);
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    } else {
+                        // /work-notes
+                        switch ($method) {
+                            case 'GET':
+                                if (isset($_GET['work_id'])) {
+                                    $workNoteController->getByWorkId($_GET['work_id']);
+                                } else {
+                                    http_response_code(400);
+                                    echo json_encode(['error' => 'work_id parameter required']);
+                                }
+                                break;
+                            case 'POST':
+                                $workNoteController->store();
+                                break;
+                            default:
+                                http_response_code(405);
+                                echo json_encode(['error' => 'Method not allowed']);
+                        }
+                    }
+            }
+            break;
+
         case 'teams':
             $teamController = new TeamController();
             switch ($pathParts[1] ?? '') {
@@ -636,40 +1011,6 @@ try {
             }
             break;
 
-        case 'work-assignments':
-            $workAssignmentController = new WorkAssignmentController();
-            switch ($method) {
-                case 'GET':
-                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
-                        $workAssignmentController->show($pathParts[1]);
-                    } else {
-                        $workAssignmentController->index();
-                    }
-                    break;
-                case 'POST':
-                    $workAssignmentController->store();
-                    break;
-                case 'PUT':
-                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
-                        $workAssignmentController->update($pathParts[1]);
-                    } else {
-                        http_response_code(400);
-                        echo json_encode(['error' => 'Work assignment ID required']);
-                    }
-                    break;
-                case 'DELETE':
-                    if (isset($pathParts[1]) && is_numeric($pathParts[1])) {
-                        $workAssignmentController->delete($pathParts[1]);
-                    } else {
-                        http_response_code(400);
-                        echo json_encode(['error' => 'Work assignment ID required']);
-                    }
-                    break;
-                default:
-                    http_response_code(405);
-                    echo json_encode(['error' => 'Method not allowed']);
-            }
-            break;
 
         case 'navigation-menus':
             $navMenuController = new NavigationMenuController();

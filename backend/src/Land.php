@@ -16,23 +16,18 @@ class Land
         $sql = "INSERT INTO lands (
                     land_name, land_code, deed_number, location, 
                     province, district, city, plant_type_id, category_id, 
-                    plant_date, harvest_cycle_days, tree_count, geometry, size, palm_area,
-                    owner_name, notes, created_by, created_at, updated_at
+                    plant_date, tree_count, geometry, size, palm_area,
+                    owner_name, notes, previous_harvest_date, next_harvest_date,
+                    created_by, created_at, updated_at
                 ) VALUES (
                     :land_name, :land_code, :deed_number, :location,
                     :province, :district, :city, :plant_type_id, :category_id,
-                    :plant_date, :harvest_cycle_days, :tree_count, :geometry, :size, :palm_area,
-                    :owner_name, :notes, :created_by, NOW(), NOW()
+                    :plant_date, :tree_count, :geometry, :size, :palm_area,
+                    :owner_name, :notes, :previous_harvest_date, :next_harvest_date,
+                    :created_by, NOW(), NOW()
                 )";
 
-        // Handle harvest_cycle - extract first number if it's comma-separated
-        $harvestCycle = $data['harvest_cycle'];
-        if (is_string($harvestCycle) && strpos($harvestCycle, ',') !== false) {
-            $parts = explode(',', $harvestCycle);
-            $harvestCycle = (int) trim($parts[0]);
-        } else {
-            $harvestCycle = (int) $harvestCycle;
-        }
+        // Note: harvest_cycle_days is now retrieved from plant_types table, not stored in lands
 
         $params = [
             'land_name' => $data['land_name'],
@@ -45,13 +40,14 @@ class Land
             'plant_type_id' => (int) $data['planttypeid'],
             'category_id' => (int) $data['categoryid'],
             'plant_date' => $data['plant_date'],
-            'harvest_cycle_days' => $harvestCycle,
             'tree_count' => isset($data['tree_count']) ? (int) $data['tree_count'] : null,
             'geometry' => $data['coordinations'],
             'size' => (float) $data['size'],
             'palm_area' => isset($data['palm_area']) && $data['palm_area'] !== '' ? (float) $data['palm_area'] : null,
             'owner_name' => $data['owner'] ?? null,
             'notes' => $data['notes'] ?? null,
+            'previous_harvest_date' => isset($data['previous_harvest_date']) && $data['previous_harvest_date'] !== '' ? $data['previous_harvest_date'] : null,
+            'next_harvest_date' => isset($data['next_harvest_date']) && $data['next_harvest_date'] !== '' ? $data['next_harvest_date'] : null,
             'created_by' => $data['created_by'] ?? 1,
         ];
 
@@ -64,6 +60,7 @@ class Land
         $sql = "SELECT l.*, u.first_name, u.last_name,
                        pt.name as plant_type_name, 
                        pt.translation_key as plant_type_translation_key,
+                       pt.harvest_cycle_days,
                        c.name as category_name, 
                        c.translation_key as category_translation_key,
                        c.color as category_color
@@ -81,6 +78,7 @@ class Land
         $sql = "SELECT l.*, u.first_name, u.last_name, 
                        pt.name as plant_type_name, 
                        pt.translation_key as plant_type_translation_key,
+                       pt.harvest_cycle_days,
                        c.name as category_name, 
                        c.translation_key as category_translation_key,
                        c.color as category_color
@@ -131,16 +129,8 @@ class Land
                 $fields[] = 'plant_date = :plant_date';
                 $params['plant_date'] = $value;
             } elseif ($key === 'harvest_cycle') {
-                // Handle harvest_cycle - extract first number if it's comma-separated
-                $harvestCycle = $value;
-                if (is_string($harvestCycle) && strpos($harvestCycle, ',') !== false) {
-                    $parts = explode(',', $harvestCycle);
-                    $harvestCycle = (int) trim($parts[0]);
-                } else {
-                    $harvestCycle = (int) $harvestCycle;
-                }
-                $fields[] = 'harvest_cycle_days = :harvest_cycle_days';
-                $params['harvest_cycle_days'] = $harvestCycle;
+                // Note: harvest_cycle_days is now retrieved from plant_types table, not updated in lands
+                // This field is kept for frontend compatibility but ignored in backend
             } elseif ($key === 'coordinations') {
                 $fields[] = 'geometry = :geometry';
                 $params['geometry'] = $value;
@@ -159,6 +149,12 @@ class Land
             } elseif ($key === 'notes') {
                 $fields[] = 'notes = :notes';
                 $params['notes'] = $value;
+            } elseif ($key === 'previous_harvest_date') {
+                $fields[] = 'previous_harvest_date = :previous_harvest_date';
+                $params['previous_harvest_date'] = isset($value) && $value !== '' ? $value : null;
+            } elseif ($key === 'next_harvest_date') {
+                $fields[] = 'next_harvest_date = :next_harvest_date';
+                $params['next_harvest_date'] = isset($value) && $value !== '' ? $value : null;
             }
         }
 
@@ -201,8 +197,9 @@ class Land
             'category_translation_key' => $land['category_translation_key'] ?? null,
             'category_color' => $land['category_color'] ?? '#4285F4',
             'plant_date' => $land['plant_date'],
-            'harvest_cycle_days' => (int) $land['harvest_cycle_days'],
-            'harvest_cycle' => (string) $land['harvest_cycle_days'], // Add harvest_cycle field for frontend
+            'harvest_cycle_days' => (int) ($land['harvest_cycle_days'] ?? 365), // Get from plant_types join
+            'harvest_cycle' => (string) ($land['harvest_cycle_days'] ?? 365), // Get from plant_types join
+            'previous_harvest_date' => $land['previous_harvest_date'],
             'next_harvest_date' => $land['next_harvest_date'],
             'coordinations' => $land['geometry'], // Map geometry to coordinations for frontend
             'geometry' => $land['geometry'], // Keep original geometry field too

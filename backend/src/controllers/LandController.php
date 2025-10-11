@@ -47,11 +47,11 @@ class LandController
         $requiredFields = [
             'land_name', 'land_code', 'land_number', 'location',
             'province', 'district', 'city', 'planttypeid', 'categoryid',
-            'plant_date', 'harvest_cycle', 'coordinations', 'size'
+            'plant_date', 'coordinations', 'size'
         ];
 
         // Optional fields that can be provided
-        $optionalFields = ['palm_area', 'tree_count', 'notes'];
+        $optionalFields = ['palm_area', 'tree_count', 'notes', 'previous_harvest_date', 'next_harvest_date'];
 
         // Check if tree_count is required for Palm Oil
         $plantTypeId = $input['planttypeid'] ?? null;
@@ -73,6 +73,23 @@ class LandController
             if (!is_numeric($input['palm_area']) || floatval($input['palm_area']) < 0) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Palm area must be a positive number']);
+                return;
+            }
+        }
+
+        // Validate harvest dates if provided
+        if (isset($input['previous_harvest_date']) && $input['previous_harvest_date'] !== null && $input['previous_harvest_date'] !== '') {
+            if (!strtotime($input['previous_harvest_date'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Previous harvest date must be a valid date']);
+                return;
+            }
+        }
+
+        if (isset($input['next_harvest_date']) && $input['next_harvest_date'] !== null && $input['next_harvest_date'] !== '') {
+            if (!strtotime($input['next_harvest_date'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Next harvest date must be a valid date']);
                 return;
             }
         }
@@ -132,6 +149,23 @@ class LandController
             if (!is_numeric($input['palm_area']) || floatval($input['palm_area']) < 0) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Palm area must be a positive number']);
+                return;
+            }
+        }
+
+        // Validate harvest dates if provided
+        if (isset($input['previous_harvest_date']) && $input['previous_harvest_date'] !== null && $input['previous_harvest_date'] !== '') {
+            if (!strtotime($input['previous_harvest_date'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Previous harvest date must be a valid date']);
+                return;
+            }
+        }
+
+        if (isset($input['next_harvest_date']) && $input['next_harvest_date'] !== null && $input['next_harvest_date'] !== '') {
+            if (!strtotime($input['next_harvest_date'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Next harvest date must be a valid date']);
                 return;
             }
         }

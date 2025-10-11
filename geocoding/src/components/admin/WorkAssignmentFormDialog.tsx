@@ -24,7 +24,8 @@ import {
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
-import { ClipboardList, Users, User, MapPin, Calendar, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { ClipboardList, Users, User, MapPin, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface WorkAssignmentFormDialogProps {
   open: boolean;
@@ -36,6 +37,7 @@ interface WorkAssignmentFormDialogProps {
     landId: number | null;
     teamId: number | null;
     assignedToUserId: number | null;
+    workTypeId: number | null;
     priority: 'low' | 'medium' | 'high' | 'urgent';
     status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
     dueDate: string | null;
@@ -62,6 +64,39 @@ interface User {
   role: string;
 }
 
+interface WorkCategory {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+}
+
+interface WorkType {
+  id: number;
+  name: string;
+  description: string;
+  categoryId: number;
+  categoryName: string;
+  categoryColor: string;
+  icon: string;
+  estimatedDurationHours: number | null;
+}
+
+interface WorkStatus {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string;
+  color: string;
+  icon: string;
+  sortOrder: number;
+  isActive: boolean;
+  isFinal: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
   open,
   onOpenChange,
@@ -75,6 +110,8 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
     title: z.string().min(1, t('createWorkAssignment.titleRequired')),
     description: z.string().optional(),
     landId: z.union([z.number(), z.literal("none")]).optional(),
+    workTypeId: z.number().min(1, t('createWorkAssignment.workTypeRequired')),
+    workStatusId: z.number().optional(),
     teamId: z.number().optional(),
     assignedToUserId: z.number().optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
@@ -98,6 +135,10 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
   const [lands, setLands] = useState<Land[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [workCategories, setWorkCategories] = useState<WorkCategory[]>([]);
+  const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
+  const [workStatuses, setWorkStatuses] = useState<WorkStatus[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [assignmentType, setAssignmentType] = useState<'team' | 'individual'>('team');
 
@@ -107,6 +148,8 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
       title: assignment?.title || '',
       description: assignment?.description || '',
       landId: assignment?.landId || "none",
+      workTypeId: assignment?.workTypeId || undefined,
+      workStatusId: assignment?.workStatusId || undefined,
       teamId: assignment?.teamId || undefined,
       assignedToUserId: assignment?.assignedToUserId || undefined,
       priority: assignment?.priority || 'medium',
@@ -117,18 +160,29 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
 
   // Fetch data when dialog opens
   useEffect(() => {
+    console.log('useEffect triggered, open:', open);
     if (open) {
+      console.log('Dialog is open, calling fetchData...');
       fetchData();
+    } else {
+      console.log('Dialog is closed');
     }
   }, [open]);
 
   // Update form values when assignment prop changes
   useEffect(() => {
     if (assignment) {
+      // Find the category for the work type
+      const workType = workTypes.find(wt => wt.id === assignment.workTypeId);
+      if (workType) {
+        setSelectedCategoryId(workType.categoryId);
+      }
+      
       form.reset({
         title: assignment.title,
         description: assignment.description,
         landId: assignment.landId || "none",
+        workTypeId: assignment.workTypeId || undefined,
         teamId: assignment.teamId || undefined,
         assignedToUserId: assignment.assignedToUserId || undefined,
         priority: assignment.priority,
@@ -141,30 +195,97 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
         title: '',
         description: '',
         landId: "none",
+        workTypeId: undefined,
         teamId: undefined,
         assignedToUserId: undefined,
         priority: 'medium',
         status: 'pending',
         dueDate: '',
       });
+      setSelectedCategoryId(null);
       setAssignmentType('team');
     }
-  }, [assignment, form]);
+  }, [assignment, form, workTypes]);
 
   const fetchData = async () => {
     try {
+      console.log('=== fetchData function called ===');
       setLoadingData(true);
-      const [landsResponse, teamsResponse, usersResponse] = await Promise.all([
+      
+      console.log('Fetching data...');
+      
+      // Fetch all data including work categories, types, and statuses
+      const [landsResponse, teamsResponse, usersResponse, categoriesResponse, workTypesResponse, statusesResponse] = await Promise.all([
         axiosClient.get('/lands'),
         axiosClient.get('/teams'),
         axiosClient.get('/users'),
+        axiosClient.get('/farm-works/categories').catch((error) => {
+          console.error('Categories API error:', error);
+          console.error('Categories API error details:', error.response?.data);
+          console.error('Categories API status:', error.response?.status);
+          return { data: { success: false, data: [], error: error.message } };
+        }),
+        axiosClient.get('/farm-works/work-types').catch((error) => {
+          console.error('Work types API error:', error);
+          console.error('Work types API error details:', error.response?.data);
+          console.error('Work types API status:', error.response?.status);
+          return { data: { success: false, data: [], error: error.message } };
+        }),
+        axiosClient.get('/work-statuses').catch((error) => {
+          console.error('Work statuses API error:', error);
+          console.error('Work statuses API error details:', error.response?.data);
+          console.error('Work statuses API status:', error.response?.status);
+          return { data: { success: false, data: [], error: error.message } };
+        }),
       ]);
       
-      setLands(landsResponse.data);
-      setTeams(teamsResponse.data);
-      setUsers(usersResponse.data);
+      setLands(landsResponse.data || []);
+      setTeams(teamsResponse.data || []);
+      setUsers(usersResponse.data || []);
+      
+      // Process work categories data
+      const categoriesData = Array.isArray(categoriesResponse.data?.data) ? categoriesResponse.data.data : [];
+      const workTypesData = Array.isArray(workTypesResponse.data?.data) ? workTypesResponse.data.data : [];
+      const statusesData = Array.isArray(statusesResponse.data?.data) ? statusesResponse.data.data : [];
+      
+      setWorkCategories(categoriesData);
+      setWorkTypes(workTypesData);
+      setWorkStatuses(statusesData);
+      
+      console.log('=== API Response Analysis ===');
+      console.log('Categories API response:', categoriesResponse.data);
+      console.log('Work types API response:', workTypesResponse.data);
+      console.log('Work statuses API response:', statusesResponse.data);
+      console.log('=== Processed Data ===');
+      console.log('Work categories count:', categoriesData.length);
+      console.log('Work types count:', workTypesData.length);
+      console.log('Work statuses count:', statusesData.length);
+      console.log('Categories data:', categoriesData);
+      console.log('Work types data:', workTypesData);
+      console.log('Work statuses data:', statusesData);
+      
+      // Check for API errors and show user-friendly messages
+      if (categoriesResponse.data?.success === false) {
+        console.error('Categories API failed:', categoriesResponse.data.error);
+        toast.error(`Failed to load work categories: ${categoriesResponse.data.error}`);
+      }
+      if (workTypesResponse.data?.success === false) {
+        console.error('Work types API failed:', workTypesResponse.data.error);
+        toast.error(`Failed to load work types: ${workTypesResponse.data.error}`);
+      }
+      if (statusesResponse.data?.success === false) {
+        console.error('Work statuses API failed:', statusesResponse.data.error);
+        toast.error(`Failed to load work statuses: ${statusesResponse.data.error}`);
+      }
+      
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      // Set empty arrays as fallback
+      setLands([]);
+      setTeams([]);
+      setUsers([]);
+      setWorkCategories([]);
+      setWorkTypes([]);
     } finally {
       setLoadingData(false);
     }
@@ -172,30 +293,33 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
 
   const onSubmit = async (values: WorkAssignmentFormData) => {
     try {
-      const payload = {
-        title: values.title,
-        description: values.description,
-        landId: values.landId === "none" ? null : values.landId || null,
-        teamId: assignmentType === 'team' ? values.teamId : null,
-        assignedToUserId: assignmentType === 'individual' ? values.assignedToUserId : null,
-        priority: values.priority,
-        status: values.status,
-        dueDate: values.dueDate || null,
-      };
+        const payload = {
+          title: values.title,
+          description: values.description,
+          land_id: values.landId === "none" ? null : values.landId || null,
+          work_type_id: values.workTypeId, // Required field
+          work_status_id: values.workStatusId || null,
+          assigned_team_id: assignmentType === 'team' ? values.teamId : null,
+          assigned_to_user_id: assignmentType === 'individual' ? values.assignedToUserId : null,
+          priority_level: values.priority,
+          status: values.status,
+          due_date: values.dueDate || null,
+        };
 
       if (isEditing && assignment) {
         // Update existing assignment
-        await axiosClient.put(`/work-assignments/${assignment.id}`, payload);
+        await axiosClient.put(`/farm-works/${assignment.id}`, payload);
       } else {
         // Create new assignment
-        await axiosClient.post('/work-assignments', payload);
+        await axiosClient.post('/farm-works', payload);
       }
       
+      toast.success(isEditing ? t('createWorkAssignment.workAssignmentUpdated') : t('createWorkAssignment.workAssignmentCreated'));
       onAssignmentSaved();
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to save work assignment:', error);
-      alert(error.response?.data?.error || t('createWorkAssignment.failedToSaveAssignment'));
+      toast.error(error.response?.data?.error || t('createWorkAssignment.failedToSaveAssignment'));
     }
   };
 
@@ -259,49 +383,203 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="landId"
-              render={({ field }) => (
-                <FormItem>
+            {/* Two Column Layout for Dropdowns */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left Column */}
+              <div className="space-y-4">
+                {/* Work Category Selection */}
+                <div className="space-y-2">
                   <FormLabel className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4" />
-                    <span>{t('createWorkAssignment.landOptional')}</span>
+                    <ClipboardList className="h-4 w-4" />
+                    <span>{t('createWorkAssignment.workCategory')}</span>
                   </FormLabel>
                   <Select 
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
-                    value={field.value?.toString() || ''}
+                    onValueChange={(value) => {
+                      const categoryId = value ? parseInt(value) : null;
+                      setSelectedCategoryId(categoryId);
+                      // Reset work type when category changes
+                      form.setValue('workTypeId', undefined);
+                    }}
+                    value={selectedCategoryId?.toString() || ''}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('createWorkAssignment.selectLandOptional')} />
-                      </SelectTrigger>
-                    </FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('createWorkAssignment.selectWorkCategory')} />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">
-                        <div className="flex flex-col">
-                          <span>{t('createWorkAssignment.noSpecificLand')}</span>
-                          <span className="text-xs text-gray-500">
-                            {t('createWorkAssignment.generalAssignment')}
-                          </span>
-                        </div>
-                      </SelectItem>
-                      {lands.map((land) => (
-                        <SelectItem key={land.id} value={land.id.toString()}>
-                          <div className="flex flex-col">
-                            <span>{land.land_name}</span>
-                            <span className="text-xs text-gray-500">
-                              {land.land_code}
-                            </span>
-                          </div>
+                      {Array.isArray(workCategories) && workCategories.length > 0 ? (
+                        workCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            <div className="flex items-center space-x-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: category.color }}
+                              />
+                              <span>{category.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-categories" disabled>
+                          <span className="text-gray-500">No categories available</span>
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </div>
+
+                {/* Work Status Selection */}
+                <FormField
+                  control={form.control}
+                  name="workStatusId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>{t('createWorkAssignment.workStatus')}</span>
+                      </FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                        value={field.value?.toString() || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('createWorkAssignment.selectWorkStatus')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.isArray(workStatuses) ? (
+                            workStatuses
+                              .sort((a, b) => a.sortOrder - b.sortOrder)
+                              .map((status) => (
+                                <SelectItem key={status.id} value={status.id.toString()}>
+                                  <div className="flex items-center space-x-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full" 
+                                      style={{ backgroundColor: status.color }}
+                                    />
+                                    <span>{status.displayName}</span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                          ) : (
+                            <SelectItem value="no-statuses" disabled>
+                              <span className="text-gray-500">No statuses available</span>
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
+                {/* Work Type Selection */}
+                <FormField
+                  control={form.control}
+                  name="workTypeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <ClipboardList className="h-4 w-4" />
+                        <span>{t('createWorkAssignment.workType')}</span>
+                      </FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                        value={field.value?.toString() || ''}
+                        disabled={!selectedCategoryId}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              selectedCategoryId 
+                                ? t('createWorkAssignment.selectWorkType') 
+                                : t('createWorkAssignment.selectCategoryFirst')
+                            } />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.isArray(workTypes) ? (
+                            workTypes
+                              .filter(workType => workType.categoryId === selectedCategoryId)
+                              .map((workType) => (
+                                <SelectItem key={workType.id} value={workType.id.toString()}>
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center space-x-2">
+                                      <div 
+                                        className="w-2 h-2 rounded-full" 
+                                        style={{ backgroundColor: workType.categoryColor }}
+                                      />
+                                      <span>{workType.name}</span>
+                                    </div>
+                                    {workType.estimatedDurationHours && (
+                                      <span className="text-xs text-gray-500">
+                                        {t('createWorkAssignment.estimatedDuration')}: {workType.estimatedDurationHours}h
+                                      </span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))
+                          ) : (
+                            <SelectItem value="no-work-types" disabled>
+                              <span className="text-gray-500">No work types available</span>
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Land Selection */}
+                <FormField
+                  control={form.control}
+                  name="landId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>{t('createWorkAssignment.landOptional')}</span>
+                      </FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                        value={field.value?.toString() || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('createWorkAssignment.selectLandOptional')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            <div className="flex flex-col">
+                              <span>{t('createWorkAssignment.noSpecificLand')}</span>
+                              <span className="text-xs text-gray-500">
+                                {t('createWorkAssignment.generalAssignment')}
+                              </span>
+                            </div>
+                          </SelectItem>
+                          {lands.map((land) => (
+                            <SelectItem key={land.id} value={land.id.toString()}>
+                              <div className="flex flex-col">
+                                <span>{land.land_name}</span>
+                                <span className="text-xs text-gray-500">
+                                  {land.land_code}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             {/* Assignment Type Selection */}
             <div className="space-y-2">

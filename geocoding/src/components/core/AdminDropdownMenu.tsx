@@ -10,7 +10,10 @@ import {
   Users, 
   Settings, 
   Mail,
-  ChevronDown
+  ChevronDown,
+  ClipboardList,
+  Tag,
+  CheckCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canManageUsers } from '@/stores/authStore';
@@ -27,7 +30,8 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
   isMobile = false
 }) => {
   const { t } = useTranslation();
-  const isAdminActive = activeSection === 'admin' || activeSection === 'menu-management' || activeSection === 'email-templates';
+  const isAdminActive = activeSection === 'admin' || activeSection === 'menu-management' || activeSection === 'email-templates' || 
+                       activeSection === 'work-categories' || activeSection === 'work-types' || activeSection === 'work-statuses';
   
   // Admin submenu items
   const adminItems = [
@@ -47,6 +51,24 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
       id: 'email-templates',
       label: t('navigation.admin.emailTemplates'),
       icon: Mail,
+      visible: canManageUsers()
+    },
+    {
+      id: 'work-categories',
+      label: t('navigation.admin.workCategories'),
+      icon: Tag,
+      visible: canManageUsers()
+    },
+    {
+      id: 'work-types',
+      label: t('navigation.admin.workTypes'),
+      icon: ClipboardList,
+      visible: canManageUsers()
+    },
+    {
+      id: 'work-statuses',
+      label: t('navigation.admin.workStatuses'),
+      icon: CheckCircle,
       visible: canManageUsers()
     }
   ];

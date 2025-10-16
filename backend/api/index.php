@@ -134,6 +134,14 @@ try {
                         echo json_encode(['error' => 'Method not allowed']);
                     }
                     break;
+                case 'language-preference':
+                    if ($method === 'PUT') {
+                        $authController->updateLanguagePreference();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
                 case 'register':
                     if ($method === 'POST') {
                         $authController->register();
@@ -926,6 +934,31 @@ try {
             }
             break;
 
+        case 'work-note-photos':
+            $workNotePhotoController = new \App\Controllers\WorkNotePhotoController();
+            switch ($pathParts[1] ?? '') {
+                case 'upload':
+                    if ($method === 'POST') {
+                        $workNotePhotoController->upload();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'delete':
+                    if ($method === 'DELETE' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
+                        $workNotePhotoController->delete($pathParts[2]);
+                    } else {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Photo ID required']);
+                    }
+                    break;
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Endpoint not found']);
+            }
+            break;
+
         case 'teams':
             $teamController = new TeamController();
             switch ($pathParts[1] ?? '') {
@@ -946,8 +979,15 @@ try {
                     }
                     break;
                 case 'members':
-                    if ($method === 'GET' && isset($pathParts[2]) && is_numeric($pathParts[2])) {
-                        $teamController->getMembers($pathParts[2]);
+                    if ($method === 'GET' && isset($pathParts[2])) {
+                        if ($pathParts[2] === 'all') {
+                            $teamController->getAllMembers();
+                        } elseif (is_numeric($pathParts[2])) {
+                            $teamController->getMembers($pathParts[2]);
+                        } else {
+                            http_response_code(400);
+                            echo json_encode(['error' => 'Invalid members endpoint']);
+                        }
                     } else {
                         http_response_code(400);
                         echo json_encode(['error' => 'Team ID required']);
@@ -1215,6 +1255,112 @@ try {
                 default:
                     http_response_code(405);
                     echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+        case 'error-logs':
+            $errorLogController = new \App\Controllers\ErrorLogController();
+            switch ($pathParts[1] ?? '') {
+                case 'recent':
+                    if ($method === 'GET') {
+                        $errorLogController->getRecentErrors();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'stats':
+                    if ($method === 'GET') {
+                        $errorLogController->getLogStats();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'clear':
+                    if ($method === 'DELETE') {
+                        $errorLogController->clearLogs();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Error log endpoint not found']);
+            }
+            break;
+
+        case 'error-test':
+            $errorTestController = new \App\Controllers\ErrorTestController();
+            switch ($pathParts[1] ?? '') {
+                case 'database':
+                    if ($method === 'GET') {
+                        $errorTestController->testDatabaseError();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'validation':
+                    if ($method === 'POST') {
+                        $errorTestController->testValidationError();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'filesystem':
+                    if ($method === 'GET') {
+                        $errorTestController->testFileSystemError();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'api':
+                    if ($method === 'GET') {
+                        $errorTestController->testApiError();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'division':
+                    if ($method === 'GET') {
+                        $errorTestController->testDivisionByZero();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'memory':
+                    if ($method === 'GET') {
+                        $errorTestController->testMemoryError();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'custom':
+                    if ($method === 'GET') {
+                        $errorTestController->testCustomError();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                case 'multiple':
+                    if ($method === 'GET') {
+                        $errorTestController->testMultipleErrors();
+                    } else {
+                        http_response_code(405);
+                        echo json_encode(['error' => 'Method not allowed']);
+                    }
+                    break;
+                default:
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Error test endpoint not found']);
             }
             break;
 

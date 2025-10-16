@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Release Notes - Translation & Work Management Updates</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 4px solid #3498db;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        h4 {
+            color: #34495e;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .overview {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .feature-card h4 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 40px;
+            text-align: center;
+        }
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .checklist {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .checklist input[type="checkbox"] {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Release Notes - Translation & Work Management Updates</h1>
+        
+        <div class="overview">
+            <h2>🎯 Overview</h2>
+            <p>This release focuses on comprehensive internationalization improvements and enhanced work management functionality, including individual worker tracking, harvest date automation, and complete translation support for admin menus.</p>
+        </div>
+
+        <h2>🌍 Internationalization (i18n) Enhancements</h2>
+        
+        <div class="success">
+            <h3>✅ Complete Translation Support for Admin Menus</h3>
+            <ul>
+                <li><strong>Work Assignment Management</strong>: All UI elements, column dropdowns, and work type names now fully translated</li>
+                <li><strong>Email Templates Management</strong>: Complete translation coverage for all interface elements</li>
+                <li><strong>Work Categories Management</strong>: Full translation support including category names and descriptions</li>
+                <li><strong>Work Types Management</strong>: Comprehensive translation for work type names, descriptions, and category names</li>
+                <li><strong>Work Statuses Management</strong>: Complete translation support for status names, display names, and descriptions</li>
+                <li><strong>User Management</strong>: Language preference support with role badge translations</li>
+            </ul>
+        </div>
+
+        <h3>🔧 Translation Infrastructure Improvements</h3>
+        <ul>
+            <li>Fixed critical JSON parsing issues caused by duplicate keys in translation files</li>
+            <li>Added comprehensive translation keys for all admin menu sections</li>
+            <li>Implemented helper functions for dynamic data translation (work types, categories, statuses)</li>
+            <li>Enhanced translation utilities for consistent data translation across components</li>
+        </ul>
+
+        <h2>👥 Enhanced Work Management</h2>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>🎯 Individual Worker Selection & Tracking</h4>
+                <ul>
+                    <li><strong>Replaced worker count with individual worker selection</strong> in work completion forms</li>
+                    <li><strong>Cross-team worker support</strong>: Team leads can now select workers from any team, not just assigned teams</li>
+                    <li><strong>Individual payment tracking</strong>: Hours worked, hourly rates, and total payments per worker</li>
+                    <li><strong>Visual team indicators</strong>: Assigned team members highlighted with blue background and badges</li>
+                    <li><strong>Database schema updates</strong>: New <code>work_completion_workers</code> table for detailed worker tracking</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>🌱 Palm Oil Harvest Automation</h4>
+                <ul>
+                    <li><strong>Automatic harvest date calculation</strong>: When Palm Oil harvest work is completed, system automatically updates:
+                        <ul>
+                            <li><code>previous_harvest_date</code> = completion date</li>
+                            <li><code>next_harvest_date</code> = completion date + 18 days</li>
+                        </ul>
+                    </li>
+                    <li><strong>Completion date flexibility</strong>: Team leads can specify actual completion date vs. note entry date</li>
+                    <li><strong>Harvest notification preparation</strong>: System ready for cron job notifications 3 days before next harvest</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h4>📝 Work Notes & Photo Management</h4>
+                <ul>
+                    <li><strong>Photo carousel integration</strong>: Click-to-view full-size photo functionality in work note dialogs</li>
+                    <li><strong>Improved work notes layout</strong>: Optimized table layout with hover tooltips for better space utilization</li>
+                    <li><strong>Enhanced photo handling</strong>: Fixed photo display issues between add/edit work note dialogs</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>🗄️ Database Schema Updates</h2>
+
+        <h3>New Tables</h3>
+        <div class="code">
+            <strong>work_completion_workers</strong>: Individual worker tracking for work completions
+            - Links completion records to specific workers
+            - Tracks hours worked, hourly rates, total payments, and notes
+        </div>
+
+        <h3>Schema Modifications</h3>
+        <ul>
+            <li><code>work_completions</code>: Added <code>completion_date</code> column for flexible completion date tracking</li>
+            <li><code>users</code>: Added <code>language_preference</code> column for user language settings</li>
+        </ul>
+
+        <h2>🔧 Backend API Enhancements</h2>
+
+        <h3>New Endpoints</h3>
+        <ul>
+            <li><code>GET /teams/members/all</code>: Retrieve all available workers across teams</li>
+            <li><code>PUT /auth/language-preference</code>: Update user language preference</li>
+        </ul>
+
+        <h3>Enhanced Controllers</h3>
+        <ul>
+            <li><strong>FarmWorkController</strong>: Added harvest date automation and individual worker handling</li>
+            <li><strong>TeamController</strong>: Added cross-team member retrieval functionality</li>
+            <li><strong>AuthController</strong>: Added language preference management</li>
+            <li><strong>User Model</strong>: Enhanced with language preference support</li>
+        </ul>
+
+        <h2>🎨 Frontend Improvements</h2>
+
+        <h3>Component Updates</h3>
+        <ul>
+            <li><strong>WorkCompletionForm</strong>: Complete redesign with individual worker selection</li>
+            <li><strong>WorkStatusManagement</strong>: Full translation support with data translation</li>
+            <li><strong>WorkTypeManagement</strong>: Enhanced with category and type name translations</li>
+            <li><strong>WorkCategoryManagement</strong>: Complete translation coverage</li>
+            <li><strong>EmailTemplateManagement</strong>: Full interface translation</li>
+            <li><strong>UserFormDialog</strong>: Added language preference selection</li>
+            <li><strong>DataTable</strong>: Enhanced column visibility dropdown translations</li>
+        </ul>
+
+        <h3>UI/UX Enhancements</h3>
+        <ul>
+            <li><strong>Responsive design improvements</strong>: Better mobile and tablet support</li>
+            <li><strong>Visual indicators</strong>: Team assignment badges and color coding</li>
+            <li><strong>Hover tooltips</strong>: Enhanced information display in compact layouts</li>
+            <li><strong>Form validation</strong>: Improved error handling and user feedback</li>
+        </ul>
+
+        <h2>🌐 Language Support</h2>
+
+        <h3>Translation Coverage</h3>
+        <ul>
+            <li><strong>English (en)</strong>: Complete coverage for all admin menus</li>
+            <li><strong>Thai (th)</strong>: Full translation support including:
+                <ul>
+                    <li>Work type names: "Harvesting" → "การเก็บเกี่ยว"</li>
+                    <li>Work category names: "Planting" → "การปลูก"</li>
+                    <li>Work status names: "In Progress" → "กำลังดำเนินการ"</li>
+                    <li>All UI elements, buttons, labels, and messages</li>
+                </ul>
+            </li>
+        </ul>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">60+</div>
+                <div>Work Status Translation Keys</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">50+</div>
+                <div>Work Type Translation Keys</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">40+</div>
+                <div>Work Category Translation Keys</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div>New Database Tables/Columns</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div>New API Endpoints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10+</div>
+                <div>Updated Components</div>
+            </div>
+        </div>
+
+        <h2>🐛 Bug Fixes</h2>
+
+        <div class="warning">
+            <h3>Critical Fixes</h3>
+            <ul>
+                <li><strong>JSON parsing errors</strong>: Resolved duplicate key issues in translation files</li>
+                <li><strong>Photo display conflicts</strong>: Fixed file input ID conflicts between add/edit dialogs</li>
+                <li><strong>Translation key access</strong>: Resolved missing translation keys due to duplicate sections</li>
+                <li><strong>Harvest date logic</strong>: Fixed completion date usage in harvest date calculations</li>
+            </ul>
+        </div>
+
+        <h3>UI/UX Fixes</h3>
+        <ul>
+            <li><strong>Squeezed table content</strong>: Improved work notes table layout</li>
+            <li><strong>Column dropdown translations</strong>: Fixed English-only column names in Thai mode</li>
+            <li><strong>Status badge translations</strong>: Resolved untranslated status and type badges</li>
+            <li><strong>Form validation</strong>: Enhanced error messages and user feedback</li>
+        </ul>
+
+        <h2>🚀 Migration Notes</h2>
+
+        <div class="highlight">
+            <h3>Database Migrations Required</h3>
+            <ol>
+                <li>Run <code>add_completion_date_column.php</code> to add completion_date to work_completions</li>
+                <li>Run <code>create_work_completion_workers_table.php</code> to create worker tracking table</li>
+                <li>Run <code>add_language_preference_column.php</code> to add language preference to users</li>
+            </ol>
+        </div>
+
+        <h3>Configuration Updates</h3>
+        <ul>
+            <li>Translation files updated with comprehensive key coverage</li>
+            <li>Frontend components require rebuild for new translation keys</li>
+            <li>Backend API routes updated for new endpoints</li>
+        </ul>
+
+        <h2>📋 Testing Recommendations</h2>
+
+        <div class="checklist">
+            <h3>Functional Testing</h3>
+            <ul>
+                <li><input type="checkbox"> Test work completion with individual worker selection</li>
+                <li><input type="checkbox"> Verify Palm Oil harvest date automation</li>
+                <li><input type="checkbox"> Test cross-team worker selection functionality</li>
+                <li><input type="checkbox"> Validate language switching across all admin menus</li>
+            </ul>
+
+            <h3>Translation Testing</h3>
+            <ul>
+                <li><input type="checkbox"> Verify all admin menu translations in English and Thai</li>
+                <li><input type="checkbox"> Test work type, category, and status name translations</li>
+                <li><input type="checkbox"> Validate form labels and button translations</li>
+                <li><input type="checkbox"> Check data table column translations</li>
+            </ul>
+
+            <h3>Integration Testing</h3>
+            <ul>
+                <li><input type="checkbox"> Test work completion workflow end-to-end</li>
+                <li><input type="checkbox"> Verify harvest notification preparation</li>
+                <li><input type="checkbox"> Test user language preference persistence</li>
+                <li><input type="checkbox"> Validate photo upload and display functionality</li>
+            </ul>
+        </div>
+
+        <h2>🎯 Next Steps</h2>
+
+        <h3>Planned Enhancements</h3>
+        <ul>
+            <li>Harvest notification cron job implementation</li>
+            <li>Advanced worker payment reporting</li>
+            <li>Enhanced photo management with GPS coordinates</li>
+            <li>Additional language support (if needed)</li>
+        </ul>
+
+        <h3>Performance Monitoring</h3>
+        <ul>
+            <li>Monitor database performance with new worker tracking</li>
+            <li>Track translation loading performance</li>
+            <li>Monitor user language preference usage</li>
+        </ul>
+
+        <div class="footer">
+            <h3>Release Information</h3>
+            <p><strong>Version</strong>: 2.1.0</p>
+            <p><strong>Release Date</strong>: January 2025</p>
+            <p><strong>Compatibility</strong>: Requires database migrations and frontend rebuild</p>
+            <p><strong>Breaking Changes</strong>: Work completion API now expects worker array instead of worker count</p>
+        </div>
+    </div>
+</body>
+</html>

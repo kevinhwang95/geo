@@ -52,6 +52,9 @@ class AuthController
 
         $token = Auth::generateToken($user['id'], $user['role']);
 
+        // Update last login timestamp
+        Auth::updateUserLastLogin($user['id']);
+
         echo json_encode([
             'token' => $token,
             'user' => $this->userModel->formatUser($user)
@@ -70,6 +73,35 @@ class AuthController
         $user = $this->userModel->findById($userData['user_id']);
         
         echo json_encode($this->userModel->formatUser($user));
+    }
+
+    public function updateLanguagePreference()
+    {
+        $userData = Auth::requireAuth();
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($input['language'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Language is required']);
+            return;
+        }
+
+        $language = $input['language'];
+        
+        // Validate language code
+        $validLanguages = ['en', 'th'];
+        if (!in_array($language, $validLanguages)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid language code. Supported languages: ' . implode(', ', $validLanguages)]);
+            return;
+        }
+
+        $this->userModel->updateLanguagePreference($userData['user_id'], $language);
+        
+        echo json_encode([
+            'message' => 'Language preference updated successfully',
+            'language' => $language
+        ]);
     }
 
     public function register()

@@ -10,6 +10,25 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { Eye, Edit, Trash2, MoreHorizontal, AlertTriangle, Clock, Users, User, MapPin, Calendar } from "lucide-react"
+import { getTranslatedText } from "@/utils/translationUtils"
+
+// Helper function to get work type translation key
+const getWorkTypeTranslationKey = (workTypeName: string): string => {
+  const workTypeKeyMap: Record<string, string> = {
+    'Harvesting': 'workTypes.harvesting',
+    'Planting': 'workTypes.planting',
+    'Fertilizing': 'workTypes.fertilizing',
+    'Irrigation': 'workTypes.irrigation',
+    'Pruning': 'workTypes.pruning',
+    'Pest Control': 'workTypes.pest_control',
+    'Soil Preparation': 'workTypes.soil_preparation',
+    'Weeding': 'workTypes.weeding',
+    'Monitoring': 'workTypes.monitoring',
+    'Maintenance': 'workTypes.maintenance'
+  };
+  
+  return workTypeKeyMap[workTypeName] || `workTypes.${workTypeName.toLowerCase().replace(/\s+/g, '_')}`;
+};
 
 // This type is used to define the shape of our data.
 export type WorkAssignment = {
@@ -63,7 +82,7 @@ const getPriorityIcon = (priority: string) => {
   }
 };
 
-const getPriorityBadge = (priority: string) => {
+const getPriorityBadge = (priority: string, t: (key: string) => string) => {
   const variants = {
     critical: 'destructive',
     high: 'destructive', 
@@ -71,10 +90,19 @@ const getPriorityBadge = (priority: string) => {
     low: 'outline'
   } as const;
   
-  return <Badge variant={variants[priority as keyof typeof variants] || 'secondary'}>{priority}</Badge>;
+  const priorityTranslations = {
+    critical: t('workAssignments.critical'),
+    high: t('workAssignments.high'),
+    medium: t('workAssignments.medium'),
+    low: t('workAssignments.low')
+  };
+  
+  return <Badge variant={variants[priority as keyof typeof variants] || 'secondary'}>
+    {priorityTranslations[priority as keyof typeof priorityTranslations] || priority}
+  </Badge>;
 };
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, t: (key: string) => string) => {
   const variants = {
     created: 'secondary',
     assigned: 'default',
@@ -85,7 +113,19 @@ const getStatusBadge = (status: string) => {
     postponed: 'outline'
   } as const;
   
-  return <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>{status}</Badge>;
+  const statusTranslations = {
+    created: t('workAssignments.created'),
+    assigned: t('workAssignments.assigned'),
+    in_progress: t('workAssignments.inProgress'),
+    completed: t('workAssignments.completed'),
+    canceled: t('workAssignments.canceled'),
+    pending: t('workAssignments.pending'),
+    postponed: t('workAssignments.postponed')
+  };
+  
+  return <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
+    {statusTranslations[status as keyof typeof statusTranslations] || status}
+  </Badge>;
 };
 
 export const createColumns = ({
@@ -108,13 +148,16 @@ export const createColumns = ({
     header: t('workAssignments.workType'),
     cell: ({ row }) => {
       const workType = row.original;
+      const translationKey = getWorkTypeTranslationKey(workType.workTypeName);
+      const translatedWorkTypeName = getTranslatedText(t, translationKey, workType.workTypeName);
+      
       return (
         <div className="flex items-center space-x-2">
           <div 
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: workType.categoryColor }}
           />
-          <span className="text-sm">{workType.workTypeName}</span>
+          <span className="text-sm">{translatedWorkTypeName}</span>
         </div>
       );
     },
@@ -164,14 +207,14 @@ export const createColumns = ({
     cell: ({ row }) => (
       <div className="flex items-center space-x-2">
         {getPriorityIcon(row.getValue("priorityLevel"))}
-        {getPriorityBadge(row.getValue("priorityLevel"))}
+        {getPriorityBadge(row.getValue("priorityLevel"), t)}
       </div>
     ),
   },
   {
     accessorKey: "status",
     header: t('workAssignments.status'),
-    cell: ({ row }) => getStatusBadge(row.getValue("status")),
+    cell: ({ row }) => getStatusBadge(row.getValue("status"), t),
   },
   {
     accessorKey: "dueDate",
@@ -234,6 +277,8 @@ export const createColumns = ({
     },
   },
 ]
+
+
 
 
 

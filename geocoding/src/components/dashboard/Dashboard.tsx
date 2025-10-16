@@ -41,6 +41,7 @@ import WorkCategoryManagement from '@/components/admin/WorkCategoryManagement';
 import WorkTypeManagement from '@/components/admin/WorkTypeManagement';
 import WorkStatusManagement from '@/components/admin/WorkStatusManagement';
 import LandsDataTable from '@/components/admin/LandsDataTable';
+import ErrorLogsViewer from '@/components/admin/ErrorLogsViewer';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
@@ -757,6 +758,12 @@ const Dashboard: React.FC = () => {
           {hasAnyRole(['admin', 'contributor']) && activeSection === 'work-statuses' && (
             <div className="space-y-6 p-6">
               <WorkStatusManagement />
+            </div>
+          )}
+
+          {canManageUsers() && activeSection === 'error-logs' && (
+            <div className="space-y-6 p-6">
+              <ErrorLogsViewer />
             </div>
           )}
         </div>

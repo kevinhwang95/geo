@@ -49,7 +49,7 @@ interface EmailTemplateFormData {
 }
 
 const EmailTemplateManagement: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -347,9 +347,9 @@ const EmailTemplateManagement: React.FC = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Email Templates</CardTitle>
+              <CardTitle>{t('emailTemplates.title')}</CardTitle>
               <CardDescription>
-                Manage your email templates. Use the search bar to filter templates.
+                {t('emailTemplates.description')}
               </CardDescription>
             </div>
             <Button 
@@ -366,7 +366,7 @@ const EmailTemplateManagement: React.FC = () => {
           {templatesLoading ? (
             <div className="flex items-center justify-center h-32">
               <RefreshCw className="h-6 w-6 animate-spin" />
-              <span className="ml-2">Loading templates...</span>
+              <span className="ml-2">{t('emailTemplates.loading')}</span>
             </div>
           ) : templatesError ? (
             <Alert variant="destructive">
@@ -378,8 +378,8 @@ const EmailTemplateManagement: React.FC = () => {
           ) : filteredTemplates.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-center">
               <Mail className="h-8 w-8 text-gray-400 mb-2" />
-              <p className="text-gray-500">No email templates found</p>
-              <p className="text-sm text-gray-400">Create your first template to get started</p>
+              <p className="text-gray-500">{t('emailTemplates.noTemplates')}</p>
+              <p className="text-sm text-gray-400">{t('emailTemplates.createFirstTemplate')}</p>
             </div>
           ) : (
             <DataTable 
@@ -388,6 +388,7 @@ const EmailTemplateManagement: React.FC = () => {
                 onEdit: handleEdit,
                 onCopy: handleCopy,
                 onDelete: handleDelete,
+                t: t,
               })} 
               data={filteredTemplates} 
             />
@@ -400,14 +401,14 @@ const EmailTemplateManagement: React.FC = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {isEditing ? 'Edit Email Template' : isCopying ? 'Copy Email Template' : 'Create New Email Template'}
+              {isEditing ? t('emailTemplates.editTemplate') : isCopying ? t('emailTemplates.copyTemplate') : t('emailTemplates.createTemplate')}
             </DialogTitle>
             <DialogDescription>
               {isEditing 
-                ? 'Update the email template settings and content.' 
+                ? t('emailTemplates.editDescription')
                 : isCopying 
-                  ? 'Create a copy of this email template. You can modify the content and settings.'
-                  : 'Create a new email template with custom content and variables.'
+                  ? t('emailTemplates.copyDescription')
+                  : t('emailTemplates.createDescription')
               }
             </DialogDescription>
           </DialogHeader>
@@ -416,7 +417,7 @@ const EmailTemplateManagement: React.FC = () => {
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="template_key">Template Key *</Label>
+                <Label htmlFor="template_key">{t('emailTemplates.templateKey')} *</Label>
                 <Input
                   id="template_key"
                   value={formData.template_key}
@@ -442,7 +443,7 @@ const EmailTemplateManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subject">Subject *</Label>
+              <Label htmlFor="subject">{t('emailTemplates.subject')} *</Label>
               <Input
                 id="subject"
                 value={formData.subject}
@@ -499,7 +500,7 @@ const EmailTemplateManagement: React.FC = () => {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="html" className="flex items-center gap-2">
                   <Code className="h-3 w-3" />
-                  HTML Content
+                  {t('emailTemplates.htmlContent')}
                 </TabsTrigger>
                 <TabsTrigger value="preview" className="flex items-center gap-2">
                   <Eye className="h-3 w-3" />
@@ -513,7 +514,7 @@ const EmailTemplateManagement: React.FC = () => {
               
               <TabsContent value="html" className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="html_content">HTML Content *</Label>
+                  <Label htmlFor="html_content">{t('emailTemplates.htmlContent')} *</Label>
                   <div className="flex gap-1">
                     <Button
                       type="button"
@@ -635,11 +636,11 @@ const EmailTemplateManagement: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>
-              Cancel
+              {t('emailTemplates.cancel')}
             </Button>
             <Button onClick={handleFormSubmit} className="flex items-center gap-2">
               <Save className="h-4 w-4" />
-              {isEditing ? 'Update Template' : isCopying ? 'Create Copy' : 'Create Template'}
+              {isEditing ? t('emailTemplates.update') : isCopying ? t('emailTemplates.create') : t('emailTemplates.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

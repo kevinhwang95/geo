@@ -365,7 +365,7 @@ class Auth
     public static function getUserById($userId)
     {
         $db = Database::getInstance();
-        $stmt = $db->query("SELECT id, first_name, last_name, email, phone, role, avatar_url, is_active, last_login, created_at FROM users WHERE id = ? AND is_active = 1", [$userId]);
+        $stmt = $db->query("SELECT id, first_name, last_name, email, phone, role, language_preference, avatar_url, is_active, last_login, created_at FROM users WHERE id = ? AND is_active = 1", [$userId]);
         return $stmt->fetch();
     }
 

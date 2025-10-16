@@ -57,6 +57,30 @@ interface WorkStatusFormData {
 
 const WorkStatusManagement: React.FC = () => {
   const { t } = useTranslation();
+
+  // Helper function to get translated work status name
+  const getTranslatedStatusName = (name: string): string => {
+    const translationKey = `workStatuses.statusNames.${name}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original name
+    return translated !== translationKey ? translated : name;
+  };
+
+  // Helper function to get translated work status display name
+  const getTranslatedStatusDisplayName = (displayName: string): string => {
+    const translationKey = `workStatuses.statusDisplayNames.${displayName}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original display name
+    return translated !== translationKey ? translated : displayName;
+  };
+
+  // Helper function to get translated work status description
+  const getTranslatedStatusDescription = (description: string): string => {
+    const translationKey = `workStatuses.statusDescriptions.${description}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original description
+    return translated !== translationKey ? translated : description;
+  };
   const [workStatuses, setWorkStatuses] = useState<WorkStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -164,39 +188,39 @@ const WorkStatusManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Work Statuses</h2>
-          <p className="text-gray-600">Manage work statuses for farm assignments</p>
+          <h2 className="text-2xl font-bold">{t('workStatuses.title')}</h2>
+          <p className="text-gray-600">{t('workStatuses.description')}</p>
         </div>
         <Button onClick={openCreateDialog} className="flex items-center space-x-2">
           <Plus className="h-4 w-4" />
-          <span>Add Status</span>
+          <span>{t('workStatuses.createStatus')}</span>
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8">Loading work statuses...</div>
+        <div className="text-center py-8">{t('workStatuses.loading')}</div>
       ) : (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Display Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Icon</TableHead>
-                <TableHead>Sort Order</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('workStatuses.name')}</TableHead>
+                <TableHead>{t('workStatuses.displayName')}</TableHead>
+                <TableHead>{t('workStatuses.description')}</TableHead>
+                <TableHead>{t('workStatuses.color')}</TableHead>
+                <TableHead>{t('workStatuses.icon')}</TableHead>
+                <TableHead>{t('workStatuses.sortOrder')}</TableHead>
+                <TableHead>{t('workStatuses.type')}</TableHead>
+                <TableHead>{t('workStatuses.status')}</TableHead>
+                <TableHead>{t('workStatuses.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {workStatuses.map((status) => (
                 <TableRow key={status.id}>
-                  <TableCell className="font-medium">{status.name}</TableCell>
-                  <TableCell>{status.displayName}</TableCell>
-                  <TableCell>{status.description}</TableCell>
+                  <TableCell className="font-medium">{getTranslatedStatusName(status.name)}</TableCell>
+                  <TableCell>{getTranslatedStatusDisplayName(status.displayName)}</TableCell>
+                  <TableCell>{getTranslatedStatusDescription(status.description)}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <div
@@ -216,7 +240,7 @@ const WorkStatusManagement: React.FC = () => {
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >
-                      {status.isFinal ? 'Final' : 'Progress'}
+                      {status.isFinal ? t('workStatuses.final') : t('workStatuses.intermediate')}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -227,7 +251,7 @@ const WorkStatusManagement: React.FC = () => {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {status.isActive ? 'Active' : 'Inactive'}
+                      {status.isActive ? t('workStatuses.active') : t('workStatuses.inactive')}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -260,18 +284,18 @@ const WorkStatusManagement: React.FC = () => {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {editingStatus ? 'Edit Work Status' : 'Create Work Status'}
+              {editingStatus ? t('workStatuses.editStatus') : t('workStatuses.createStatus')}
             </DialogTitle>
             <DialogDescription>
               {editingStatus
-                ? 'Update the work status information.'
-                : 'Add a new work status for farm assignments.'}
+                ? t('workStatuses.editDescription')
+                : t('workStatuses.createDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t('workStatuses.name')} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -282,7 +306,7 @@ const WorkStatusManagement: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name *</Label>
+                <Label htmlFor="displayName">{t('workStatuses.displayName')} *</Label>
                 <Input
                   id="displayName"
                   value={formData.displayName}
@@ -294,7 +318,7 @@ const WorkStatusManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('workStatuses.descriptionLabel')}</Label>
               <Input
                 id="description"
                 value={formData.description}
@@ -305,7 +329,7 @@ const WorkStatusManagement: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
+                <Label htmlFor="color">{t('workStatuses.color')}</Label>
                 <div className="flex items-center space-x-2">
                   <Input
                     id="color"
@@ -324,7 +348,7 @@ const WorkStatusManagement: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sortOrder">Sort Order</Label>
+                <Label htmlFor="sortOrder">{t('workStatuses.sortOrder')}</Label>
                 <Input
                   id="sortOrder"
                   type="number"
@@ -336,7 +360,7 @@ const WorkStatusManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="icon">Icon</Label>
+              <Label htmlFor="icon">{t('workStatuses.icon')}</Label>
               <Input
                 id="icon"
                 value={formData.icon}
@@ -347,7 +371,7 @@ const WorkStatusManagement: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="isActive">Status</Label>
+                <Label htmlFor="isActive">{t('workStatuses.status')}</Label>
                 <Select
                   value={formData.isActive.toString()}
                   onValueChange={(value) => setFormData({ ...formData, isActive: value === 'true' })}
@@ -356,14 +380,14 @@ const WorkStatusManagement: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="true">Active</SelectItem>
-                    <SelectItem value="false">Inactive</SelectItem>
+                    <SelectItem value="true">{t('workStatuses.active')}</SelectItem>
+                    <SelectItem value="false">{t('workStatuses.inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="isFinal">Type</Label>
+                <Label htmlFor="isFinal">{t('workStatuses.type')}</Label>
                 <Select
                   value={formData.isFinal.toString()}
                   onValueChange={(value) => setFormData({ ...formData, isFinal: value === 'true' })}
@@ -372,8 +396,8 @@ const WorkStatusManagement: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="false">Progress Status</SelectItem>
-                    <SelectItem value="true">Final Status</SelectItem>
+                    <SelectItem value="false">{t('workStatuses.intermediate')}</SelectItem>
+                    <SelectItem value="true">{t('workStatuses.final')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -381,10 +405,10 @@ const WorkStatusManagement: React.FC = () => {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
+                {t('workStatuses.cancel')}
               </Button>
               <Button type="submit">
-                {editingStatus ? 'Update' : 'Create'}
+                {editingStatus ? t('workStatuses.update') : t('workStatuses.create')}
               </Button>
             </DialogFooter>
           </form>
@@ -395,6 +419,8 @@ const WorkStatusManagement: React.FC = () => {
 };
 
 export default WorkStatusManagement;
+
+
 
 
 

@@ -133,6 +133,21 @@ class Team
         return $this->db->fetchAll($sql, ['team_id' => $teamId]);
     }
 
+    public function getAllMembers()
+    {
+        $sql = "SELECT tm.id, tm.team_id, tm.user_id, tm.role as team_role, tm.joined_at,
+                       CONCAT(u.first_name, ' ', u.last_name) as user_name,
+                       u.first_name, u.last_name, u.email, u.role as user_role,
+                       t.name as team_name
+                FROM team_members tm
+                JOIN users u ON tm.user_id = u.id
+                JOIN teams t ON tm.team_id = t.id
+                WHERE tm.is_active = 1 AND u.is_active = 1 AND t.is_active = 1
+                ORDER BY t.name ASC, tm.role DESC, u.first_name ASC";
+        
+        return $this->db->fetchAll($sql);
+    }
+
     public function formatTeam($team)
     {
         return [

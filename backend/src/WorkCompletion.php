@@ -14,10 +14,10 @@ class WorkCompletion
     public function create($data)
     {
         $sql = "INSERT INTO work_completions (
-                    work_id, team_id, worker_count, completion_note, weight_of_product,
+                    work_id, team_id, worker_count, completion_note, completion_date, weight_of_product,
                     truck_number, driver_name, completed_by_user_id
                 ) VALUES (
-                    :work_id, :team_id, :worker_count, :completion_note, :weight_of_product,
+                    :work_id, :team_id, :worker_count, :completion_note, :completion_date, :weight_of_product,
                     :truck_number, :driver_name, :completed_by_user_id
                 )";
 
@@ -26,6 +26,7 @@ class WorkCompletion
             'team_id' => $data['team_id'],
             'worker_count' => $data['worker_count'] ?? 1,
             'completion_note' => $data['completion_note'] ?? null,
+            'completion_date' => $data['completion_date'] ?? date('Y-m-d H:i:s'),
             'weight_of_product' => $data['weight_of_product'] ?? null,
             'truck_number' => $data['truck_number'] ?? null,
             'driver_name' => $data['driver_name'] ?? null,
@@ -141,6 +142,7 @@ class WorkCompletion
             'teamName' => $completion['team_name'],
             'workerCount' => (int) $completion['worker_count'],
             'completionNote' => $completion['completion_note'],
+            'completionDate' => $completion['completion_date'] ?? $completion['completed_at'],
             'weightOfProduct' => $completion['weight_of_product'] ? (float) $completion['weight_of_product'] : null,
             'truckNumber' => $completion['truck_number'],
             'driverName' => $completion['driver_name'],

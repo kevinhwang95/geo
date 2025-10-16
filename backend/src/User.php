@@ -13,8 +13,8 @@ class User
 
     public function create($data)
     {
-        $sql = "INSERT INTO users (first_name, last_name, email, phone, role, password_hash, created_at, updated_at) 
-                VALUES (:first_name, :last_name, :email, :phone, :role, :password_hash, NOW(), NOW())";
+        $sql = "INSERT INTO users (first_name, last_name, email, phone, role, password_hash, language_preference, created_at, updated_at) 
+                VALUES (:first_name, :last_name, :email, :phone, :role, :password_hash, :language_preference, NOW(), NOW())";
 
         $params = [
             'first_name' => $data['firstName'],
@@ -23,6 +23,7 @@ class User
             'phone' => $data['phone'],
             'role' => $data['role'],
             'password_hash' => $data['password'] ? password_hash($data['password'], PASSWORD_DEFAULT) : null,
+            'language_preference' => $data['languagePreference'] ?? 'en',
         ];
 
         $this->db->query($sql, $params);
@@ -31,7 +32,7 @@ class User
 
     public function findById($id)
     {
-        $sql = "SELECT id, first_name, last_name, email, phone, role, created_at, updated_at 
+        $sql = "SELECT id, first_name, last_name, email, phone, role, language_preference, is_active, last_login, created_at, updated_at 
                 FROM users WHERE id = :id";
         
         return $this->db->fetchOne($sql, ['id' => $id]);
@@ -45,7 +46,7 @@ class User
 
     public function getAll()
     {
-        $sql = "SELECT id, first_name, last_name, email, phone, role, created_at, updated_at 
+        $sql = "SELECT id, first_name, last_name, email, phone, role, language_preference, is_active, last_login, created_at, updated_at 
                 FROM users ORDER BY created_at DESC";
         
         return $this->db->fetchAll($sql);
@@ -115,6 +116,19 @@ class User
         return $this->findById($userId);
     }
 
+    public function updateLanguagePreference($userId, $language)
+    {
+        $sql = "UPDATE users SET language_preference = :language_preference, updated_at = NOW() WHERE id = :id";
+        
+        $params = [
+            'id' => $userId,
+            'language_preference' => $language
+        ];
+
+        $this->db->query($sql, $params);
+        return true;
+    }
+
     public function formatUser($user)
     {
         return [
@@ -124,9 +138,10 @@ class User
             'email' => $user['email'],
             'phone' => $user['phone'],
             'role' => $user['role'],
-            'avatar_url' => null, // Not in current schema
-            'is_active' => true, // Default value
-            'last_login' => null, // Not in current schema
+            'language_preference' => $user['language_preference'] ?? 'en',
+            'avatar_url' => $user['avatar_url'] ?? null,
+            'is_active' => $user['is_active'] ?? true,
+            'last_login' => $user['last_login'] ?? null,
             'created_at' => $user['created_at'],
         ];
     }

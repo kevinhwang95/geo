@@ -146,14 +146,20 @@ class WorkNote
     {
         $formattedNote = [
             'id' => (int) $note['id'],
+            'work_id' => (int) $note['work_id'],
             'workId' => (int) $note['work_id'],
             'workTitle' => $note['work_title'] ?? null,
             'title' => $note['title'],
             'content' => $note['content'],
+            'priority_level' => $note['priority_level'],
             'priorityLevel' => $note['priority_level'],
+            'created_by_user_id' => (int) $note['created_by_user_id'],
             'createdByUserId' => (int) $note['created_by_user_id'],
-            'createdByName' => $note['created_by_name'],
+            'created_by_name' => $note['created_by_name'],
+            'created_by_user_name' => $note['created_by_name'],
+            'created_at' => $note['created_at'],
             'createdAt' => $note['created_at'],
+            'updated_at' => $note['updated_at'],
             'updatedAt' => $note['updated_at']
         ];
 

@@ -45,6 +45,22 @@ interface WorkCategoryFormData {
 
 const WorkCategoryManagement: React.FC = () => {
   const { t } = useTranslation();
+
+  // Helper function to get translated category name
+  const getTranslatedCategoryName = (name: string): string => {
+    const translationKey = `workCategories.categoryNames.${name}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original name
+    return translated !== translationKey ? translated : name;
+  };
+
+  // Helper function to get translated category description
+  const getTranslatedCategoryDescription = (description: string): string => {
+    const translationKey = `workCategories.categoryDescriptions.${description}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original description
+    return translated !== translationKey ? translated : description;
+  };
   const [categories, setCategories] = useState<WorkCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -143,36 +159,36 @@ const WorkCategoryManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Work Categories</h2>
-          <p className="text-gray-600">Manage work categories for farm assignments</p>
+          <h2 className="text-2xl font-bold">{t('workCategories.title')}</h2>
+          <p className="text-gray-600">{t('workCategories.description')}</p>
         </div>
         <Button onClick={openCreateDialog} className="flex items-center space-x-2">
           <Plus className="h-4 w-4" />
-          <span>Add Category</span>
+          <span>{t('workCategories.createCategory')}</span>
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8">Loading categories...</div>
+        <div className="text-center py-8">{t('workCategories.loading')}</div>
       ) : (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Icon</TableHead>
-                <TableHead>Sort Order</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('workCategories.name')}</TableHead>
+                <TableHead>{t('workCategories.description')}</TableHead>
+                <TableHead>{t('workCategories.color')}</TableHead>
+                <TableHead>{t('workCategories.icon')}</TableHead>
+                <TableHead>{t('workCategories.sortOrder')}</TableHead>
+                <TableHead>{t('workCategories.status')}</TableHead>
+                <TableHead>{t('workCategories.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {categories.map((category) => (
                 <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell>{category.description}</TableCell>
+                  <TableCell className="font-medium">{getTranslatedCategoryName(category.name)}</TableCell>
+                  <TableCell>{getTranslatedCategoryDescription(category.description)}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <div
@@ -192,7 +208,7 @@ const WorkCategoryManagement: React.FC = () => {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {category.isActive ? 'Active' : 'Inactive'}
+                      {category.isActive ? t('workCategories.active') : t('workCategories.inactive')}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -225,17 +241,17 @@ const WorkCategoryManagement: React.FC = () => {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? 'Edit Work Category' : 'Create Work Category'}
+              {editingCategory ? t('workCategories.editCategory') : t('workCategories.createCategory')}
             </DialogTitle>
             <DialogDescription>
               {editingCategory
-                ? 'Update the work category information.'
-                : 'Add a new work category for farm assignments.'}
+                ? t('workCategories.editDescription')
+                : t('workCategories.createDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t('workCategories.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -246,7 +262,7 @@ const WorkCategoryManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('workCategories.description')}</Label>
               <Input
                 id="description"
                 value={formData.description}
@@ -257,7 +273,7 @@ const WorkCategoryManagement: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
+                <Label htmlFor="color">{t('workCategories.color')}</Label>
                 <div className="flex items-center space-x-2">
                   <Input
                     id="color"
@@ -276,7 +292,7 @@ const WorkCategoryManagement: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sortOrder">Sort Order</Label>
+                <Label htmlFor="sortOrder">{t('workCategories.sortOrder')}</Label>
                 <Input
                   id="sortOrder"
                   type="number"
@@ -288,7 +304,7 @@ const WorkCategoryManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="icon">Icon</Label>
+              <Label htmlFor="icon">{t('workCategories.icon')}</Label>
               <Input
                 id="icon"
                 value={formData.icon}
@@ -299,10 +315,10 @@ const WorkCategoryManagement: React.FC = () => {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
+                {t('workCategories.cancel')}
               </Button>
               <Button type="submit">
-                {editingCategory ? 'Update' : 'Create'}
+                {editingCategory ? t('workCategories.update') : t('workCategories.create')}
               </Button>
             </DialogFooter>
           </form>

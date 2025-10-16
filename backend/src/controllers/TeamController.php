@@ -151,4 +151,20 @@ class TeamController
             echo json_encode(['error' => 'Failed to get team members: ' . $e->getMessage()]);
         }
     }
+
+    public function getAllMembers()
+    {
+        Auth::requireAnyRole(['admin', 'contributor']);
+        
+        try {
+            $members = $this->teamModel->getAllMembers();
+            echo json_encode([
+                'success' => true,
+                'data' => $members
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to get all team members: ' . $e->getMessage()]);
+        }
+    }
 }

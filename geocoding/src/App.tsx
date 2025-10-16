@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import { useTokenExpiryChecker } from '@/hooks/useTokenExpiryChecker';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Initialize i18n
 import '@/i18n';
@@ -57,8 +58,9 @@ function App() {
   }, []); // Empty dependency array - this effect should only run once on mount
 
   return (
-    <Router>
-      <div className="App">
+    <ErrorBoundary>
+      <Router>
+        <div className="App">
         {/* Global Language Switcher - appears on all pages */}
         <GlobalLanguageSwitcher />
         <Routes>
@@ -150,6 +152,7 @@ function App() {
         />
       </div>
     </Router>
+    </ErrorBoundary>
   );
 }
 

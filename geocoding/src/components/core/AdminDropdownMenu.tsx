@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ClipboardList,
   Tag,
-  CheckCircle
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canManageUsers } from '@/stores/authStore';
@@ -31,7 +32,8 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
 }) => {
   const { t } = useTranslation();
   const isAdminActive = activeSection === 'admin' || activeSection === 'menu-management' || activeSection === 'email-templates' || 
-                       activeSection === 'work-categories' || activeSection === 'work-types' || activeSection === 'work-statuses';
+                       activeSection === 'work-categories' || activeSection === 'work-types' || activeSection === 'work-statuses' ||
+                       activeSection === 'error-logs';
   
   // Admin submenu items
   const adminItems = [
@@ -69,6 +71,12 @@ const AdminDropdownMenu: React.FC<AdminDropdownMenuProps> = ({
       id: 'work-statuses',
       label: t('navigation.admin.workStatuses'),
       icon: CheckCircle,
+      visible: canManageUsers()
+    },
+    {
+      id: 'error-logs',
+      label: t('navigation.admin.errorLogs'),
+      icon: AlertTriangle,
       visible: canManageUsers()
     }
   ];

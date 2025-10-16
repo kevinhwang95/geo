@@ -26,7 +26,7 @@ class WorkNoteController
             Auth::requireAuth();
             
             $notes = $this->workNote->getByWorkId($workId);
-            $includePhotos = isset($_GET['include_photos']) && $_GET['include_photos'] === 'true';
+            $includePhotos = isset($_GET['include_photos']) ? $_GET['include_photos'] === 'true' : true; // Default to true
             $formattedNotes = array_map(function($note) use ($includePhotos) {
                 return $this->workNote->formatWorkNote($note, $includePhotos);
             }, $notes);

@@ -24,7 +24,7 @@ import {
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
-import { User, Mail, Phone, Shield, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Shield, AlertTriangle, CheckCircle, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserFormDialogProps {
@@ -37,6 +37,7 @@ interface UserFormDialogProps {
     email: string;
     phone: string;
     role: 'admin' | 'contributor' | 'user' | 'team_lead';
+    language_preference?: string;
   } | null;
   isEditing: boolean;
   onUserSaved: () => void;
@@ -59,6 +60,9 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     role: z.enum(['admin', 'contributor', 'user', 'team_lead'], {
       message: t('createUser.pleaseSelectRole'),
     }),
+    language_preference: z.enum(['en', 'th'], {
+      message: t('createUser.pleaseSelectLanguage'),
+    }),
   });
 
   type UserFormData = z.infer<typeof userSchema>;
@@ -73,6 +77,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
       email: user?.email || '',
       phone: user?.phone || '',
       role: user?.role || 'user',
+      language_preference: user?.language_preference || 'en',
     },
   });
 
@@ -85,6 +90,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         email: user.email,
         phone: user.phone,
         role: user.role,
+        language_preference: user.language_preference || 'en',
       });
     } else {
       form.reset({
@@ -93,6 +99,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         email: '',
         phone: '',
         role: 'user',
+        language_preference: 'en',
       });
     }
     // Clear any previous error/success messages when dialog opens
@@ -113,6 +120,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         email: values.email,
         phone: values.phone,
         role: values.role,
+        languagePreference: values.language_preference,
       };
       
       if (isEditing && user) {
@@ -342,6 +350,44 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
                   <FormMessage />
                   <p className="text-xs text-gray-500">
                     {getRoleDescription(field.value)}
+                  </p>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="language_preference"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4" />
+                    <span>{t('createUser.languagePreference')}</span>
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('createUser.selectLanguage')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="en">
+                        <div className="flex items-center space-x-2">
+                          <span>🇺🇸</span>
+                          <span>{t('createUser.english')}</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="th">
+                        <div className="flex items-center space-x-2">
+                          <span>🇹🇭</span>
+                          <span>{t('createUser.thai')}</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                  <p className="text-xs text-gray-500">
+                    {t('createUser.languagePreferenceDescription')}
                   </p>
                 </FormItem>
               )}

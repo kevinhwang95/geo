@@ -1,4 +1,5 @@
 import { ChevronsUpDownIcon, XIcon } from "lucide-react"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -48,33 +49,38 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
     noOptionFoundText, 
     searchText, 
     onChange, 
-    isOpen, 
-    onOpenChange, 
+    isOpen: externalIsOpen, 
+    onOpenChange: externalOnOpenChange, 
     allowMultipleSelect, 
     ariaLabel 
   } = props;
 
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  
+  // Use external state if provided, otherwise use internal state
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setOpen = externalOnOpenChange || setInternalIsOpen;
+
   return (
-    <Popover open={isOpen} onOpenChange={onOpenChange}>
+    <Popover open={isOpen} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           role="combobox"
           aria-expanded={isOpen}
-          className={cn("w-[200px] justify-between rounded-md fornt-medium hover:bg-gray-100",
+          className={cn("w-full justify-between rounded-md font-medium hover:bg-gray-100",
             isOpen && "border ring-2 ring-offset-2 ring-gray-400",
             disabled && "text-gray-500 bg-gray-50 cursor-not-allowed",
             className)}
           variant="outline"
           aria-label={ariaLabel}
+          disabled={disabled}
         >
           {allowMultipleSelect && Array.isArray(value) && value.length > 0 
-          ? `${value.length} Seleted`
+          ? `${value.length} Selected`
           : value !== undefined && !Array.isArray(value) 
             ? options.find((o) => o.value === value)?.label
             : selectText}
-          <span className="flex items-center ml-2">
-            <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </span>
+          <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       {allowMultipleSelect && Array.isArray(value) && value.length > 0 && (
@@ -90,9 +96,9 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
             : (e) => {
               e.preventDefault();
               e.stopPropagation();
-              (onChange as (value: T[]) => void);
-              if(onOpenChange) {
-                onOpenChange(false);
+              (onChange as (value: T[]) => void)([]);
+              if(setOpen) {
+                setOpen(false);
               }
             }
           }
@@ -102,7 +108,7 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
           aria-disabled={disabled}
         />
       )}
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command>
           <CommandInput disabled={disabled} placeholder={searchText} />
           <CommandList>
@@ -111,8 +117,8 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
               {options.map((option) => (
                 <CommandItem
                   key={String(option.value)}
-                  value={String(option.value)}
-                  area-selected={
+                  value={option.label}
+                  aria-selected={
                     allowMultipleSelect 
                     ? Array.isArray(value) && value.includes(option.value)
                       : value === option.value
@@ -133,8 +139,8 @@ export const Combobox = <T,>(props: ComboboxProps<T>) => {
                       }
                     } else {
                         (onChange as (value: T) => void)(option.value);
-                        if(onOpenChange) {
-                          onOpenChange(false);
+                        if(setOpen) {
+                          setOpen(false);
                         }
                       }
                     }}

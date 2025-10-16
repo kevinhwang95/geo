@@ -35,9 +35,8 @@ class PhotoController
         $commentId = $_POST['comment_id'] ?? null;
         
         // Check if land exists
-        $stmt = $this->db->prepare("SELECT id FROM lands WHERE id = ? AND is_active = 1");
-        $stmt->execute([$landId]);
-        if (!$stmt->fetch()) {
+        $land = $this->db->fetchOne("SELECT id FROM lands WHERE id = ? AND is_active = 1", [$landId]);
+        if (!$land) {
             http_response_code(404);
             echo json_encode(['error' => 'Land not found']);
             return;
@@ -75,15 +74,13 @@ class PhotoController
             $exifData = $this->extractExifData($filePath);
             
             // Insert photo record
-            $stmt = $this->db->prepare("
+            $this->db->query("
                 INSERT INTO land_photos (
                     comment_id, land_id, user_id, filename, original_filename, 
                     file_path, file_size, mime_type, latitude, longitude, altitude, 
                     photo_timestamp, camera_info
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            
-            $stmt->execute([
+            ", [
                 $commentId,
                 $landId,
                 $user['user_id'],
@@ -125,15 +122,13 @@ class PhotoController
     {
         $user = Auth::requireAuth();
         
-        $stmt = $this->db->prepare("
+        $photo = $this->db->fetchOne("
             SELECT lp.*, l.land_name, l.land_code, u.first_name, u.last_name
             FROM land_photos lp
             JOIN lands l ON lp.land_id = l.id
             JOIN users u ON lp.user_id = u.id
             WHERE lp.id = ? AND lp.is_active = 1
-        ");
-        $stmt->execute([$id]);
-        $photo = $stmt->fetch(\PDO::FETCH_ASSOC);
+        ", [$id]);
 
         if (!$photo) {
             http_response_code(404);
@@ -153,9 +148,7 @@ class PhotoController
         $user = Auth::requireAuth();
         
         // Check if photo exists and user owns it
-        $stmt = $this->db->prepare("SELECT user_id, file_path FROM land_photos WHERE id = ?");
-        $stmt->execute([$id]);
-        $photo = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $photo = $this->db->fetchOne("SELECT user_id, file_path FROM land_photos WHERE id = ?", [$id]);
         
         if (!$photo) {
             http_response_code(404);
@@ -172,8 +165,7 @@ class PhotoController
 
         try {
             // Soft delete photo
-            $stmt = $this->db->prepare("UPDATE land_photos SET is_active = 0 WHERE id = ?");
-            $stmt->execute([$id]);
+            $this->db->query("UPDATE land_photos SET is_active = 0 WHERE id = ?", [$id]);
             
             // Optionally delete physical file
             if (file_exists($photo['file_path'])) {
@@ -257,22 +249,19 @@ class PhotoController
     private function createPhotoNotification($landId, $photoId, $userId)
     {
         // Get all users who should be notified
-        $stmt = $this->db->prepare("
-            SELECT DISTINCT u.id 
+        $users = $this->db->fetchAll("
+            SELECT DISTINCT u.id
             FROM users u
             LEFT JOIN lands l ON l.created_by = u.id
             WHERE (l.id = ? AND l.created_by != ?) OR u.role IN ('admin', 'contributor')
             AND u.is_active = 1
-        ");
-        $stmt->execute([$landId, $userId]);
-        $users = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        ", [$landId, $userId]);
         
-        foreach ($users as $targetUserId) {
-            $stmt = $this->db->prepare("
+        foreach ($users as $user) {
+            $this->db->query("
                 INSERT INTO notifications (land_id, user_id, type, title, message)
                 VALUES (?, ?, 'photo_added', 'New Photo Added', 'A new photo has been added to a land you are following')
-            ");
-            $stmt->execute([$landId, $targetUserId]);
+            ", [$landId, $user['id']]);
         }
     }
 }

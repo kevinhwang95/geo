@@ -62,6 +62,30 @@ interface WorkTypeFormData {
 
 const WorkTypeManagement: React.FC = () => {
   const { t } = useTranslation();
+
+  // Helper function to get translated work type name
+  const getTranslatedWorkTypeName = (name: string): string => {
+    const translationKey = `workTypes.typeNames.${name}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original name
+    return translated !== translationKey ? translated : name;
+  };
+
+  // Helper function to get translated work type description
+  const getTranslatedWorkTypeDescription = (description: string): string => {
+    const translationKey = `workTypes.typeDescriptions.${description}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original description
+    return translated !== translationKey ? translated : description;
+  };
+
+  // Helper function to get translated category name
+  const getTranslatedCategoryName = (name: string): string => {
+    const translationKey = `workCategories.categoryNames.${name}`;
+    const translated = t(translationKey);
+    // If translation key doesn't exist, return original name
+    return translated !== translationKey ? translated : name;
+  };
   const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
   const [categories, setCategories] = useState<WorkCategory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -174,46 +198,46 @@ const WorkTypeManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Work Types</h2>
-          <p className="text-gray-600">Manage work types for farm assignments</p>
+          <h2 className="text-2xl font-bold">{t('workTypes.title')}</h2>
+          <p className="text-gray-600">{t('workTypes.description')}</p>
         </div>
         <Button onClick={openCreateDialog} className="flex items-center space-x-2">
           <Plus className="h-4 w-4" />
-          <span>Add Work Type</span>
+          <span>{t('workTypes.createType')}</span>
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8">Loading work types...</div>
+        <div className="text-center py-8">{t('workTypes.loading')}</div>
       ) : (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Icon</TableHead>
-                <TableHead>Sort Order</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('workTypes.name')}</TableHead>
+                <TableHead>{t('workTypes.category')}</TableHead>
+                <TableHead>{t('workTypes.description')}</TableHead>
+                <TableHead>{t('workTypes.duration')}</TableHead>
+                <TableHead>{t('workTypes.icon')}</TableHead>
+                <TableHead>{t('workTypes.sortOrder')}</TableHead>
+                <TableHead>{t('workTypes.status')}</TableHead>
+                <TableHead>{t('workTypes.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {workTypes.map((workType) => (
                 <TableRow key={workType.id}>
-                  <TableCell className="font-medium">{workType.name}</TableCell>
+                  <TableCell className="font-medium">{getTranslatedWorkTypeName(workType.name)}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: workType.categoryColor }}
                       />
-                      <span>{workType.categoryName}</span>
+                      <span>{getTranslatedCategoryName(workType.categoryName)}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{workType.description}</TableCell>
+                  <TableCell>{getTranslatedWorkTypeDescription(workType.description)}</TableCell>
                   <TableCell>
                     {workType.estimatedDurationHours ? `${workType.estimatedDurationHours}h` : '-'}
                   </TableCell>
@@ -227,7 +251,7 @@ const WorkTypeManagement: React.FC = () => {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {workType.isActive ? 'Active' : 'Inactive'}
+                      {workType.isActive ? t('workTypes.active') : t('workTypes.inactive')}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -260,17 +284,17 @@ const WorkTypeManagement: React.FC = () => {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {editingWorkType ? 'Edit Work Type' : 'Create Work Type'}
+              {editingWorkType ? t('workTypes.editType') : t('workTypes.createType')}
             </DialogTitle>
             <DialogDescription>
               {editingWorkType
-                ? 'Update the work type information.'
-                : 'Add a new work type for farm assignments.'}
+                ? t('workTypes.editDescription')
+                : t('workTypes.createDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t('workTypes.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -281,7 +305,7 @@ const WorkTypeManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('workTypes.description')}</Label>
               <Input
                 id="description"
                 value={formData.description}
@@ -291,7 +315,7 @@ const WorkTypeManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Category *</Label>
+              <Label htmlFor="category">{t('workTypes.category')} *</Label>
               <Select
                 value={formData.categoryId.toString()}
                 onValueChange={(value) => setFormData({ ...formData, categoryId: parseInt(value) })}
@@ -307,7 +331,7 @@ const WorkTypeManagement: React.FC = () => {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: category.color }}
                         />
-                        <span>{category.name}</span>
+                        <span>{getTranslatedCategoryName(category.name)}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -317,7 +341,7 @@ const WorkTypeManagement: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="duration">Duration (hours)</Label>
+                <Label htmlFor="duration">{t('workTypes.duration')} (hours)</Label>
                 <Input
                   id="duration"
                   type="number"
@@ -332,7 +356,7 @@ const WorkTypeManagement: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sortOrder">Sort Order</Label>
+                <Label htmlFor="sortOrder">{t('workTypes.sortOrder')}</Label>
                 <Input
                   id="sortOrder"
                   type="number"
@@ -344,7 +368,7 @@ const WorkTypeManagement: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="icon">Icon</Label>
+              <Label htmlFor="icon">{t('workTypes.icon')}</Label>
               <Input
                 id="icon"
                 value={formData.icon}
@@ -355,10 +379,10 @@ const WorkTypeManagement: React.FC = () => {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
+                {t('workTypes.cancel')}
               </Button>
               <Button type="submit">
-                {editingWorkType ? 'Update' : 'Create'}
+                {editingWorkType ? t('workTypes.update') : t('workTypes.create')}
               </Button>
             </DialogFooter>
           </form>

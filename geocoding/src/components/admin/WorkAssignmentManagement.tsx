@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import { hasAnyRole } from '@/stores/authStore';
 import WorkAssignmentFormDialog from './WorkAssignmentFormDialog';
+import WorkAssignmentDetailsModal from './WorkAssignmentDetailsModal';
 
 
 
@@ -25,6 +26,7 @@ const WorkAssignmentManagement: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<WorkAssignment | null>(null);
   const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const { 
     data: assignments, 
@@ -48,9 +50,10 @@ const WorkAssignmentManagement: React.FC = () => {
   }, []);
 
   const handleViewAssignment = useCallback((assignment: WorkAssignment) => {
-    // For now, view and edit are the same
-    handleEditAssignment(assignment);
-  }, [handleEditAssignment]);
+    // Open the details modal for viewing
+    setSelectedAssignment(assignment);
+    setIsDetailsModalOpen(true);
+  }, []);
 
   const handleDeleteAssignment = useCallback(async (assignment: WorkAssignment) => {
     if (window.confirm(t('workAssignments.confirmDelete', { title: assignment.title }))) {
@@ -198,7 +201,7 @@ const WorkAssignmentManagement: React.FC = () => {
                   )}
                   {statusFilter !== 'all' && (
                     <span className="ml-2">
-                      with status "{statusFilter}"
+                      {t('workAssignments.withStatus')} "{t(`workAssignments.${statusFilter}`)}"
                     </span>
                   )}
                 </div>
@@ -243,6 +246,28 @@ const WorkAssignmentManagement: React.FC = () => {
         assignment={convertToFormAssignment(selectedAssignment)}
         isEditing={isEditing}
         onAssignmentSaved={handleAssignmentFormClose}
+      />
+
+      {/* Work Assignment Details Modal */}
+      <WorkAssignmentDetailsModal
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        workAssignment={selectedAssignment ? {
+          id: selectedAssignment.id,
+          title: selectedAssignment.title,
+          description: selectedAssignment.description,
+          landId: selectedAssignment.landId,
+          teamId: selectedAssignment.assignedTeamId,
+          assignedToUserId: selectedAssignment.assignedToUserId,
+          workTypeId: selectedAssignment.workTypeId,
+          workStatusId: selectedAssignment.workStatusId,
+          priority: selectedAssignment.priorityLevel as 'low' | 'medium' | 'high' | 'urgent',
+          status: selectedAssignment.status as 'pending' | 'in_progress' | 'completed' | 'cancelled',
+          dueDate: selectedAssignment.dueDate,
+          createdAt: selectedAssignment.createdAt,
+          updatedAt: selectedAssignment.updatedAt,
+        } : null}
+        onWorkUpdated={refreshAssignments}
       />
     </div>
   );

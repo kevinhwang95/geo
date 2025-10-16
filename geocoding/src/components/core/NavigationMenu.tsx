@@ -195,6 +195,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({
                 {(() => {
                 if (activeSection === 'admin') return t('navigation.admin.userManagement');
                 if (activeSection === 'menu-management') return t('navigation.admin.menuManagement');
+                if (activeSection === 'error-logs') return t('navigation.admin.errorLogs');
                 return menuItems.find(item => item.id === activeSection)?.label || t('navigation.dashboard');
                 })()}
               </span>

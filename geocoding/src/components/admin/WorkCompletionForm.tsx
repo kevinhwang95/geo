@@ -89,14 +89,6 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
   const isCompleted = completion !== null;
   const canComplete = workAssignment.status !== 'completed' && workAssignment.teamId !== null;
 
-  // Debug: Log completion data
-  useEffect(() => {
-    if (completion) {
-      console.log('Completion data received:', completion);
-      console.log('completedByName:', completion.completedByName);
-      console.log('completedAt:', completion.completedAt);
-    }
-  }, [completion]);
 
   // Load all available workers (not just assigned team members)
   useEffect(() => {

@@ -71,16 +71,16 @@ interface WorkNote {
 
 interface WorkCompletion {
   id: number;
-  work_id: number;
-  team_id: number;
-  worker_count: number;
-  completion_note: string;
-  weight_of_product: number | null;
-  truck_number: string | null;
-  driver_name: string | null;
-  completed_by_user_id: number;
-  completed_at: string;
-  completed_by_name: string;
+  workId: number;
+  teamId: number;
+  workerCount: number;
+  completionNote: string;
+  weightOfProduct: number | null;
+  truckNumber: string | null;
+  driverName: string | null;
+  completedByUserId: number;
+  completedAt: string;
+  completedByName: string;
   workers?: Array<{
     userId: number;
     userName: string;
@@ -374,7 +374,7 @@ const WorkAssignmentDetailsModal: React.FC<WorkAssignmentDetailsModalProps> = ({
                     <div>{t('workAssignmentDetails.createdAt')}: {new Date(workAssignment.createdAt).toLocaleString()}</div>
                     <div>{t('workAssignmentDetails.updatedAt')}: {new Date(workAssignment.updatedAt).toLocaleString()}</div>
                     {completion && (
-                      <div>{t('workAssignmentDetails.completedAt')}: {new Date(completion.completed_at).toLocaleString()}</div>
+                      <div>{t('workAssignmentDetails.completedAt')}: {new Date(completion.completedAt).toLocaleString()}</div>
                     )}
                   </div>
                 </div>
@@ -400,13 +400,13 @@ const WorkAssignmentDetailsModal: React.FC<WorkAssignmentDetailsModalProps> = ({
               workAssignment={workAssignment}
               completion={completion ? {
                 id: completion.id,
-                completionNote: completion.completion_note,
-                workerCount: completion.worker_count,
-                weightOfProduct: completion.weight_of_product,
-                truckNumber: completion.truck_number,
-                driverName: completion.driver_name,
-                completedByName: completion.completed_by_name,
-                completedAt: completion.completed_at,
+                completionNote: completion.completionNote,
+                workerCount: completion.workerCount,
+                weightOfProduct: completion.weightOfProduct,
+                truckNumber: completion.truckNumber,
+                driverName: completion.driverName,
+                completedByName: completion.completedByName,
+                completedAt: completion.completedAt,
                 workers: completion.workers,
                 photos: completion.photos
               } : null}

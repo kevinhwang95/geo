@@ -159,6 +159,34 @@ class WorkCompletion
             $formattedCompletion['photos'] = $photos;
         }
 
+        // Include workers information
+        $workers = $this->getWorkers($completion['id']);
+        $formattedCompletion['workers'] = array_map(function($worker) {
+            return [
+                'userId' => (int) $worker['user_id'],
+                'userName' => $worker['user_name'],
+                'teamName' => $worker['team_name']
+            ];
+        }, $workers);
+
         return $formattedCompletion;
+    }
+
+    /**
+     * Get workers for a specific work completion
+     */
+    public function getWorkers($completionId)
+    {
+        $sql = "SELECT wcw.user_id, 
+                       CONCAT(u.first_name, ' ', u.last_name) as user_name,
+                       t.name as team_name
+                FROM work_completion_workers wcw
+                JOIN users u ON wcw.user_id = u.id
+                LEFT JOIN team_members tm ON u.id = tm.user_id AND tm.is_active = 1
+                LEFT JOIN teams t ON tm.team_id = t.id AND t.is_active = 1
+                WHERE wcw.completion_id = :completion_id
+                ORDER BY u.first_name ASC";
+        
+        return $this->db->fetchAll($sql, ['completion_id' => $completionId]);
     }
 }

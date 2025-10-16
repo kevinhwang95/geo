@@ -69,7 +69,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = React.useState<string | null>(null);
-  const form = useForm<UserFormData>({
+  const form = useForm({
     resolver: zodResolver(userSchema),
     defaultValues: {
       first_name: user?.first_name || '',
@@ -77,7 +77,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
       email: user?.email || '',
       phone: user?.phone || '',
       role: user?.role || 'user',
-      language_preference: user?.language_preference || 'en',
+      language_preference: (user?.language_preference as 'en' | 'th') || 'en',
     },
   });
 
@@ -90,7 +90,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
         email: user.email,
         phone: user.phone,
         role: user.role,
-        language_preference: user.language_preference || 'en',
+        language_preference: (user.language_preference as 'en' | 'th') || 'en',
       });
     } else {
       form.reset({

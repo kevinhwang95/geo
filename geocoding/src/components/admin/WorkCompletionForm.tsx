@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Combobox } from '@/components/ui/combobox';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { toast } from 'sonner';
@@ -19,8 +19,6 @@ import {
   Calendar,
   MessageSquare,
   Users,
-  Plus,
-  Minus
 } from 'lucide-react';
 
 interface WorkCompletionFormProps {
@@ -33,13 +31,18 @@ interface WorkCompletionFormProps {
   };
   completion: {
     id: number;
-    completion_note: string;
-    worker_count: number;
-    weight_of_product: number | null;
-    truck_number: string | null;
-    driver_name: string | null;
-    completed_by_name: string;
-    completed_at: string;
+    completionNote: string;
+    workerCount: number;
+    weightOfProduct: number | null;
+    truckNumber: string | null;
+    driverName: string | null;
+    completedByName: string;
+    completedAt: string;
+    workers?: Array<{
+      userId: number;
+      userName: string;
+      teamName: string;
+    }>;
     photos?: Array<{
       id: number;
       filename: string;
@@ -63,10 +66,6 @@ interface Worker {
   userId: number;
   userName: string;
   teamName: string;
-  hoursWorked?: number;
-  hourlyRate?: number;
-  totalPayment?: number;
-  notes?: string;
 }
 
 const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
@@ -90,6 +89,15 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
   const isCompleted = completion !== null;
   const canComplete = workAssignment.status !== 'completed' && workAssignment.teamId !== null;
 
+  // Debug: Log completion data
+  useEffect(() => {
+    if (completion) {
+      console.log('Completion data received:', completion);
+      console.log('completedByName:', completion.completedByName);
+      console.log('completedAt:', completion.completedAt);
+    }
+  }, [completion]);
+
   // Load all available workers (not just assigned team members)
   useEffect(() => {
     if (canComplete) {
@@ -102,22 +110,25 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
     try {
       // Get all team members from all teams
       const response = await axiosClient.get('/teams/members/all');
-      if (response.data.success) {
+      console.log('Workers API response:', response.data);
+      
+      if (response.data.success && response.data.data) {
         const workers: Worker[] = response.data.data.map((member: any) => ({
           id: member.id,
-          userId: member.userId,
-          userName: member.userName,
-          teamName: member.teamName,
-          hoursWorked: 8, // Default 8 hours
-          hourlyRate: 0,
-          totalPayment: 0,
-          notes: ''
+          userId: member.user_id,
+          userName: member.user_name,
+          teamName: member.team_name
         }));
+        console.log('Mapped workers:', workers);
         setAvailableWorkers(workers);
+      } else {
+        console.warn('No workers data received from API');
+        setAvailableWorkers([]);
       }
     } catch (error) {
       console.error('Failed to load workers:', error);
       toast.error('Failed to load workers');
+      setAvailableWorkers([]);
     } finally {
       setLoadingWorkers(false);
     }
@@ -158,34 +169,7 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
     setPhotos(prev => prev.filter(photo => photo.id !== photoId));
   };
 
-  const toggleWorkerSelection = (worker: Worker) => {
-    setSelectedWorkers(prev => {
-      const isSelected = prev.some(w => w.userId === worker.userId);
-      if (isSelected) {
-        return prev.filter(w => w.userId !== worker.userId);
-      } else {
-        return [...prev, { ...worker }];
-      }
-    });
-  };
 
-  const updateWorkerDetails = (userId: number, field: keyof Worker, value: any) => {
-    setSelectedWorkers(prev => 
-      prev.map(worker => {
-        if (worker.userId === userId) {
-          const updated = { ...worker, [field]: value };
-          // Auto-calculate total payment if hours or rate changed
-          if (field === 'hoursWorked' || field === 'hourlyRate') {
-            const hours = field === 'hoursWorked' ? value : worker.hoursWorked || 0;
-            const rate = field === 'hourlyRate' ? value : worker.hourlyRate || 0;
-            updated.totalPayment = hours * rate;
-          }
-          return updated;
-        }
-        return worker;
-      })
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,8 +197,7 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
         driver_name: driverName.trim() || null,
       };
 
-      const completionResponse = await axiosClient.post(`/farm-works/complete/${workAssignment.id}`, completionData);
-      const newCompletion = completionResponse.data.completion;
+      await axiosClient.post(`/farm-works/complete/${workAssignment.id}`, completionData);
 
       // Note: Photo upload for completions would need to be handled separately
       // as the current API doesn't support adding photos to completions
@@ -249,14 +232,26 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
                 <User className="h-4 w-4" />
                 <span>{t('workCompletionForm.completedBy')}</span>
               </label>
-              <span>{completion.completed_by_name}</span>
+              <span>{completion.completedByName || 'Unknown'}</span>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span>{t('workCompletionForm.completedAt')}</span>
               </label>
-              <span>{new Date(completion.completed_at).toLocaleString()}</span>
+              <span>
+                {completion.completedAt ? 
+                  (() => {
+                    try {
+                      return new Date(completion.completedAt).toLocaleString();
+                    } catch (error) {
+                      console.error('Date parsing error:', error, 'Date string:', completion.completedAt);
+                      return completion.completedAt;
+                    }
+                  })() 
+                  : 'Unknown'
+                }
+              </span>
             </div>
           </div>
 
@@ -267,30 +262,52 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
               <MessageSquare className="h-4 w-4" />
               <span>{t('workCompletionForm.completionNote')}</span>
             </label>
-            <p className="text-gray-700 whitespace-pre-wrap">{completion.completion_note}</p>
+            <p className="text-gray-700 whitespace-pre-wrap">{completion.completionNote}</p>
           </div>
 
-          {completion.worker_count > 0 && (
+          {completion.workerCount > 0 && (
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center space-x-2">
-                <User className="h-4 w-4" />
+                <Users className="h-4 w-4" />
                 <span>{t('workCompletionForm.workerCount')}</span>
               </label>
-              <span>{completion.worker_count}</span>
+              <span>{completion.workerCount}</span>
             </div>
           )}
 
-          {completion.weight_of_product && (
+          {/* Workers List */}
+          {completion.workers && completion.workers.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>{t('workCompletionForm.workersInvolved', 'Workers Involved')}</span>
+              </label>
+              <div className="space-y-1">
+                {completion.workers.map((worker, index) => (
+                  <div key={worker.userId || `worker-${index}`} className="flex items-center justify-between p-2 border rounded-lg bg-gray-50">
+                    <div>
+                      <span className="font-medium">{worker.userName}</span>
+                      {worker.teamName && (
+                        <span className="text-sm text-gray-500 ml-2">({worker.teamName})</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {completion.weightOfProduct && (
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center space-x-2">
                 <Package className="h-4 w-4" />
                 <span>{t('workCompletionForm.weightOfProduct')}</span>
               </label>
-              <span>{completion.weight_of_product} kg</span>
+              <span>{completion.weightOfProduct} kg</span>
             </div>
           )}
 
-          {(completion.truck_number || completion.driver_name) && (
+          {(completion.truckNumber || completion.driverName) && (
             <>
               <Separator />
               <div className="space-y-2">
@@ -299,16 +316,16 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
                   <span>{t('workCompletionForm.transportation')}</span>
                 </label>
                 <div className="grid grid-cols-2 gap-4">
-                  {completion.truck_number && (
+                  {completion.truckNumber && (
                     <div>
                       <span className="text-sm text-gray-600">{t('workCompletionForm.truckNumber')}: </span>
-                      <span>{completion.truck_number}</span>
+                      <span>{completion.truckNumber}</span>
                     </div>
                   )}
-                  {completion.driver_name && (
+                  {completion.driverName && (
                     <div>
                       <span className="text-sm text-gray-600">{t('workCompletionForm.driverName')}: </span>
-                      <span>{completion.driver_name}</span>
+                      <span>{completion.driverName}</span>
                     </div>
                   )}
                 </div>
@@ -328,7 +345,7 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
                   {completion.photos.map((photo, index) => (
                     <img
                       key={photo.id || `photo-${index}`}
-                      src={photo.url || `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/photos/${photo.filename}`}
+                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/photos/${photo.filename}`}
                       alt={photo.filename}
                       className="w-full h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                       onError={(e) => {
@@ -424,109 +441,60 @@ const WorkCompletionForm: React.FC<WorkCompletionFormProps> = ({
                 <div className="text-sm text-gray-500">Loading all workers...</div>
               ) : (
                 <div className="space-y-2">
-                  {availableWorkers.map((worker) => {
-                    // Check if this worker belongs to the assigned team
-                    const isAssignedTeam = workAssignment.teamName && worker.teamName === workAssignment.teamName;
-                    return (
-                      <div key={worker.userId} className={`flex items-center space-x-3 p-3 border rounded-lg ${
-                        isAssignedTeam ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
-                      }`}>
-                        <Checkbox
-                          id={`worker-${worker.userId}`}
-                          checked={selectedWorkers.some(w => w.userId === worker.userId)}
-                          onCheckedChange={() => toggleWorkerSelection(worker)}
-                        />
-                        <label htmlFor={`worker-${worker.userId}`} className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{worker.userName}</span>
-                            {isAssignedTeam && (
-                              <Badge variant="secondary" className="text-xs">
-                                {t('workCompletionForm.assignedTeam')}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500">{worker.teamName}</div>
-                        </label>
-                      </div>
-                    );
-                  })}
+                  <Combobox<number>
+                    options={availableWorkers.map(worker => ({
+                      key: worker.userId,
+                      value: worker.userId,
+                      label: `${worker.userName} (${worker.teamName})${workAssignment.teamName && worker.teamName === workAssignment.teamName ? ' - ' + t('workCompletionForm.assignedTeam') : ''}`
+                    }))}
+                    value={selectedWorkers.map(w => w.userId)}
+                    onChange={(selectedUserIds) => {
+                      const userIds = Array.isArray(selectedUserIds) ? selectedUserIds : [selectedUserIds];
+                      const selectedWorkers = availableWorkers.filter(worker => 
+                        userIds.includes(worker.userId)
+                      );
+                      setSelectedWorkers(selectedWorkers);
+                    }}
+                    allowMultipleSelect={true}
+                    searchText={t('workCompletionForm.searchWorkers')}
+                    selectText={t('workCompletionForm.selectWorkers')}
+                    noOptionFoundText={t('workCompletionForm.noWorkersFound')}
+                    disabled={loadingWorkers}
+                    className="w-full"
+                  />
                   
-                  {availableWorkers.length === 0 && (
+                  {availableWorkers.length === 0 && !loadingWorkers && (
                     <div className="text-sm text-gray-500 p-3 border rounded-lg">
-                      No workers available
+                      {t('workCompletionForm.noWorkersAvailable')}
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Selected Workers Details */}
+            {/* Selected Workers List */}
             {selectedWorkers.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium">Worker Details & Payment</h4>
-                {selectedWorkers.map((worker) => (
-                  <div key={worker.userId} className="p-4 border rounded-lg bg-gray-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-medium">{worker.userName}</h5>
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">{t('workCompletionForm.selectedWorkers', 'Selected Workers')}</h4>
+                <div className="space-y-2">
+                  {selectedWorkers.map((worker, index) => (
+                    <div key={worker.userId || `selected-worker-${index}`} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                      <div>
+                        <span className="font-medium">{worker.userName}</span>
+                        <span className="text-sm text-gray-500 ml-2">({worker.teamName})</span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleWorkerSelection(worker)}
+                        onClick={() => setSelectedWorkers(prev => prev.filter(w => w.userId !== worker.userId))}
                         className="text-red-500 hover:text-red-700"
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium">Hours Worked</label>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          value={worker.hoursWorked || ''}
-                          onChange={(e) => updateWorkerDetails(worker.userId, 'hoursWorked', parseFloat(e.target.value) || 0)}
-                          placeholder="8"
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium">Hourly Rate (฿)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={worker.hourlyRate || ''}
-                          onChange={(e) => updateWorkerDetails(worker.userId, 'hourlyRate', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium">Total Payment (฿)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={worker.totalPayment || 0}
-                          readOnly
-                          className="h-8 bg-gray-100"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <label className="text-xs font-medium">Notes</label>
-                      <Input
-                        value={worker.notes || ''}
-                        onChange={(e) => updateWorkerDetails(worker.userId, 'notes', e.target.value)}
-                        placeholder="Additional notes..."
-                        className="h-8"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>

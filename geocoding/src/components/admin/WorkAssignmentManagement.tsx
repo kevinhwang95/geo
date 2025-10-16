@@ -260,7 +260,6 @@ const WorkAssignmentManagement: React.FC = () => {
           teamId: selectedAssignment.assignedTeamId,
           assignedToUserId: selectedAssignment.assignedToUserId,
           workTypeId: selectedAssignment.workTypeId,
-          workStatusId: selectedAssignment.workStatusId,
           priority: selectedAssignment.priorityLevel as 'low' | 'medium' | 'high' | 'urgent',
           status: selectedAssignment.status as 'pending' | 'in_progress' | 'completed' | 'cancelled',
           dueDate: selectedAssignment.dueDate,

@@ -635,7 +635,6 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                             <DatePicker 
                               date={field.value ? new Date(field.value) : undefined} 
                               setDate={field.onChange} 
-                              placeholder="Select previous harvest date (optional)"
                             />
                           </FormControl>
                           <FormMessage />

@@ -17,7 +17,7 @@ interface Land {
   category_color: string;
   plant_date: string;
   harvest_cycle_days: number;
-  next_harvest_date: string;
+  next_harvest_date: string | null;
   coordinations: string;
   geometry: string;
   size: number;

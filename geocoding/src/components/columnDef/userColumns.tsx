@@ -17,7 +17,6 @@ import {
   User,
   UserPlus,
   Crown,
-  Mail,
   Phone,
   Calendar,
   CheckCircle,

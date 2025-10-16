@@ -149,7 +149,7 @@ export const createColumns = ({
     cell: ({ row }) => {
       const workType = row.original;
       const translationKey = getWorkTypeTranslationKey(workType.workTypeName);
-      const translatedWorkTypeName = getTranslatedText(t, translationKey, workType.workTypeName);
+      const translatedWorkTypeName = getTranslatedText(t as any, translationKey, workType.workTypeName);
       
       return (
         <div className="flex items-center space-x-2">

@@ -608,20 +608,14 @@ class FarmWorkController
     {
         foreach ($workers as $worker) {
             $sql = "INSERT INTO work_completion_workers (
-                        completion_id, user_id, hours_worked, hourly_rate, 
-                        total_payment, notes
+                        completion_id, user_id
                     ) VALUES (
-                        :completion_id, :user_id, :hours_worked, :hourly_rate,
-                        :total_payment, :notes
+                        :completion_id, :user_id
                     )";
 
             $params = [
                 'completion_id' => $completionId,
-                'user_id' => $worker['userId'],
-                'hours_worked' => $worker['hoursWorked'] ?? null,
-                'hourly_rate' => $worker['hourlyRate'] ?? null,
-                'total_payment' => $worker['totalPayment'] ?? null,
-                'notes' => $worker['notes'] ?? null
+                'user_id' => $worker['userId']
             ];
 
             $this->db->query($sql, $params);

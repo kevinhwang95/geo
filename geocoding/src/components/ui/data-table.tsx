@@ -45,7 +45,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  searchKey,
+  searchKey: _searchKey,
   searchPlaceholder = "Search...",
   globalFilter,
   onGlobalFilterChange,
@@ -67,7 +67,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: onGlobalFilterChange || setGlobalFilterValue,
-    globalFilterFn: (row, columnId, value) => {
+    globalFilterFn: (row, _columnId, value) => {
       const search = value.toLowerCase();
       const rowData = row.original as any;
       

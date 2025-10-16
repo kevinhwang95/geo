@@ -629,11 +629,10 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           </FormLabel>
                           <FormControl>
                             <div className="border border-gray-200 rounded-md focus-within:border-orange-500 focus-within:ring-orange-500 transition-colors">
-                              <DatePicker 
-                                date={field.value ? new Date(field.value) : undefined} 
-                                setDate={field.onChange} 
-                                placeholder="Select previous harvest date (optional)"
-                              />
+                                <DatePicker 
+                                  date={field.value ? new Date(field.value) : undefined} 
+                                  setDate={field.onChange} 
+                                />
                             </div>
                           </FormControl>
                           <FormMessage />

@@ -22,9 +22,6 @@ import axiosClient from '@/api/axiosClient';
 import { toast } from 'sonner';
 import { 
   MessageSquare, 
-  AlertTriangle, 
-  Calendar, 
-  User,
   Camera,
   Edit,
   Trash2,
@@ -56,14 +53,14 @@ interface WorkNote {
 
 interface WorkNotesListProps {
   notes: WorkNote[];
-  workId: number;
+  workId?: number;
   onNotesUpdated: () => void;
   onEditNote?: (note: WorkNote) => void;
 }
 
 const WorkNotesList: React.FC<WorkNotesListProps> = ({
   notes,
-  workId,
+  workId: _workId,
   onNotesUpdated,
   onEditNote,
 }) => {
@@ -133,10 +130,10 @@ const WorkNotesList: React.FC<WorkNotesListProps> = ({
     }
   };
 
-  const truncateText = (text: string, maxLength: number = 100) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-  };
+  // const _truncateText = (text: string, maxLength: number = 100) => {
+  //   if (text.length <= maxLength) return text;
+  //   return text.substring(0, maxLength) + '...';
+  // };
 
   // Filter and pagination logic
   const filteredNotes = useMemo(() => {

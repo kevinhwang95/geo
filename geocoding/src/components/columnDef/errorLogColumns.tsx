@@ -116,7 +116,7 @@ const getMethodBadge = (method: string) => {
 export const createBackendErrorColumns = (
   onViewDetails: (error: BackendErrorLog) => void
 ): ColumnDef<BackendErrorLog>[] => {
-  const { t } = useTranslation();
+  const { } = useTranslation();
 
   return [
     {
@@ -138,8 +138,8 @@ export const createBackendErrorColumns = (
         </Badge>
       ),
       enableSorting: true,
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id));
+      filterFn: (row, _id, value) => {
+        return value.includes(row.getValue(_id));
       },
     },
     {
@@ -159,8 +159,8 @@ export const createBackendErrorColumns = (
       header: 'Method',
       cell: ({ row }) => getMethodBadge(row.getValue('method')),
       enableSorting: true,
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id));
+      filterFn: (row, _id, value) => {
+        return value.includes(row.getValue(_id));
       },
     },
     {
@@ -197,7 +197,7 @@ export const createBackendErrorColumns = (
         </div>
       ),
       enableSorting: false,
-      filterFn: (row, id, value) => {
+      filterFn: (row, _id, value) => {
         const errorType = getErrorTypeLabel(row.original);
         return value.includes(errorType);
       },
@@ -223,7 +223,7 @@ export const createBackendErrorColumns = (
 export const createFrontendErrorColumns = (
   onViewDetails: (error: FrontendErrorLog) => void
 ): ColumnDef<FrontendErrorLog>[] => {
-  const { t } = useTranslation();
+  const { } = useTranslation();
 
   return [
     {
@@ -245,8 +245,8 @@ export const createFrontendErrorColumns = (
         </Badge>
       ),
       enableSorting: true,
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id));
+      filterFn: (row, _id, value) => {
+        return value.includes(row.getValue(_id));
       },
     },
     {
@@ -272,8 +272,8 @@ export const createFrontendErrorColumns = (
         </div>
       ),
       enableSorting: true,
-      filterFn: (row, id, value) => {
-        const component = row.getValue(id) || 'Unknown';
+      filterFn: (row, _id, value) => {
+        const component = row.getValue(_id) || 'Unknown';
         return value.includes(component);
       },
     },

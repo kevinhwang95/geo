@@ -81,7 +81,7 @@ const FrontendErrorTester: React.FC<FrontendErrorTesterProps> = ({ onErrorGenera
   const testAsyncError = async () => {
     try {
       // Simulate an async operation that fails
-      await new Promise((resolve, reject) => {
+      await new Promise((_resolve, reject) => {
         setTimeout(() => {
           reject(new Error('Async operation failed: Network timeout'));
         }, 100);

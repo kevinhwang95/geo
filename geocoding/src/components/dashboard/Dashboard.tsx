@@ -2,13 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import NavigationMenu from '@/components/core/NavigationMenu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslation } from 'react-i18next';
-import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
-import { formatLandSizeToThaiUnits } from '@/utils/areaCalculator';
 import { 
   MapPin, 
   Bell, 
@@ -19,8 +16,6 @@ import {
   Clock,
   Plus,
   LogOut,
-  Search,
-  Edit
 } from 'lucide-react';
 // Import logo image
 import { useAuthStore, canManageLands, canManageUsers, canManageTeams, hasAnyRole } from '@/stores/authStore';
@@ -71,7 +66,7 @@ interface Land {
   category_translation_key?: string;
   plant_date: string;
   harvest_cycle_days: number;
-  next_harvest_date: string;
+  next_harvest_date: string | null;
   coordinations: string;
   geometry: string;
   size: number;

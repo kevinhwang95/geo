@@ -56,9 +56,8 @@ const UserManagement: React.FC = () => {
     setIsUserFormOpen(true);
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    const userToDelete = users?.find(u => u.id === userId);
-    const userName = userToDelete ? `${userToDelete.first_name} ${userToDelete.last_name}` : 'this user';
+  const handleDeleteUser = async (user: UserData) => {
+    const userName = `${user.first_name} ${user.last_name}`;
     
     toast.error('Delete User', {
       description: `Are you sure you want to delete ${userName}? This action cannot be undone.`,
@@ -66,7 +65,7 @@ const UserManagement: React.FC = () => {
         label: 'Delete',
         onClick: async () => {
           try {
-            await deleteUser(userId);
+            await deleteUser(user.id);
             await refreshUsers();
             toast.success('User deleted successfully', {
               description: `${userName} has been removed from the system.`,

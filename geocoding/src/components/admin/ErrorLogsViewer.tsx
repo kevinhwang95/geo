@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DataTable } from '@/components/ui/data-table';
 import { 
@@ -9,10 +8,7 @@ import {
   RefreshCw, 
   Trash2, 
   Download,
-  Eye,
   Clock,
-  Globe,
-  User,
   FileText,
   Settings,
   ChevronDown,
@@ -67,7 +63,7 @@ interface LogStats {
 }
 
 const ErrorLogsViewer: React.FC = () => {
-  const { t } = useTranslation();
+  const { } = useTranslation();
   const [backendErrors, setBackendErrors] = useState<BackendErrorLog[]>([]);
   const [frontendErrors, setFrontendErrors] = useState<FrontendErrorLog[]>([]);
   const [logStats, setLogStats] = useState<LogStats | null>(null);
@@ -80,10 +76,8 @@ const ErrorLogsViewer: React.FC = () => {
   // Auto-polling setup
   const {
     isPolling,
-    pollingEnabled,
     lastUpdate,
     togglePolling,
-    setPollingEnabled,
     manualRefresh,
     isToggling
   } = useErrorLogPolling({
@@ -142,18 +136,18 @@ const ErrorLogsViewer: React.FC = () => {
     toast.success('Frontend error logs cleared successfully');
   };
 
-  const testErrorLogging = () => {
-    // Test frontend error logging
-    errorLogger.logError('Test error from Error Logs Viewer', new Error('This is a test error'), { 
-      test: true, 
-      timestamp: new Date().toISOString() 
-    }, 'ErrorLogsViewer');
-    
-    // Refresh frontend errors
-    fetchFrontendErrors();
-    
-    toast.info('Test error logged. Check the Frontend Errors tab.');
-  };
+  // const _testErrorLogging = () => {
+  //   // Test frontend error logging
+  //   errorLogger.logError('Test error from Error Logs Viewer', new Error('This is a test error'), { 
+  //     test: true, 
+  //     timestamp: new Date().toISOString() 
+  //   }, 'ErrorLogsViewer');
+  //   
+  //   // Refresh frontend errors
+  //   fetchFrontendErrors();
+  //   
+  //   toast.info('Test error logged. Check the Frontend Errors tab.');
+  // };
 
   const handleTabChange = (tab: 'backend' | 'frontend') => {
     setActiveTab(tab);

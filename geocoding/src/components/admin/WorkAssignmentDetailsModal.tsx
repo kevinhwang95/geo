@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -23,10 +22,8 @@ import {
   AlertTriangle, 
   CheckCircle,
   MessageSquare,
-  Camera,
   Clock,
   FileText,
-  X
 } from 'lucide-react';
 import WorkNotesList from './WorkNotesList';
 import AddWorkNoteForm from './AddWorkNoteForm';
@@ -84,6 +81,11 @@ interface WorkCompletion {
   completed_by_user_id: number;
   completed_at: string;
   completed_by_name: string;
+  workers?: Array<{
+    userId: number;
+    userName: string;
+    teamName: string;
+  }>;
   photos?: Array<{
     id: number;
     filename: string;
@@ -130,7 +132,7 @@ const WorkAssignmentDetailsModal: React.FC<WorkAssignmentDetailsModalProps> = ({
   const [team, setTeam] = useState<Team | null>(null);
   const [assignedUser, setAssignedUser] = useState<User | null>(null);
   const [workType, setWorkType] = useState<WorkType | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [editingNote, setEditingNote] = useState<WorkNote | null>(null);
 
   // Fetch work details when modal opens
@@ -396,7 +398,18 @@ const WorkAssignmentDetailsModal: React.FC<WorkAssignmentDetailsModalProps> = ({
           <TabsContent value="completion" className="space-y-4">
             <WorkCompletionForm 
               workAssignment={workAssignment}
-              completion={completion}
+              completion={completion ? {
+                id: completion.id,
+                completionNote: completion.completion_note,
+                workerCount: completion.worker_count,
+                weightOfProduct: completion.weight_of_product,
+                truckNumber: completion.truck_number,
+                driverName: completion.driver_name,
+                completedByName: completion.completed_by_name,
+                completedAt: completion.completed_at,
+                workers: completion.workers,
+                photos: completion.photos
+              } : null}
               onWorkCompleted={handleWorkCompleted}
             />
           </TabsContent>

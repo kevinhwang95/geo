@@ -31,15 +31,25 @@ interface Land {
   harvest_status: 'overdue' | 'due_soon' | 'normal';
 }
 
+interface NotificationContext {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  priority: string;
+  created_at: string;
+}
+
 interface MapState {
   selectedLand: Land | null;
   shouldCenterMap: boolean;
   showInfoWindow: boolean;
+  notificationContext: NotificationContext | null;
 }
 
 interface MapActions {
   selectLand: (land: Land | null) => void;
-  centerMapOnLand: (land: Land) => void;
+  centerMapOnLand: (land: Land, notification?: NotificationContext) => void;
   clearSelection: () => void;
   setShowInfoWindow: (show: boolean) => void;
 }
@@ -49,19 +59,25 @@ export const useMapStore = create<MapState & MapActions>((set) => ({
   selectedLand: null,
   shouldCenterMap: false,
   showInfoWindow: false,
+  notificationContext: null,
 
   // Actions
   selectLand: (land) => set({ 
     selectedLand: land,
-    showInfoWindow: land !== null 
+    showInfoWindow: land !== null,
+    notificationContext: null // Clear notification context when selecting land normally
   }),
 
-  centerMapOnLand: (land) => {
+  centerMapOnLand: (land, notification) => {
     console.log('Map store: centerMapOnLand called with land:', land.land_name);
+    if (notification) {
+      console.log('Map store: Including notification context:', notification.title);
+    }
     set({ 
       selectedLand: land,
       shouldCenterMap: true,
-      showInfoWindow: true 
+      showInfoWindow: true,
+      notificationContext: notification || null
     });
     console.log('Map store: state updated, shouldCenterMap set to true');
   },
@@ -71,7 +87,8 @@ export const useMapStore = create<MapState & MapActions>((set) => ({
     set({ 
       selectedLand: null,
       shouldCenterMap: false,
-      showInfoWindow: false 
+      showInfoWindow: false,
+      notificationContext: null
     });
     console.log('Map store: selection cleared');
   },

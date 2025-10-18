@@ -61,3 +61,4 @@ const ErrorBoundaryTestComponent: React.FC<ErrorBoundaryTestComponentProps> = ({
 
 export default ErrorBoundaryTestComponent;
 
+

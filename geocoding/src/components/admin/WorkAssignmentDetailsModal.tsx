@@ -42,7 +42,7 @@ interface WorkAssignmentDetailsModalProps {
     assignedToUserId: number | null;
     workTypeId: number | null;
     workStatusId?: number | null;
-    priority: 'low' | 'medium' | 'high' | 'urgent';
+    priority: 'low' | 'medium' | 'high' | 'critical' | 'urgent';
     status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
     dueDate: string | null;
     createdAt: string;
@@ -199,6 +199,7 @@ const WorkAssignmentDetailsModal: React.FC<WorkAssignmentDetailsModalProps> = ({
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'destructive';
+      case 'critical': return 'destructive';
       case 'high': return 'destructive';
       case 'medium': return 'default';
       case 'low': return 'secondary';

@@ -81,8 +81,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
     }
   };
 
-  // Function to navigate to land on map
-  const handleViewLandOnMap = async (landId: number) => {
+  // Function to navigate to land on map with notification context
+  const handleViewLandOnMap = async (landId: number, notificationData?: any) => {
     console.log('handleViewLandOnMap called with landId:', landId);
     
     try {
@@ -104,9 +104,21 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
         console.log('Land name:', land.land_name);
         console.log('Land coordinations:', land.coordinations);
         
-        // Center map on the selected land and show InfoWindow
+        // Center map on the selected land and show InfoWindow with notification context
         console.log('Calling centerMapOnLand...');
-        centerMapOnLand(land);
+        if (notificationData) {
+          console.log('Including notification context:', notificationData.title);
+          centerMapOnLand(land, {
+            id: notificationData.id,
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type,
+            priority: notificationData.priority,
+            created_at: notificationData.created_at
+          });
+        } else {
+          centerMapOnLand(land);
+        }
         console.log('centerMapOnLand function called successfully');
       } else {
         console.error('Land not found or error in response:', response.data);
@@ -374,7 +386,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigateToMap
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleViewLandOnMap(notification.land_id);
+                        handleViewLandOnMap(notification.land_id, notification);
                       }}
                       className="text-gray-600 hover:text-green-600 hover:border-green-300 hover:bg-green-50 transition-colors duration-200 w-full sm:w-auto"
                       title={t('notifications.viewOnMapTooltip')}

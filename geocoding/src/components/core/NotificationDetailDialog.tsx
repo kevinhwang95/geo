@@ -126,10 +126,34 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleViewOnMap = () => {
+  const handleViewOnMap = async () => {
     if (notification?.land_id && onNavigateToMap) {
-      onNavigateToMap();
-      // The parent component should handle the map navigation
+      try {
+        // Import the map store dynamically to avoid circular dependencies
+        const { useMapStore } = await import('@/stores/mapStore');
+        const { centerMapOnLand } = useMapStore.getState();
+        
+        // Navigate to map tab
+        onNavigateToMap();
+        
+        // Fetch land data
+        const axiosClient = (await import('@/api/axiosClient')).default;
+        const response = await axiosClient.get(`/lands/${notification.land_id}`);
+        
+        if (response.data) {
+          // Pass both land and notification context to map
+          centerMapOnLand(response.data, {
+            id: notification.id,
+            title: notification.title,
+            message: notification.message,
+            type: notification.type,
+            priority: notification.priority,
+            created_at: notification.created_at
+          });
+        }
+      } catch (error) {
+        console.error('Error navigating to map with notification:', error);
+      }
     }
   };
 

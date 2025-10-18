@@ -87,3 +87,4 @@ curl http://localhost:8000/api/error-test/file-system
 - `DELETE /api/error-logs/clear` - Clear all error logs
 - `GET /api/error-logs/stats` - Get log statistics
 
+

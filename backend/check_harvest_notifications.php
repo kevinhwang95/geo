@@ -18,10 +18,11 @@
  * 
  * Usage:
  * - Run daily via cron: 0 6 * * * php /path/to/check_harvest_notifications.php
+ * - This cron job schedule is equivalent to 0 23 * * * in UTC timezone.
  * - Manual execution: php check_harvest_notifications.php
  * 
  * Author: System Administrator
- * Created: 2024-01-XX
+ * Created: 2025-10-17
  */
 
 require_once 'vendor/autoload.php';
@@ -92,6 +93,7 @@ try {
 
 echo "\n=== Harvest Notification Cron Job Completed ===\n";
 exit($exitCode);
+
 
 
 

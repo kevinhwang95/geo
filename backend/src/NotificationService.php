@@ -15,12 +15,36 @@ class NotificationService
 
     /**
      * Create a notification for a specific user
+     * Can be called with individual parameters or an array
      */
-    public function createNotification($landId, $userId, $type, $title, $message, $priority = 'normal')
+    public function createNotification($landIdOrData, $userId = null, $type = null, $title = null, $message = null, $priority = 'medium')
     {
+        // Support both calling patterns: array or individual parameters
+        if (is_array($landIdOrData)) {
+            $data = $landIdOrData;
+            $landId = $data['land_id'] ?? null;
+            $userId = $data['created_by'] ?? $data['user_id'] ?? null;
+            $type = $data['type'];
+            $title = $data['title'];
+            $message = $data['message'];
+            $priority = $data['priority'] ?? 'medium';
+            $metadata = $data['metadata'] ?? null;
+            $createdBy = $data['created_by'] ?? null;
+            $isActive = $data['is_active'] ?? 1;
+            $status = $data['status'] ?? 'pending';
+        } else {
+            // Legacy calling pattern with individual parameters
+            $landId = $landIdOrData;
+            $metadata = null;
+            $createdBy = null;
+            $isActive = 1;
+            $status = 'pending';
+        }
+        
+        // Build SQL with optional metadata column
         $sql = "
-            INSERT INTO notifications (land_id, user_id, type, title, message, priority)
-            VALUES (:land_id, :user_id, :type, :title, :message, :priority)
+            INSERT INTO notifications (land_id, user_id, type, title, message, priority, metadata, created_by, is_active, status)
+            VALUES (:land_id, :user_id, :type, :title, :message, :priority, :metadata, :created_by, :is_active, :status)
         ";
         $params = [
             'land_id' => $landId,
@@ -28,11 +52,18 @@ class NotificationService
             'type' => $type,
             'title' => $title,
             'message' => $message,
-            'priority' => $priority
+            'priority' => $priority,
+            'metadata' => $metadata,
+            'created_by' => $createdBy,
+            'is_active' => $isActive,
+            'status' => $status
         ];
         
         $this->db->query($sql, $params);
-        return $this->db->lastInsertId();
+        $notificationId = $this->db->lastInsertId();
+        
+        // Return the full notification record
+        return $this->db->fetchOne("SELECT * FROM notifications WHERE id = ?", [$notificationId]);
     }
 
     /**

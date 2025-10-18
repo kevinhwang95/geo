@@ -379,6 +379,7 @@
   },
   "notifications": {
     "title": "Notifications",
+    "notification": "Notification",
     "loading": "Loading notifications...",
     "retry": "Retry",
     "generateHarvestAlerts": "Generate Harvest Alerts",
@@ -1013,6 +1014,7 @@
     "low": "Low",
     "medium": "Medium",
     "high": "High",
+    "critical": "Critical",
     "urgent": "Urgent",
     "status": "Status",
     "selectStatus": "Select status",

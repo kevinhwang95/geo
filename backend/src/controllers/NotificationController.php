@@ -450,13 +450,14 @@ class NotificationController
     }
 
     /**
-     * Show a specific notification
+     * Show a specific notification with details
      */
     public function show($notificationId)
     {
         try {
             $user = Auth::requireAuth();
             
+            // Fetch notification with land details
             $sql = "
                 SELECT 
                     n.id,
@@ -472,6 +473,10 @@ class NotificationController
                     n.updated_at,
                     l.land_name,
                     l.land_code,
+                    l.location,
+                    l.city,
+                    l.district,
+                    l.province,
                     CONCAT(u.first_name, ' ', u.last_name) as user_name
                 FROM notifications n
                 LEFT JOIN lands l ON n.land_id = l.id
@@ -483,19 +488,54 @@ class NotificationController
             
             if (!$notification) {
                 http_response_code(404);
-                echo json_encode(['error' => 'Notification not found']);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Notification not found'
+                ]);
                 return;
             }
             
+            // Fetch associated photos if the notification is related to a land
+            $photos = [];
+            if ($notification['land_id']) {
+                $photoSql = "
+                    SELECT 
+                        lp.id,
+                        lp.filename as file_name,
+                        lp.file_path,
+                        lp.file_size,
+                        lp.mime_type,
+                        lp.created_at as uploaded_at
+                    FROM land_photos lp
+                    WHERE lp.land_id = ?
+                    AND lp.is_active = 1
+                    AND lp.created_at >= DATE_SUB(?, INTERVAL 7 DAY)
+                    ORDER BY lp.created_at DESC
+                    LIMIT 10
+                ";
+                
+                $photos = $this->db->fetchAll($photoSql, [
+                    $notification['land_id'],
+                    $notification['created_at']
+                ]);
+            }
+            
+            // Return in the structure expected by the frontend
             echo json_encode([
                 'success' => true,
-                'data' => $notification
+                'data' => [
+                    'notification' => $notification,
+                    'photos' => $photos
+                ]
             ]);
 
         } catch (Exception $e) {
             error_log("NotificationController::show error: " . $e->getMessage());
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch notification']);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to fetch notification'
+            ]);
         }
     }
 

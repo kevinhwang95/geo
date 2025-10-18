@@ -120,7 +120,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
     workStatusId: z.number().optional(),
     teamId: z.number().optional(),
     assignedToUserId: z.number().optional(),
-    priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+    priority: z.enum(['low', 'medium', 'high', 'critical', 'urgent']).optional(),
     status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
     dueDate: z.string().optional(),
   }).refine(
@@ -727,6 +727,7 @@ const WorkAssignmentFormDialog: React.FC<WorkAssignmentFormDialogProps> = ({
                         <SelectItem value="low">{t('createWorkAssignment.low')}</SelectItem>
                         <SelectItem value="medium">{t('createWorkAssignment.medium')}</SelectItem>
                         <SelectItem value="high">{t('createWorkAssignment.high')}</SelectItem>
+                        <SelectItem value="critical">{t('createWorkAssignment.critical')}</SelectItem>
                         <SelectItem value="urgent">{t('createWorkAssignment.urgent')}</SelectItem>
                       </SelectContent>
                     </Select>

@@ -126,8 +126,9 @@ class HarvestNotificationService
                 $notificationsCreated += $notificationResult['created'];
                 $notificationsUpdated += $notificationResult['updated'];
 
-                // Create farm work if notification was created (3 days before)
-                if ($notificationResult['created'] > 0 && $daysUntilHarvest == 3) {
+                // Create farm work whenever a notification is created (for any day <= 3)
+                // Farm work creation checks internally if one already exists
+                if ($notificationResult['created'] > 0) {
                     $farmWorkResult = $this->createHarvestFarmWork($land);
                     $farmWorksCreated += $farmWorkResult;
                 }
@@ -212,7 +213,8 @@ class HarvestNotificationService
                 'type' => 'harvest',
                 'priority' => $priority,
                 'land_id' => $land['id'],
-                'created_by' => $land['created_by'],
+                'user_id' => $land['created_by'], // User to receive the notification
+                'created_by' => $land['created_by'], // User who created the notification
                 'metadata' => json_encode([
                     'land_code' => $land['land_code'],
                     'land_name' => $land['land_name'],
@@ -347,22 +349,34 @@ class HarvestNotificationService
                 return 0;
             }
 
+            // Calculate priority based on days until harvest
+            $daysUntilHarvest = $this->calculateDaysUntilHarvest($land['next_harvest_date']);
+            $priorityLevel = 'medium'; // default
+            if ($daysUntilHarvest <= 0) {
+                $priorityLevel = 'critical'; // Overdue
+            } elseif ($daysUntilHarvest == 1) {
+                $priorityLevel = 'high'; // 1 day before
+            } elseif ($daysUntilHarvest == 2) {
+                $priorityLevel = 'high'; // 2 days before
+            }
+            
             // Create farm work data
             $farmWorkData = [
                 'title' => "Harvest {$land['plant_type_name']} - {$land['land_name']}",
                 'description' => "Harvest {$land['plant_type_name']} from {$land['land_name']} ({$land['land_code']}) scheduled for " . date('F j, Y', strtotime($land['next_harvest_date'])),
                 'land_id' => $land['id'],
                 'work_type_id' => $harvestWorkType['id'],
-                'priority_level' => 'medium',
+                'priority_level' => $priorityLevel,
                 'status' => 'pending',
                 'due_date' => $land['next_harvest_date'],
-                'created_by' => $land['created_by'],
+                'creator_user_id' => $land['created_by'], // Required for farm_works table
                 'metadata' => json_encode([
                     'land_code' => $land['land_code'],
                     'land_name' => $land['land_name'],
                     'plant_type_name' => $land['plant_type_name'],
                     'harvest_date' => $land['next_harvest_date'],
                     'harvest_cycle_days' => $land['harvest_cycle_days'],
+                    'days_until_harvest' => $daysUntilHarvest,
                     'auto_created' => true,
                     'created_from' => 'harvest_notification'
                 ])
@@ -509,6 +523,7 @@ class HarvestNotificationService
         ]);
     }
 }
+
 
 
 

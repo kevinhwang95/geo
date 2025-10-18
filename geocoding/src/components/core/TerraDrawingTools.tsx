@@ -140,7 +140,7 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
   const { isAuthenticated, user } = useAuthStore();
 
   // Get map store for land selection and centering
-  const { selectedLand, shouldCenterMap, clearSelection } = useMapStore();
+  const { selectedLand, shouldCenterMap, clearSelection, notificationContext } = useMapStore();
 
   // Ensure InfoWindow is initialized
   const ensureInfoWindow = () => {
@@ -519,8 +519,32 @@ const TerraDrawingTools: React.FC<TerraDrawingToolsProps> = ({
             const nextHarvestDate = (selectedLand as any).next_harvest_date || new Date().toISOString();
             const formattedSize = formatLandSizeToThaiUnits(selectedLand.size, t);
             
+            // Check if we have notification context to display
+            const hasNotification = notificationContext !== null;
+            const notificationSection = hasNotification ? `
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                  <div style="background: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; margin-right: 8px;">
+                    <span style="font-size: 16px;">🔔</span>
+                  </div>
+                  <strong style="color: white; font-size: 14px;">${t('notifications.notification').toUpperCase()}</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.95); padding: 10px; border-radius: 6px;">
+                  <div style="font-weight: 700; font-size: 14px; color: #1a202c; margin-bottom: 6px;">${notificationContext.title}</div>
+                  <div style="color: #4a5568; font-size: 13px; line-height: 1.5; margin-bottom: 8px; white-space: pre-wrap;">${notificationContext.message}</div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                    <span style="background: ${notificationContext.priority === 'high' ? '#ef4444' : notificationContext.priority === 'medium' ? '#f59e0b' : '#10b981'}; color: white; padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase;">
+                      ${notificationContext.priority}
+                    </span>
+                    <span style="color: #718096;">${new Date(notificationContext.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+            ` : '';
+            
             const infoContent = `
-              <div style="font-family: Arial, sans-serif; max-width: 300px;">
+              <div style="font-family: Arial, sans-serif; max-width: 320px;">
+                ${notificationSection}
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                   <div style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
                     <strong style="color: #495057; font-size: 12px;">${t('labels.landName').toUpperCase()}</strong>

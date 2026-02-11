@@ -44,5 +44,5 @@ export function formatLandSizeToThaiUnits(raiValue: number, t: (key: string) => 
     parts.push(`${breakdown.tarangWa} ${t('dashboard.lands.tarangWa')}`);
   }
   
-  return parts.length > 0 ? parts.join(' ') : `0 ${t('dashboard.lands.wa')}`;
+  return parts.length > 0 ? parts.join(' ') : `0 ${t('dashboard.lands.tarangWa')}`;
 }

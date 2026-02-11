@@ -2,6 +2,7 @@ import axiosClient from '@/api/axiosClient';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { Notification, NotificationStats } from '@/types/notification';
+import { debugLog } from '@/utils/debugLogger';
 
 class NotificationPollingService {
   private static instance: NotificationPollingService;
@@ -22,14 +23,14 @@ class NotificationPollingService {
   public startPolling(interval: number = 30000): void {
     // Stop any existing polling first
     if (this.isPolling) {
-      console.log('Restarting notification polling service with new interval');
+      debugLog('Restarting notification polling service with new interval');
       this.stopPolling();
     }
 
     this.pollInterval = interval;
     this.isPolling = true;
     
-    console.log(`🔄 Starting notification polling service every ${interval / 1000} seconds`);
+    debugLog(`🔄 Starting notification polling service every ${interval / 1000} seconds`);
     
     // Initial fetch (silent)
     this.fetchNotifications(true);
@@ -42,7 +43,7 @@ class NotificationPollingService {
         if (isAuthenticated) {
           this.fetchNotifications(true);
         } else {
-          console.log('User not authenticated, stopping polling');
+          debugLog('User not authenticated, stopping polling');
           this.stopPolling();
         }
       }
@@ -54,7 +55,7 @@ class NotificationPollingService {
       return;
     }
 
-    console.log('🛑 Stopping notification polling service');
+    debugLog('🛑 Stopping notification polling service');
     this.isPolling = false;
 
     if (this.pollingInterval) {
@@ -68,7 +69,7 @@ class NotificationPollingService {
         this.abortController.abort();
       } catch (error) {
         // Ignore errors when aborting - this is expected
-        console.log('Abort controller cleanup completed');
+        debugLog('Abort controller cleanup completed');
       }
       this.abortController = null;
     }
@@ -80,7 +81,7 @@ class NotificationPollingService {
     // Check if user is authenticated
     const { isAuthenticated } = useAuthStore.getState();
     if (!isAuthenticated) {
-      console.log('Skipping notification fetch - user not authenticated');
+      debugLog('Skipping notification fetch - user not authenticated');
       return;
     }
 
@@ -130,7 +131,7 @@ class NotificationPollingService {
         }
       }
 
-      console.log(`📬 Polling: Fetched ${notifications.length} notifications (silent: ${silent})`);
+      debugLog(`📬 Polling: Fetched ${notifications.length} notifications (silent: ${silent})`);
 
     } catch (error: any) {
       // Handle different types of cancellation errors - these are expected and should be silent
@@ -166,7 +167,7 @@ class NotificationPollingService {
       const store = useNotificationStore.getState();
       store.markAsRead(notificationId);
       
-      console.log(`✅ Marked notification ${notificationId} as read`);
+      debugLog(`✅ Marked notification ${notificationId} as read`);
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
       throw error;
@@ -175,14 +176,14 @@ class NotificationPollingService {
 
   public async markAsDismissed(notificationId: number): Promise<void> {
     try {
-      console.log(`[NotificationPollingService] Making API call to dismiss notification ${notificationId}`);
+      debugLog(`[NotificationPollingService] Making API call to dismiss notification ${notificationId}`);
       const response = await axiosClient.post(`/notifications/dismiss/${notificationId}`);
-      console.log(`[NotificationPollingService] API response for dismiss:`, response.data);
+      debugLog(`[NotificationPollingService] API response for dismiss:`, response.data);
       
       const store = useNotificationStore.getState();
       store.markAsDismissed(notificationId);
       
-      console.log(`✅ Marked notification ${notificationId} as dismissed`);
+      debugLog(`✅ Marked notification ${notificationId} as dismissed`);
     } catch (error: any) {
       console.error(`[NotificationPollingService] Failed to dismiss notification ${notificationId}:`, error);
       console.error('Error details:', {
@@ -195,7 +196,7 @@ class NotificationPollingService {
   }
 
   public refreshNow(silent: boolean = false): void {
-    console.log('🔄 Manual notification refresh requested');
+    debugLog('🔄 Manual notification refresh requested');
     this.fetchNotifications(silent);
   }
 

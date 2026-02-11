@@ -7,6 +7,7 @@ import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import { useTokenExpiryChecker } from '@/hooks/useTokenExpiryChecker';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { debugLog } from '@/utils/debugLogger';
 
 // Initialize i18n
 import '@/i18n';
@@ -20,7 +21,7 @@ import GlobalLanguageSwitcher from '@/components/core/GlobalLanguageSwitcher';
 
 function App() {
   const { isAuthenticated, setLoading, tokens, user } = useAuthStore();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   // Memoize authentication status to prevent unnecessary re-renders
   const authStatus = useMemo(() => {
@@ -33,6 +34,14 @@ function App() {
   // Initialize periodic token expiry checker
   useTokenExpiryChecker();
 
+  // Set language based on user's language preference when app loads
+  useEffect(() => {
+    if (user?.language_preference) {
+      i18n.changeLanguage(user.language_preference);
+      debugLog(`[App] Setting language to user preference: ${user.language_preference}`);
+    }
+  }, [user?.language_preference, i18n]);
+
   useEffect(() => {
     // Check if user has stored tokens on app load
     const checkStoredAuth = () => {
@@ -42,7 +51,11 @@ function App() {
         
         if (tokens?.access_token && user) {
           // User has stored tokens, they're considered authenticated
-          // No action needed - Zustand store handles this automatically
+          // Set language based on user preference
+          if (user.language_preference) {
+            i18n.changeLanguage(user.language_preference);
+            debugLog(`[App] Restored language preference: ${user.language_preference}`);
+          }
         } else {
           // No stored tokens, user needs to login
           // This is normal for first-time visitors

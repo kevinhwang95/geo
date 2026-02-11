@@ -52,6 +52,32 @@ import { useTranslation } from 'react-i18next';
 import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
 import { formatLandSizeToThaiUnits } from '@/utils/areaCalculator';
 
+// Helper function to parse date strings without timezone conversion
+const parseDateString = (dateString: string): Date | null => {
+  if (!dateString) return null;
+  
+  // Format is "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"
+  const parts = dateString.split(' ');
+  const datePart = parts[0]; // "YYYY-MM-DD"
+  const [year, month, day] = datePart.split('-').map(Number);
+  
+  // Create date in local timezone (not UTC)
+  return new Date(year, month - 1, day);
+};
+
+// Helper function to format date for display
+const formatDateForDisplay = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  const date = parseDateString(dateString);
+  if (!date) return '-';
+  
+  // Format as YYYY-MM-DD for consistency (or use toLocaleDateString for localized format)
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Define Land type that matches the actual API response from backend
 interface Land {
   id: number;
@@ -287,10 +313,7 @@ function LandsDataTable({
         },
         cell: ({ row }) => {
           const land = row.original;
-          if (land.previous_harvest_date) {
-            return <div>{new Date(land.previous_harvest_date).toLocaleDateString()}</div>;
-          }
-          return <div className="text-gray-400">-</div>;
+          return <div>{formatDateForDisplay(land.previous_harvest_date)}</div>;
         },
       },
       {
@@ -315,11 +338,7 @@ function LandsDataTable({
         },
         cell: ({ row }) => {
           const nextHarvestDate = row.getValue("next_harvest_date") as string | null;
-          if (!nextHarvestDate || nextHarvestDate === 'null' || nextHarvestDate === '') {
-            return <div className="text-gray-400">-</div>;
-          }
-          const date = new Date(nextHarvestDate);
-          return <div>{date.toLocaleDateString()}</div>;
+          return <div>{formatDateForDisplay(nextHarvestDate)}</div>;
         },
       },
       {

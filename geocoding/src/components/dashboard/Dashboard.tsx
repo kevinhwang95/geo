@@ -40,6 +40,7 @@ import ErrorLogsViewer from '@/components/admin/ErrorLogsViewer';
 import { Avatar } from '@/components/ui/avatar';
 import { useGenericCrud } from '@/hooks/useGenericCrud';
 import type LandRegistry from '@/types/landRegistry.type';
+import { debugLog } from '@/utils/debugLogger';
 //import { TokenDebugger } from '@/components/debug/TokenDebugger';
 // import { NotificationDebugger } from '@/components/debug/NotificationDebugger';
 // import NotificationAPITester from '@/components/debug/NotificationAPITester';
@@ -66,6 +67,7 @@ interface Land {
   category_translation_key?: string;
   plant_date: string;
   harvest_cycle_days: number;
+  previous_harvest_date?: string;
   next_harvest_date: string | null;
   coordinations: string;
   geometry: string;
@@ -128,20 +130,20 @@ const Dashboard: React.FC = () => {
       const uniqueUserIds = [...new Set(userIds)];
       const userNamesMap: Record<number, string> = {};
       
-      console.log('Fetching user names for IDs:', uniqueUserIds);
+      debugLog('Fetching user names for IDs:', uniqueUserIds);
       
       for (const userId of uniqueUserIds) {
         try {
-          console.log(`Fetching user ${userId}...`);
+          debugLog(`Fetching user ${userId}...`);
           const response = await axiosClient.get(`/users/${userId}`);
-          console.log(`User ${userId} response:`, response.data);
+          debugLog(`User ${userId} response:`, response.data);
           
           if (response.data.first_name) {
             // Handle direct response format (API returns snake_case)
             const userData = response.data;
             const fullName = `${userData.first_name} ${userData.last_name}`.trim();
             userNamesMap[userId] = fullName;
-            console.log(`User ${userId} name: ${fullName}`);
+            debugLog(`User ${userId} name: ${fullName}`);
           } else {
             console.warn(`No user data found for ${userId}`);
             userNamesMap[userId] = `User #${userId}`;
@@ -152,7 +154,7 @@ const Dashboard: React.FC = () => {
         }
       }
       
-      console.log('Final user names map:', userNamesMap);
+      debugLog('Final user names map:', userNamesMap);
       setUserNames(userNamesMap);
     } catch (error) {
       console.error('Error fetching user names:', error);
@@ -165,8 +167,8 @@ const Dashboard: React.FC = () => {
       setError(null);
 
       // Check if user is authenticated
-      console.log('User from auth store:', user);
-      console.log('Auth tokens:', useAuthStore.getState().tokens);
+      debugLog('User from auth store:', user);
+      debugLog('Auth tokens:', useAuthStore.getState().tokens);
       
       if (!user) {
         setError(t('dashboard.errors.userNotAuthenticated'));
@@ -178,7 +180,7 @@ const Dashboard: React.FC = () => {
       notificationPollingService.startPolling(30000); // Poll every 30 seconds
 
       // Lands are now loaded by the useGenericCrud hook automatically
-      console.log('Lands loaded by hook:', lands?.length || 0, 'lands');
+      debugLog('Lands loaded by hook:', lands?.length || 0, 'lands');
 
     } catch (error: any) {
       console.error('Dashboard data loading error:', error);
@@ -236,27 +238,27 @@ const Dashboard: React.FC = () => {
   };
 
   const handleViewLandDetails = (landId: number) => {
-    console.log('handleViewLandDetails called with landId:', landId);
-    console.log('Available lands:', lands?.map(l => ({ id: l.id, name: l.land_name })));
+    debugLog('handleViewLandDetails called with landId:', landId);
+    debugLog('Available lands:', lands?.map(l => ({ id: l.id, name: l.land_name })));
     
     // Find the land by ID
     const land = lands?.find(l => l.id === landId);
-    console.log('Found land:', land);
+    debugLog('Found land:', land);
     
     if (land) {
-      console.log('Switching to map tab and centering on land:', land.land_name);
+      debugLog('Switching to map tab and centering on land:', land.land_name);
       // Switch to map tab
       setActiveSection('map');
       // Center map on the selected land and show InfoWindow
       centerMapOnLand(land);
-      console.log('centerMapOnLand function called');
+      debugLog('centerMapOnLand function called');
     } else {
       console.error('Land not found with ID:', landId);
     }
   };
 
   const handleEditLand = (land: Land) => {
-    console.log('🔍 handleEditLand called with land:', land);
+    debugLog('🔍 handleEditLand called with land:', land);
     
     // Convert Land to LandRegistry format
     const landRegistry: LandRegistry = {
@@ -278,6 +280,8 @@ const Dashboard: React.FC = () => {
       category_color: land.category_color,
       plant_date: land.plant_date,
       harvest_cycle: land.harvest_cycle_days?.toString() || '',
+      previous_harvest_date: land.previous_harvest_date,
+      next_harvest_date: land.next_harvest_date ?? undefined,
       tree_count: land.tree_count,
       notes: land.notes || '',
       created: land.created_at,
@@ -286,7 +290,7 @@ const Dashboard: React.FC = () => {
       updatedby: userNames[land.created_by] || 'Unknown'
     };
     
-    console.log('🔍 Converted landRegistry:', landRegistry);
+    debugLog('🔍 Converted landRegistry:', landRegistry);
     setSelectedLandForEdit(landRegistry);
     setEditDialogOpen(true);
   };
@@ -344,9 +348,9 @@ const Dashboard: React.FC = () => {
 
 
   // Debug logging
-  console.log('Dashboard - Authentication state:', { isAuthenticated, user: user?.first_name });
-  console.log('Total lands from hook:', lands?.length || 0);
-  console.log('Lands loading:', landsLoading);
+  debugLog('Dashboard - Authentication state:', { isAuthenticated, user: user?.first_name });
+  debugLog('Total lands from hook:', lands?.length || 0);
+  debugLog('Lands loading:', landsLoading);
 
   const getHarvestStatusIcon = (status: string) => {
     switch (status) {

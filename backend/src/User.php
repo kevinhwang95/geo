@@ -73,6 +73,9 @@ class User
             } elseif ($key === 'role') {
                 $fields[] = 'role = :role';
                 $params['role'] = $value;
+            } elseif ($key === 'languagePreference') {
+                $fields[] = 'language_preference = :language_preference';
+                $params['language_preference'] = $value;
             }
         }
 

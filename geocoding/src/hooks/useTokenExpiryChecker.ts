@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { debugLog } from '@/utils/debugLogger';
 
 const ACTIVITY_TIMEOUT = 20 * 60 * 1000; // 15 minutes of inactivity
 
@@ -59,14 +60,14 @@ export const useTokenExpiryChecker = () => {
 
     // Set up periodic token expiry check every 30 seconds
     intervalRef.current = setInterval(() => {
-      console.log('[TokenExpiryChecker] Checking token expiry...');
+      debugLog('[TokenExpiryChecker] Checking token expiry...');
       
       // Only logout inactive users when tokens expire
       if (!isUserActive()) {
-        console.log('[TokenExpiryChecker] User is inactive, checking if tokens are expired');
+        debugLog('[TokenExpiryChecker] User is inactive, checking if tokens are expired');
         const wasLoggedOut = checkTokenExpiryAndLogout();
         if (wasLoggedOut) {
-          console.log('[TokenExpiryChecker] Inactive user logged out due to expired tokens');
+          debugLog('[TokenExpiryChecker] Inactive user logged out due to expired tokens');
           // Clear the interval since user is now logged out
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
@@ -74,7 +75,7 @@ export const useTokenExpiryChecker = () => {
           }
         }
       } else {
-        console.log('[TokenExpiryChecker] User is active, not checking token expiry');
+        debugLog('[TokenExpiryChecker] User is active, not checking token expiry');
       }
     }, 30000); // Check every 30 seconds
 
@@ -94,13 +95,13 @@ export const useTokenExpiryChecker = () => {
   // Also check immediately when tokens change (only for inactive users)
   useEffect(() => {
     if (isAuthenticated && tokens) {
-      console.log('[TokenExpiryChecker] Tokens changed, checking expiry immediately...');
+      debugLog('[TokenExpiryChecker] Tokens changed, checking expiry immediately...');
       // Only check expiry for inactive users
       if (!isUserActive()) {
-        console.log('[TokenExpiryChecker] User is inactive, checking token expiry on token change');
+        debugLog('[TokenExpiryChecker] User is inactive, checking token expiry on token change');
         checkTokenExpiryAndLogout();
       } else {
-        console.log('[TokenExpiryChecker] User is active, not checking token expiry on token change');
+        debugLog('[TokenExpiryChecker] User is active, not checking token expiry on token change');
       }
     }
   }, [tokens, isAuthenticated, checkTokenExpiryAndLogout, isUserActive]);

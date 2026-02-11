@@ -34,3 +34,6 @@ CREATE INDEX `idx_land_photos_land_id_null` ON `land_photos`(`land_id`);
 -- Land photos will continue to have land_id referencing the specific land
 
 
+
+
+

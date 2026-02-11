@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { AlertTriangle, CheckCircle, MessageSquare, Camera, Info, MapPin, Calendar, Download } from 'lucide-react';
 import axiosClient from '@/api/axiosClient';
+import { useMapStore } from '@/stores/mapStore';
 
 interface NotificationDetail {
   id: number;
@@ -129,15 +130,12 @@ const NotificationDetailDialog: React.FC<NotificationDetailDialogProps> = ({
   const handleViewOnMap = async () => {
     if (notification?.land_id && onNavigateToMap) {
       try {
-        // Import the map store dynamically to avoid circular dependencies
-        const { useMapStore } = await import('@/stores/mapStore');
         const { centerMapOnLand } = useMapStore.getState();
         
         // Navigate to map tab
         onNavigateToMap();
         
         // Fetch land data
-        const axiosClient = (await import('@/api/axiosClient')).default;
         const response = await axiosClient.get(`/lands/${notification.land_id}`);
         
         if (response.data) {

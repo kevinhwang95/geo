@@ -32,6 +32,32 @@ import { MapPin, User, Calendar, Hash, Building, Map, Leaf, Save, X, Globe, Crop
 import axiosClient from '@/api/axiosClient';
 import { useTranslation } from 'react-i18next';
 import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
+import { debugLog } from '@/utils/debugLogger';
+
+// Helper function to parse date strings without timezone conversion
+const parseDateWithoutTimezone = (dateValue: string | Date | undefined): Date | undefined => {
+  if (!dateValue) return undefined;
+  
+  // If already a Date object, return it
+  if (dateValue instanceof Date) return dateValue;
+  
+  // Split the date string (format: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS")
+  const parts = dateValue.split(' ');
+  const datePart = parts[0]; // "YYYY-MM-DD"
+  const [year, month, day] = datePart.split('-').map(Number);
+  
+  // Create date in local timezone (not UTC)
+  return new Date(year, month - 1, day);
+};
+
+// Helper function to format Date to YYYY-MM-DD string
+const formatDateToString = (date: Date | undefined): string | undefined => {
+  if (!date) return undefined;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export interface MyFormDialogProps {
   //polygonPaths: google.maps.LatLngLiteral[][];
@@ -59,7 +85,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
         setLoadingOptions(true);
         setOptionsError(null);
         
-        console.log('Fetching plant types and categories...');
+        debugLog('Fetching plant types and categories...');
         
         // Fetch plant types and categories in parallel
         const [plantTypesResponse, categoriesResponse] = await Promise.allSettled([
@@ -70,20 +96,20 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
         // Handle plant types response
         if (plantTypesResponse.status === 'fulfilled' && plantTypesResponse.value.data.success) {
           const plantTypesData = plantTypesResponse.value.data.data;
-          console.log('Plant types loaded:', plantTypesData.length);
+          debugLog('Plant types loaded:', plantTypesData.length);
           setPlantTypes(plantTypesData);
         } else {
-          console.error('Plant types fetch failed:', plantTypesResponse);
+          debugLog('Plant types fetch failed:', plantTypesResponse);
           setOptionsError('Failed to load plant types');
         }
         
         // Handle categories response
         if (categoriesResponse.status === 'fulfilled' && categoriesResponse.value.data.success) {
           const categoriesData = categoriesResponse.value.data.data;
-          console.log('Categories loaded:', categoriesData.length);
+          debugLog('Categories loaded:', categoriesData.length);
           setCategories(categoriesData);
         } else {
-          console.error('Categories fetch failed:', categoriesResponse);
+          debugLog('Categories fetch failed:', categoriesResponse);
           setOptionsError('Failed to load categories');
         }
         
@@ -93,7 +119,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
         }
         
       } catch (error) {
-        console.error('Error fetching options:', error);
+        debugLog('Error fetching options:', error);
         setOptionsError('Network error loading options');
       } finally {
         setLoadingOptions(false);
@@ -103,8 +129,10 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
     fetchOptions();
   }, []);
  
-  const currentdate = new Date().toISOString().slice(0, 10)
-  const formattedDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  // Use useMemo to stabilize date values
+  const currentdate = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const formattedDate = React.useMemo(() => new Date().toISOString().slice(0, 19).replace('T', ' '), []);
+  
   const form = useForm<z.infer<typeof landRegistrySchema>>({
     resolver: zodResolver(landRegistrySchema),
     defaultValues: {
@@ -123,7 +151,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
       planttypeid: land.planttypeid || 1,
       categoryid: land.categoryid || 1,
       plant_date: land.plant_date || currentdate,
-      previous_harvest_date: land.previous_harvest_date,
+      previous_harvest_date: land.previous_harvest_date || undefined,
       tree_count: land.tree_count,
       notes: land.notes || '',
       created: land.created || formattedDate,
@@ -136,8 +164,11 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
   // Reset form values when land prop changes
   React.useEffect(() => {
     if (land && land.id) {
-      console.log('Resetting form with land data:', land);
-      form.reset({
+      debugLog('🔄 Resetting form with land data:', land);
+      debugLog('📅 previous_harvest_date value from land prop:', land.previous_harvest_date);
+      debugLog('📅 previous_harvest_date type:', typeof land.previous_harvest_date);
+      
+      const resetData = {
         id: land.id,
         land_name: land.land_name || '',
         land_code: land.land_code || '',
@@ -160,9 +191,33 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
         createdby: land.createdby || '',
         updated: land.updated || formattedDate,
         updatedby: land.updatedby || '',
+      };
+      
+      debugLog('✅ Resetting with previous_harvest_date:', resetData.previous_harvest_date);
+      debugLog('📊 Full reset data:', resetData);
+      
+      form.reset(resetData, { 
+        keepErrors: false,
+        keepDirty: false,
+        keepIsSubmitted: false,
+        keepTouched: false,
+        keepIsValid: false,
+        keepSubmitCount: false,
       });
+      
+      // Check what the form has immediately after reset
+      requestAnimationFrame(() => {
+        const formValue = form.getValues('previous_harvest_date');
+        debugLog('📋 Form value after reset (immediate):', formValue);
+      });
+      
+      // Also check after a short delay
+      setTimeout(() => {
+        const formValue = form.getValues('previous_harvest_date');
+        debugLog('📋 Form value after reset (delayed):', formValue);
+      }, 100);
     }
-  }, [land, form, currentdate, formattedDate]);
+  }, [land.id, land.previous_harvest_date, form, currentdate, formattedDate]);
         
   // // Set form values when size or coordination changes
   // React.useEffect(() => {
@@ -175,7 +230,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
       // Remove harvest_cycle from submission since it's now derived from plant type
       const { harvest_cycle, ...safeValues } = values;
 
-      console.log(safeValues);
+      debugLog(safeValues);
       
       // If land has an ID, it's an update operation
       if (land.id) {
@@ -189,7 +244,7 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
       setOpen(false);
       form.reset();
     } catch (e) {
-      console.log(e);
+      debugLog(e);
     }
   }
 
@@ -598,7 +653,10 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                             Plant Date
                           </FormLabel>
                           <FormControl>
-                            <DatePicker date={field.value ? new Date(field.value) : new Date()} setDate={field.onChange} />
+                            <DatePicker 
+                              date={field.value ? parseDateWithoutTimezone(field.value as string) : new Date()} 
+                              setDate={(date) => field.onChange(formatDateToString(date))} 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -625,7 +683,16 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                     <FormField
                       control={form.control}
                       name="previous_harvest_date"
-                      render={({ field }) => (
+                      render={({ field }) => {
+                        debugLog('📅 DatePicker render - field.value:', field.value);
+                        
+                        // Parse the date if it exists
+                        let parsedDate: Date | undefined = undefined;
+                        if (field.value) {
+                          parsedDate = parseDateWithoutTimezone(field.value as string);
+                        }
+                        
+                        return (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Calendar className="h-4 w-4 text-orange-600" />
@@ -633,8 +700,11 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                           </FormLabel>
                           <FormControl>
                             <DatePicker 
-                              date={field.value ? new Date(field.value) : undefined} 
-                              setDate={field.onChange} 
+                              date={parsedDate} 
+                              setDate={(date) => {
+                                debugLog('✅ Setting previous_harvest_date to:', date);
+                                field.onChange(formatDateToString(date));
+                              }} 
                             />
                           </FormControl>
                           <FormMessage />
@@ -642,7 +712,8 @@ export function MyFormDialogLoad({ open, setOpen, land, onUpdateSuccess = () => 
                             Date of the last harvest - used to calculate next harvest date
                           </p>
                         </FormItem>
-                      )}
+                      );
+                      }}
                     />
                     <FormField
                       control={form.control}

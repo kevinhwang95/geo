@@ -35,6 +35,31 @@ import { MapPin, User, Calendar, Hash, Building, Map, Leaf, Save, X, Globe, Crop
 import { useTranslation } from 'react-i18next';
 import { getTranslatedPlantType, getTranslatedCategory } from '@/utils/translationUtils';
 
+// Helper function to parse date strings without timezone conversion
+const parseDateWithoutTimezone = (dateValue: string | Date | undefined): Date | undefined => {
+  if (!dateValue) return undefined;
+  
+  // If already a Date object, return it
+  if (dateValue instanceof Date) return dateValue;
+  
+  // Split the date string (format: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS")
+  const parts = dateValue.split(' ');
+  const datePart = parts[0]; // "YYYY-MM-DD"
+  const [year, month, day] = datePart.split('-').map(Number);
+  
+  // Create date in local timezone (not UTC)
+  return new Date(year, month - 1, day);
+};
+
+// Helper function to format Date to YYYY-MM-DD string
+const formatDateToString = (date: Date | undefined): string | undefined => {
+  if (!date) return undefined;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 
 export interface MyFormDialogProps {
   //polygonPaths: google.maps.LatLngLiteral[][];
@@ -593,7 +618,10 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           </FormLabel>
                           <FormControl>
                             <div className="border border-gray-200 rounded-md focus-within:border-indigo-500 focus-within:ring-indigo-500 transition-colors">
-                              <DatePicker date={field.value ? new Date(field.value) : new Date()} setDate={field.onChange} />
+                              <DatePicker 
+                                date={field.value ? parseDateWithoutTimezone(field.value as string) : new Date()} 
+                                setDate={(date) => field.onChange(formatDateToString(date))} 
+                              />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -630,8 +658,8 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                           <FormControl>
                             <div className="border border-gray-200 rounded-md focus-within:border-orange-500 focus-within:ring-orange-500 transition-colors">
                                 <DatePicker 
-                                  date={field.value ? new Date(field.value) : undefined} 
-                                  setDate={field.onChange} 
+                                  date={field.value ? parseDateWithoutTimezone(field.value as string) : undefined} 
+                                  setDate={(date) => field.onChange(formatDateToString(date))} 
                                 />
                             </div>
                           </FormControl>
@@ -1078,7 +1106,10 @@ export function MyFormDialog({ open, setOpen, polygonPaths, polygonArea, createI
                             <FormItem>
                               <FormLabel>Plant Date</FormLabel>
                               <FormControl>
-                                <DatePicker date={field.value ? new Date(field.value) : new Date()} setDate={field.onChange} />
+                                <DatePicker 
+                                  date={field.value ? parseDateWithoutTimezone(field.value as string) : new Date()} 
+                                  setDate={(date) => field.onChange(formatDateToString(date))} 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

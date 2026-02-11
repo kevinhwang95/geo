@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import axiosClient from '@/api/axiosClient';
 import { User, Mail, Phone, Shield, AlertTriangle, CheckCircle, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/authStore';
 
 interface UserFormDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   onUserSaved,
 }) => {
   const { t } = useTranslation();
+  const { user: currentUser, updateUser } = useAuthStore();
   
   const userSchema = z.object({
     first_name: z.string().min(1, t('createUser.firstNameRequired')),
@@ -126,6 +128,18 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
       if (isEditing && user) {
         // Update existing user
         await axiosClient.put(`/users/${user.id}`, apiData);
+        
+        // If editing the current logged-in user, update the auth store
+        if (currentUser && user.id === currentUser.id) {
+          updateUser({
+            first_name: values.first_name,
+            last_name: values.last_name,
+            phone: values.phone,
+            role: values.role,
+            language_preference: values.language_preference
+          });
+        }
+        
         toast.success('User updated successfully!', {
           description: `${values.first_name} ${values.last_name} has been updated.`,
         });

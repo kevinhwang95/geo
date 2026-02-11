@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { isTokenExpired, getTokenTimeRemaining } from '@/utils/jwt';
+import i18n from '@/i18n';
 
 export interface User {
   id: number;
@@ -9,6 +10,7 @@ export interface User {
   email: string;
   phone: string;
   role: 'admin' | 'contributor' | 'user' | 'team_lead';
+  language_preference?: string;
   avatar_url?: string;
   is_active: boolean;
   last_login?: string;
@@ -60,13 +62,21 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       
-      login: (user, tokens) => set({
-        user,
-        tokens,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null
-      }),
+      login: (user, tokens) => {
+        // Set i18n language based on user's language preference
+        if (user.language_preference) {
+          i18n.changeLanguage(user.language_preference);
+          console.log(`[AuthStore] Language set to: ${user.language_preference}`);
+        }
+        
+        set({
+          user,
+          tokens,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null
+        });
+      },
       
       logout: () => set({
         user: null,
@@ -81,6 +91,12 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       updateUser: (updates) => {
         const currentUser = get().user;
         if (currentUser) {
+          // If language preference is being updated, change i18n language immediately
+          if (updates.language_preference && updates.language_preference !== currentUser.language_preference) {
+            i18n.changeLanguage(updates.language_preference);
+            console.log(`[AuthStore] Language updated to: ${updates.language_preference}`);
+          }
+          
           set({ user: { ...currentUser, ...updates } });
         }
       },
